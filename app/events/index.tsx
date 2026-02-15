@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { createClient } from '@supabase/supabase-js';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const supabase = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,
@@ -67,14 +67,14 @@ export default function EventsListScreen() {
         options={{
           title: 'Events',
           headerLeft: () => (
-            <View style={{ paddingLeft: 12 }}>
+            <View style={Platform.select({ ios: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'relative', opacity: 1 }, default: { paddingLeft: 12 } })}>
               <TouchableOpacity onPress={() => router.back()}>
                 <Ionicons name="arrow-back-outline" size={26} color="#fff" />
               </TouchableOpacity>
             </View>
           ),
           headerRight: () => (
-            <View style={{ paddingRight: 12 }}>
+            <View style={Platform.select({ ios: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'relative', opacity: 1 }, default: { paddingRight: 12 } })}>
               <TouchableOpacity onPress={() => router.push('/')}>
                 <Ionicons name="home-outline" size={26} color="#fff" />
               </TouchableOpacity>

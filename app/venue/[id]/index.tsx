@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -60,7 +61,7 @@ export default function VenueDetailsScreen() {
           headerTitleAlign: 'center',
 
           headerLeft: () => (
-            <View style={{ paddingLeft: 12 }}>
+            <View style={Platform.select({ ios: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'relative', opacity: 1 }, default: { paddingLeft: 12 } })}>
               <TouchableOpacity onPress={() => router.back()}>
                 <Ionicons name="arrow-back-outline" size={26} color="#fff" />
               </TouchableOpacity>
@@ -68,7 +69,7 @@ export default function VenueDetailsScreen() {
           ),
 
           headerRight: () => (
-            <View style={{ paddingRight: 12 }}>
+            <View style={Platform.select({ ios: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'relative', opacity: 1 }, default: { paddingRight: 12 } })}>
               <TouchableOpacity onPress={() => router.push('/')}>
                 <Ionicons name="home-outline" size={26} color="#fff" />
               </TouchableOpacity>

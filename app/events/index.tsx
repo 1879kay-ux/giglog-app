@@ -1,4 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import { createClient } from '@supabase/supabase-js';
+import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -20,6 +22,7 @@ type EventRow = {
 };
 
 export default function EventsListScreen() {
+  const router = useRouter();
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,29 +62,51 @@ export default function EventsListScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Events</Text>
-
-      <FlatList
-        data={events}
-        keyExtractor={(item) => item.event_id}
-        renderItem={({ item }) => {
-          const venue = item.venues?.[0];
-          const venueName = venue?.event_venue_name ?? 'Unknown venue';
-          const city = venue?.city ?? 'Unknown city';
-          const status = item.event_status ?? 'Unknown';
-
-          return (
-            <TouchableOpacity style={styles.eventItem}>
-              <Text style={styles.eventDate}>{item.event_date}</Text>
-              <Text style={styles.eventVenue}>{venueName}</Text>
-              <Text style={styles.eventCity}>{city}</Text>
-              <Text style={styles.eventStatus}>Status: {status}</Text>
-            </TouchableOpacity>
-          );
+    <>
+      <Stack.Screen
+        options={{
+          title: 'Events',
+          headerLeft: () => (
+            <View style={{ paddingLeft: 12 }}>
+              <TouchableOpacity onPress={() => router.back()}>
+                <Ionicons name="arrow-back-outline" size={26} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ),
+          headerRight: () => (
+            <View style={{ paddingRight: 12 }}>
+              <TouchableOpacity onPress={() => router.push('/')}>
+                <Ionicons name="home-outline" size={26} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ),
         }}
       />
-    </View>
+      <View style={styles.container}>
+        <FlatList
+          data={events}
+          keyExtractor={(item) => item.event_id}
+          renderItem={({ item }) => {
+            const venue = item.venues?.[0];
+            const venueName = venue?.event_venue_name ?? 'Unknown venue';
+            const city = venue?.city ?? 'Unknown city';
+            const status = item.event_status ?? 'Unknown';
+
+            return (
+              <TouchableOpacity
+                style={styles.eventItem}
+                onPress={() => router.push({ pathname: '/events/[id]', params: { id: item.event_id } })}
+              >
+                <Text style={styles.eventDate}>{item.event_date}</Text>
+                <Text style={styles.eventVenue}>{venueName}</Text>
+                <Text style={styles.eventCity}>{city}</Text>
+                <Text style={styles.eventStatus}>Status: {status}</Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </View>
+    </>
   );
 }
 
@@ -93,19 +118,14 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 20,
+    backgroundColor: '#f5f5f5',
   },
   eventItem: {
     padding: 16,
-    backgroundColor: '#f2f2f2',
+    backgroundColor: '#fff',
     borderRadius: 10,
-    marginBottom: 12,
+    marginHorizontal: 12,
+    marginVertical: 8,
   },
   eventDate: {
     fontSize: 18,

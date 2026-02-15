@@ -1,7 +1,9 @@
+import InfoCard from '@/components/InfoCard';
+import { Ionicons } from '@expo/vector-icons';
 import { createClient } from '@supabase/supabase-js';
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const supabase = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,
@@ -45,6 +47,7 @@ type EventRow = {
 
 export default function EventDetailsScreen() {
   const { id } = useLocalSearchParams();
+  const router = useRouter();
   const [event, setEvent] = useState<EventRow | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -87,69 +90,83 @@ export default function EventDetailsScreen() {
   const venue = event.venues?.[0];
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Event Details</Text>
+    <>
+      <Stack.Screen
+        options={{
+          title: 'Event Details',
+          headerLeft: () => (
+            <View style={{ paddingLeft: 12 }}>
+              <TouchableOpacity onPress={() => router.back()}>
+                <Ionicons name="arrow-back-outline" size={26} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ),
+          headerRight: () => (
+            <View style={{ paddingRight: 12 }}>
+              <TouchableOpacity onPress={() => router.push('/')}>
+                <Ionicons name="home-outline" size={26} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ),
+        }}
+      />
+      <ScrollView style={styles.container}>
+        <Text style={styles.title}>{venue?.event_venue_name ?? 'Event Details'}</Text>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Date</Text>
-        <Text style={styles.value}>{event.event_date}</Text>
-      </View>
+        <InfoCard title="Date">
+          <Text style={styles.value}>{event.event_date}</Text>
+        </InfoCard>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Status</Text>
-        <Text style={styles.value}>{event.event_status ?? 'Unknown'}</Text>
-      </View>
+        <InfoCard title="Status">
+          <Text style={styles.value}>{event.event_status ?? 'Unknown'}</Text>
+        </InfoCard>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Venue</Text>
-        <Text style={styles.value}>{venue?.event_venue_name ?? 'Unknown venue'}</Text>
-        <Text style={styles.value}>{venue?.city ?? ''}</Text>
-      </View>
+        <InfoCard title="Venue">
+          <Text style={styles.value}>{venue?.event_venue_name ?? 'Unknown venue'}</Text>
+          {venue?.city && <Text style={styles.value}>{venue.city}</Text>}
+          {venue?.address && <Text style={styles.value}>{venue.address}</Text>}
+          {venue?.postcode && <Text style={styles.value}>{venue.postcode}</Text>}
+        </InfoCard>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Event Type</Text>
-        <Text style={styles.value}>{event.event_type ?? '—'}</Text>
-      </View>
+        <InfoCard title="Event Type">
+          <Text style={styles.value}>{event.event_type ?? '—'}</Text>
+        </InfoCard>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Notes</Text>
-        <Text style={styles.value}>{event.event_notes ?? '—'}</Text>
-      </View>
+        <InfoCard title="Notes">
+          <Text style={styles.value}>{event.event_notes ?? '—'}</Text>
+        </InfoCard>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Promoter Contact</Text>
-        <Text style={styles.value}>{event.promoter_contact_name ?? '—'}</Text>
-        <Text style={styles.value}>{event.promoter_contact_phone ?? ''}</Text>
-        <Text style={styles.value}>{event.promoter_contact_email ?? ''}</Text>
-      </View>
+        <InfoCard title="Promoter Contact">
+          <Text style={styles.value}>{event.promoter_contact_name ?? '—'}</Text>
+          {event.promoter_contact_phone && <Text style={styles.value}>{event.promoter_contact_phone}</Text>}
+          {event.promoter_contact_email && <Text style={styles.value}>{event.promoter_contact_email}</Text>}
+        </InfoCard>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Times</Text>
-        <Text style={styles.value}>Call: {event.call_time ?? '—'}</Text>
-        <Text style={styles.value}>Load-in: {event.loadin_time ?? '—'}</Text>
-        <Text style={styles.value}>Soundcheck: {event.soundcheck_time ?? '—'}</Text>
-        <Text style={styles.value}>Onstage: {event.onstage ?? '—'}</Text>
-        <Text style={styles.value}>Offstage: {event.offstage ?? '—'}</Text>
-        <Text style={styles.value}>Curfew: {event.venue_curfew ?? '—'}</Text>
-        <Text style={styles.value}>Bus Leaves: {event.bus_leave_time ?? '—'}</Text>
-      </View>
+        <InfoCard title="Times">
+          <Text style={styles.value}>Call: {event.call_time ?? '—'}</Text>
+          <Text style={styles.value}>Load-in: {event.loadin_time ?? '—'}</Text>
+          <Text style={styles.value}>Soundcheck: {event.soundcheck_time ?? '—'}</Text>
+          <Text style={styles.value}>Onstage: {event.onstage ?? '—'}</Text>
+          <Text style={styles.value}>Offstage: {event.offstage ?? '—'}</Text>
+          <Text style={styles.value}>Curfew: {event.venue_curfew ?? '—'}</Text>
+          <Text style={styles.value}>Bus Leaves: {event.bus_leave_time ?? '—'}</Text>
+        </InfoCard>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Documents</Text>
-        <Text style={styles.value}>Setlist: {event.setlist_url ?? '—'}</Text>
-        <Text style={styles.value}>Stage Plan: {event.stageplan_url ?? '—'}</Text>
-        <Text style={styles.value}>Input List: {event.inputlist_url ?? '—'}</Text>
-        <Text style={styles.value}>Monitor Sends: {event.monitorsends_url ?? '—'}</Text>
-        <Text style={styles.value}>Event Info: {event.eventinfo_url ?? '—'}</Text>
-      </View>
+        <InfoCard title="Documents">
+          <Text style={styles.value}>Setlist: {event.setlist_url ?? '—'}</Text>
+          <Text style={styles.value}>Stage Plan: {event.stageplan_url ?? '—'}</Text>
+          <Text style={styles.value}>Input List: {event.inputlist_url ?? '—'}</Text>
+          <Text style={styles.value}>Monitor Sends: {event.monitorsends_url ?? '—'}</Text>
+          <Text style={styles.value}>Event Info: {event.eventinfo_url ?? '—'}</Text>
+        </InfoCard>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Financials</Text>
-        <Text style={styles.value}>Fee: {event.income_fee ?? '—'}</Text>
-        <Text style={styles.value}>Fee Type: {event.fee_type ?? '—'}</Text>
-        <Text style={styles.value}>Paid Status: {event.paid_status ?? '—'}</Text>
-      </View>
-    </ScrollView>
+        <InfoCard title="Financials">
+          <Text style={styles.value}>Fee: {event.income_fee ?? '—'}</Text>
+          <Text style={styles.value}>Fee Type: {event.fee_type ?? '—'}</Text>
+          <Text style={styles.value}>Paid Status: {event.paid_status ?? '—'}</Text>
+        </InfoCard>
+      </ScrollView>
+    </>
   );
 }
 
@@ -161,24 +178,17 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
+    backgroundColor: '#f5f5f5',
+    padding: 16,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    marginBottom: 20,
-  },
-  section: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 16,
   },
   value: {
     fontSize: 16,
-    marginBottom: 2,
+    marginBottom: 6,
+    color: '#333',
   },
 });

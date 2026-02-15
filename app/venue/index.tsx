@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -67,10 +68,15 @@ export default function VenuesScreen() {
 
     const renderVenueCard = ({ item }: { item: Venue }) => (
         <TouchableOpacity style={styles.card} onPress={() => handleVenuePress(item.venue_id)}>
-            <View style={styles.content}>
-                <Text style={styles.name}>{item.event_venue_name}</Text>
-                <Text style={styles.city}>{item.city}</Text>
-                {item.postcode ? <Text style={styles.postcode}>{item.postcode}</Text> : null}
+            <View style={styles.cardRow}>
+                <View style={styles.content}>
+                    <Text style={styles.name}>{item.event_venue_name}</Text>
+                    <Text style={styles.city}>{item.city}</Text>
+                    {item.postcode ? <Text style={styles.postcode}>{item.postcode}</Text> : null}
+                </View>
+                <View style={styles.iconContainer}>
+                    <Ionicons name="chevron-forward-outline" size={24} color="#999" />
+                </View>
             </View>
         </TouchableOpacity>
     );
@@ -95,15 +101,36 @@ export default function VenuesScreen() {
     }
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.countText}>{venues.length} venues</Text>
-            <FlatList
-                data={venues}
-                keyExtractor={(item) => item.venue_id}
-                renderItem={renderVenueCard}
-                contentContainerStyle={styles.listContent}
+        <>
+            <Stack.Screen
+                options={{
+                    title: 'Venues',
+                    headerLeft: () => (
+                        <View style={{ paddingLeft: 12 }}>
+                            <TouchableOpacity onPress={() => router.back()}>
+                                <Ionicons name="arrow-back-outline" size={26} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
+                    ),
+                    headerRight: () => (
+                        <View style={{ paddingRight: 12 }}>
+                            <TouchableOpacity onPress={() => router.push('/')}>
+                                <Ionicons name="home-outline" size={26} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
+                    ),
+                }}
             />
-        </View>
+            <View style={styles.container}>
+                <Text style={styles.countText}>{venues.length} venues</Text>
+                <FlatList
+                    data={venues}
+                    keyExtractor={(item) => item.venue_id}
+                    renderItem={renderVenueCard}
+                    contentContainerStyle={styles.listContent}
+                />
+            </View>
+        </>
     );
 }
 
@@ -126,6 +153,16 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
+    cardRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    iconContainer: {
+        paddingRight: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     image: {
         width: '100%',
         height: 200,
@@ -133,6 +170,7 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 12,
+        flex: 1,
     },
     name: {
         fontSize: 16,

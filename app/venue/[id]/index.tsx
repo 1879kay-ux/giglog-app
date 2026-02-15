@@ -1,17 +1,21 @@
+import InfoCard from '@/components/InfoCard';
 import { supabase } from '@/lib/supabase';
-import { useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Linking,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function VenueDetailsScreen() {
   const { id } = useLocalSearchParams();
+  const router = useRouter();
   const [venue, setVenue] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -20,26 +24,21 @@ export default function VenueDetailsScreen() {
   }, [id]);
 
   async function loadVenue() {
-    setLoading(true);
-
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('venues')
       .select('*')
       .eq('venue_id', id)
       .single();
 
-    if (!error) setVenue(data);
-
+    setVenue(data);
     setLoading(false);
   }
 
   function openMap() {
     if (!venue) return;
-
     const query = encodeURIComponent(
       `${venue.event_venue_name}, ${venue.address}, ${venue.city}, ${venue.postcode}`
     );
-
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
   }
 
@@ -52,76 +51,97 @@ export default function VenueDetailsScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <>
+      <Stack.Screen
+        options={{
+          title: 'Venue Details',
+          headerStyle: { backgroundColor: '#008080' },
+          headerTitleStyle: { color: '#fff', fontWeight: '700' },
+          headerTitleAlign: 'center',
 
-      {/* Title */}
-      <Text style={styles.title}>{venue.event_venue_name}</Text>
+          headerLeft: () => (
+            <View style={{ paddingLeft: 12 }}>
+              <TouchableOpacity onPress={() => router.back()}>
+                <Ionicons name="arrow-back-outline" size={26} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ),
 
-      {/* Address */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Address</Text>
-        <Text style={styles.text}>{venue.address}</Text>
-        <Text style={styles.text}>{venue.city}</Text>
-        <Text style={styles.text}>{venue.postcode}</Text>
+          headerRight: () => (
+            <View style={{ paddingRight: 12 }}>
+              <TouchableOpacity onPress={() => router.push('/')}>
+                <Ionicons name="home-outline" size={26} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ),
+        }}
+      />
 
-        <TouchableOpacity style={styles.mapButton} onPress={openMap}>
-          <Text style={styles.mapButtonText}>Open in Maps</Text>
-        </TouchableOpacity>
-      </View>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>{venue.event_venue_name}</Text>
 
-      {/* Capacity */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Capacity</Text>
-        <Text style={styles.text}>{venue.capacity}</Text>
-      </View>
+        <InfoCard title="Address">
+          <Text style={styles.cardText}>{venue.address}</Text>
+          <Text style={styles.cardText}>{venue.city}</Text>
+          <Text style={styles.cardText}>{venue.postcode}</Text>
 
-      {/* Capacity Notes */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Capacity Notes</Text>
-        <Text style={styles.text}>
-          {venue.capacity_notes || 'No capacity notes provided'}
-        </Text>
-      </View>
+          <TouchableOpacity style={styles.mapButton} onPress={openMap}>
+            <Text style={styles.mapButtonText}>Open in Maps</Text>
+          </TouchableOpacity>
+        </InfoCard>
 
-      {/* Venue Contact */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Venue Contact</Text>
-        <Text style={styles.text}>Name: {venue.venue_contact_name}</Text>
-        <Text style={styles.text}>Phone: {venue.venue_contact_phone}</Text>
-        <Text style={styles.text}>Email: {venue.venue_contact_email}</Text>
-      </View>
+        <InfoCard title="Capacity">
+          <Text style={styles.cardText}>{venue.capacity}</Text>
+        </InfoCard>
 
-      {/* Venue Notes */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Venue Notes</Text>
-        <Text style={styles.text}>
-          {venue.venue_notes || 'No venue notes provided'}
-        </Text>
-      </View>
+        <InfoCard title="Capacity Notes">
+          <Text style={styles.cardText}>
+            {venue.capacity_notes || 'No capacity notes provided'}
+          </Text>
+        </InfoCard>
 
-    </View>
+        <InfoCard title="Venue Contact">
+          <Text style={styles.cardText}>Name: {venue.venue_contact_name}</Text>
+          <Text style={styles.cardText}>Phone: {venue.venue_contact_phone}</Text>
+          <Text style={styles.cardText}>Email: {venue.venue_contact_email}</Text>
+        </InfoCard>
+
+        <InfoCard title="Venue Notes">
+          <Text style={styles.cardText}>
+            {venue.venue_notes || 'No venue notes provided'}
+          </Text>
+        </InfoCard>
+      </ScrollView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
 
-  title: { fontSize: 26, fontWeight: '700', marginBottom: 20 },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  content: { padding: 16 },
 
-  section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 16,
+  },
 
-  text: { fontSize: 16, marginBottom: 4 },
+  cardText: {
+    fontSize: 16,
+    marginBottom: 4,
+  },
 
   mapButton: {
-    marginTop: 10,
-    backgroundColor: '#007AFF',
+    marginTop: 12,
+    backgroundColor: '#008080',
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 6,
     alignSelf: 'flex-start',
   },
+
   mapButtonText: {
     color: '#fff',
     fontWeight: '600',

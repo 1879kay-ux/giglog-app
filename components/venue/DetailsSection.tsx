@@ -23,8 +23,8 @@ type EventRow = {
 };
 
 type DetailsSectionProps = {
-  event: EventRow | null;
-  venue: VenueRow | null;
+  event: EventRow;          // ← event is ALWAYS defined
+  venue: VenueRow | null;   // ← venue may be null
 };
 
 export default function DetailsSection({ event, venue }: DetailsSectionProps) {
@@ -32,11 +32,11 @@ export default function DetailsSection({ event, venue }: DetailsSectionProps) {
     if (!dateStr) return '—';
     try {
       const date = new Date(dateStr);
-      return date.toLocaleDateString('en-GB', { 
-        weekday: 'short', 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
+      return date.toLocaleDateString('en-GB', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
       });
     } catch {
       return dateStr;
@@ -46,27 +46,32 @@ export default function DetailsSection({ event, venue }: DetailsSectionProps) {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
+
         {/* Event Overview */}
         <InfoCard title="Event Overview">
           <View style={styles.row}>
             <Text style={styles.label}>Date</Text>
-            <Text style={styles.value}>{formatDate(event?.event_date)}</Text>
+            <Text style={styles.value}>{formatDate(event.event_date)}</Text>
           </View>
+
           <View style={styles.row}>
             <Text style={styles.label}>Event Name</Text>
             <Text style={styles.value}>{venue?.event_venue_name || '—'}</Text>
           </View>
+
           <View style={styles.row}>
             <Text style={styles.label}>City</Text>
             <Text style={styles.value}>{venue?.city || '—'}</Text>
           </View>
+
           <View style={styles.row}>
             <Text style={styles.label}>Status</Text>
-            <Text style={styles.value}>{event?.event_status || '—'}</Text>
+            <Text style={styles.value}>{event.event_status || '—'}</Text>
           </View>
+
           <View style={styles.row}>
             <Text style={styles.label}>Type</Text>
-            <Text style={styles.value}>{event?.event_type || '—'}</Text>
+            <Text style={styles.value}>{event.event_type || '—'}</Text>
           </View>
         </InfoCard>
 
@@ -76,31 +81,35 @@ export default function DetailsSection({ event, venue }: DetailsSectionProps) {
             <Text style={styles.label}>Venue Name</Text>
             <Text style={styles.value}>{venue?.event_venue_name || '—'}</Text>
           </View>
+
           <View style={styles.row}>
             <Text style={styles.label}>Address</Text>
             <Text style={styles.value}>
               {venue?.address || '—'}
-              {venue?.postcode && ` ${venue.postcode}`}
+              {venue?.postcode ? ` ${venue.postcode}` : ''}
             </Text>
           </View>
+
           <View style={styles.row}>
             <Text style={styles.label}>Contact Name</Text>
             <Text style={styles.value}>{venue?.venue_contact_name || '—'}</Text>
           </View>
+
           <View style={styles.row}>
             <Text style={styles.label}>Contact Phone</Text>
             <Text style={styles.value}>{venue?.venue_contact_phone || '—'}</Text>
           </View>
+
           <View style={styles.row}>
             <Text style={styles.label}>Contact Email</Text>
             <Text style={styles.value}>{venue?.venue_contact_email || '—'}</Text>
           </View>
+
           <View style={styles.row}>
             <Text style={styles.label}>Capacity</Text>
-            <Text style={styles.value}>
-              {venue?.capacity || '—'}
-            </Text>
+            <Text style={styles.value}>{venue?.capacity ?? '—'}</Text>
           </View>
+
           {venue?.venue_notes && (
             <View style={styles.row}>
               <Text style={styles.label}>Venue Notes</Text>
@@ -113,17 +122,20 @@ export default function DetailsSection({ event, venue }: DetailsSectionProps) {
         <InfoCard title="Promoter Contact">
           <View style={styles.row}>
             <Text style={styles.label}>Name</Text>
-            <Text style={styles.value}>{event?.promoter_contact_name || '—'}</Text>
+            <Text style={styles.value}>{event.promoter_contact_name || '—'}</Text>
           </View>
+
           <View style={styles.row}>
             <Text style={styles.label}>Phone</Text>
-            <Text style={styles.value}>{event?.promoter_contact_phone || '—'}</Text>
+            <Text style={styles.value}>{event.promoter_contact_phone || '—'}</Text>
           </View>
+
           <View style={styles.row}>
             <Text style={styles.label}>Email</Text>
-            <Text style={styles.value}>{event?.promoter_contact_email || '—'}</Text>
+            <Text style={styles.value}>{event.promoter_contact_email || '—'}</Text>
           </View>
         </InfoCard>
+
       </View>
     </ScrollView>
   );
@@ -147,7 +159,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#666',
-    flex: 0,
     width: 100,
   },
   value: {

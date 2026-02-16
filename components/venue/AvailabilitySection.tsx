@@ -1,6 +1,6 @@
 import InfoCard from '@/components/InfoCard';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type AvailabilitySectionProps = {
   initialStatus?: string | null;
@@ -11,50 +11,75 @@ export default function AvailabilitySection({ initialStatus }: AvailabilitySecti
     (initialStatus as 'available' | 'provisional' | 'unavailable') || 'available'
   );
 
+  const getChipStyle = (status: 'available' | 'provisional' | 'unavailable') => {
+    const isSelected = userStatus === status;
+    if (isSelected) {
+      switch (status) {
+        case 'available':
+          return { backgroundColor: '#4caf50' };
+        case 'provisional':
+          return { backgroundColor: '#ff9800' };
+        case 'unavailable':
+          return { backgroundColor: '#f44336' };
+      }
+    }
+    return { backgroundColor: '#e0e0e0' };
+  };
+
+  const getChipTextColor = (status: 'available' | 'provisional' | 'unavailable') => {
+    return userStatus === status ? '#fff' : '#333';
+  };
+
   return (
     <ScrollView style={styles.container}>
-      <InfoCard title="Your Availability">
-        <View style={styles.chipContainer}>
-          <TouchableOpacity
-            style={[styles.chip, userStatus === 'available' && styles.chipActive, styles.chipGreen]}
-            onPress={() => setUserStatus('available')}
-          >
-            <Text style={[styles.chipText, userStatus === 'available' && styles.chipTextActive]}>
-              Available
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.chip, userStatus === 'provisional' && styles.chipActive, styles.chipAmber]}
-            onPress={() => setUserStatus('provisional')}
-          >
-            <Text style={[styles.chipText, userStatus === 'provisional' && styles.chipTextActive]}>
-              Provisional
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.chip, userStatus === 'unavailable' && styles.chipActive, styles.chipRed]}
-            onPress={() => setUserStatus('unavailable')}
-          >
-            <Text style={[styles.chipText, userStatus === 'unavailable' && styles.chipTextActive]}>
-              Unavailable
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </InfoCard>
+      <View style={styles.content}>
+        <InfoCard title="Your Availability">
+          <View style={styles.chipContainer}>
+            <TouchableOpacity
+              style={[styles.chip, getChipStyle('available')]}
+              onPress={() => setUserStatus('available')}
+            >
+              <Text style={[styles.chipText, { color: getChipTextColor('available') }]}>
+                Available
+              </Text>
+            </TouchableOpacity>
 
-      <InfoCard title="Band Availability">
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableCell, styles.tableCellHeader]}>Member</Text>
-            <Text style={[styles.tableCell, styles.tableCellHeader]}>Status</Text>
+            <TouchableOpacity
+              style={[styles.chip, getChipStyle('provisional')]}
+              onPress={() => setUserStatus('provisional')}
+            >
+              <Text style={[styles.chipText, { color: getChipTextColor('provisional') }]}>
+                Provisional
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.chip, getChipStyle('unavailable')]}
+              onPress={() => setUserStatus('unavailable')}
+            >
+              <Text style={[styles.chipText, { color: getChipTextColor('unavailable') }]}>
+                Unavailable
+              </Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>Band Members</Text>
-            <Text style={styles.tableCell}>—</Text>
+        </InfoCard>
+
+        <InfoCard title="Band Availability">
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableCell, styles.tableCellHeader]}>Member</Text>
+              <Text style={[styles.tableCell, styles.tableCellHeader]}>Status</Text>
+            </View>
+
+            <View style={styles.tableRow}>
+              <Text style={styles.tableCell}>Band Members</Text>
+              <Text style={styles.tableCell}>—</Text>
+            </View>
+
+            <Text style={styles.note}>Data synced from band schedule</Text>
           </View>
-          <Text style={styles.note}>Data synced from band schedule</Text>
-        </View>
-      </InfoCard>
+        </InfoCard>
+      </View>
     </ScrollView>
   );
 }
@@ -62,8 +87,9 @@ export default function AvailabilitySection({ initialStatus }: AvailabilitySecti
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  content: {
     padding: 16,
-    backgroundColor: '#f5f5f5',
   },
   chipContainer: {
     flexDirection: 'row',
@@ -76,31 +102,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 20,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  chipGreen: {
-    backgroundColor: '#e8f5e9',
-    borderColor: '#4caf50',
-  },
-  chipAmber: {
-    backgroundColor: '#fff3e0',
-    borderColor: '#ff9800',
-  },
-  chipRed: {
-    backgroundColor: '#ffebee',
-    borderColor: '#f44336',
-  },
-  chipActive: {
-    borderWidth: 2,
   },
   chipText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
-  },
-  chipTextActive: {
-    color: '#333',
   },
   table: {
     borderRadius: 8,

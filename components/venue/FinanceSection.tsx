@@ -2,15 +2,15 @@ import InfoCard from '@/components/InfoCard';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 type FinanceSectionProps = {
-  incomeFee?: number | null;
-  feeType?: string | null;
-  paidStatus?: string | null;
-  vanHire?: number | null;
-  fuel?: number | null;
-  depCost?: number | null;
-  driverCost?: number | null;
-  fohEngCost?: number | null;
-  otherCosts?: number | null;
+  incomeFee: number | null;
+  feeType: string | null;
+  paidStatus: string | null;
+  vanHire: number | null;
+  fuel: number | null;
+  depCost: number | null;
+  driverCost: number | null;
+  fohEngCost: number | null;
+  otherCosts: number | null;
 };
 
 export default function FinanceSection({
@@ -31,7 +31,8 @@ export default function FinanceSection({
 
   return (
     <ScrollView style={styles.container}>
-      <InfoCard title="Income">
+      <View style={styles.content}>
+        <InfoCard title="Income">
         <View style={styles.row}>
           <Text style={styles.label}>Fee</Text>
           <Text style={styles.value}>{formatCurrency(incomeFee)}</Text>
@@ -106,6 +107,7 @@ export default function FinanceSection({
           </Text>
         </View>
       </InfoCard>
+      </View>
     </ScrollView>
   );
 }
@@ -113,8 +115,9 @@ export default function FinanceSection({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  content: {
     padding: 16,
-    backgroundColor: '#f5f5f5',
   },
   row: {
     flexDirection: 'row',

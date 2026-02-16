@@ -32,7 +32,8 @@ export default function ScheduleSection({
 
   return (
     <ScrollView style={styles.container}>
-      <InfoCard title="Schedule">
+      <View style={styles.content}>
+        <InfoCard title="Schedule">
         {timeFields.map((field, index) => (
           <View key={index} style={styles.timeRow}>
             <Text style={styles.label}>{field.label}</Text>
@@ -40,6 +41,7 @@ export default function ScheduleSection({
           </View>
         ))}
       </InfoCard>
+      </View>
     </ScrollView>
   );
 }
@@ -47,8 +49,9 @@ export default function ScheduleSection({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  content: {
     padding: 16,
-    backgroundColor: '#f5f5f5',
   },
   timeRow: {
     flexDirection: 'row',

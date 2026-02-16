@@ -42,7 +42,8 @@ export default function TravelSection({ venue }: TravelSectionProps) {
 
   return (
     <ScrollView style={styles.container}>
-      <InfoCard title="Homebase → Venue">
+      <View style={styles.content}>
+        <InfoCard title="Homebase → Venue">
         <Text style={styles.subtitle}>Open in:</Text>
         <View style={styles.buttonGroup}>
           <TouchableOpacity 
@@ -96,6 +97,7 @@ export default function TravelSection({ venue }: TravelSectionProps) {
           {lat.toFixed(4)}, {lng.toFixed(4)}
         </Text>
       </InfoCard>
+      </View>
     </ScrollView>
   );
 }
@@ -103,8 +105,9 @@ export default function TravelSection({ venue }: TravelSectionProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  content: {
     padding: 16,
-    backgroundColor: '#f5f5f5',
   },
   subtitle: {
     fontSize: 14,

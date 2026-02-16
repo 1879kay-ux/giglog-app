@@ -1,11 +1,11 @@
-import DetailsSection from '@/components/venue/DetailsSection';
 import AvailabilitySection from '@/components/venue/AvailabilitySection';
-import ScheduleSection from '@/components/venue/ScheduleSection';
+import DetailsSection from '@/components/venue/DetailsSection';
 import DocumentsSection from '@/components/venue/DocumentsSection';
-import TravelSection from '@/components/venue/TravelSection';
 import FinanceSection from '@/components/venue/FinanceSection';
-import { createClient } from '@supabase/supabase-js';
+import ScheduleSection from '@/components/venue/ScheduleSection';
+import TravelSection from '@/components/venue/TravelSection';
 import { Ionicons } from '@expo/vector-icons';
+import { createClient } from '@supabase/supabase-js';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -62,15 +62,13 @@ type EventRow = {
   income_fee: number | null;
   fee_type: string | null;
   paid_status: string | null;
+  van_hire: number | null;
+  fuel: number | null;
+  dep_cost: number | null;
+  driver_cost: number | null;
+  foh_eng_cost: number | null;
+  other_costs: number | null;
   venue_id: string | null;
-  availability_status?: string | null;
-  van_hire?: number | null;
-  fuel?: number | null;
-  dep_cost?: number | null;
-  driver_cost?: number | null;
-  foh_eng_cost?: number | null;
-  other_costs?: number | null;
-  promo_material?: string | null;
   venues: VenueRow[] | null;
 };
 
@@ -92,28 +90,26 @@ export default function EventDetailsScreen() {
 
     const { data, error } = await supabase
       .from('events')
-      .select(`
-        *,
-        venues (
-          event_venue_name,
-          address,
-          city,
-          postcode,
-          venue_contact_name,
-          venue_contact_phone,
-          venue_contact_email,
-          capacity,
-          capacity_notes,
-          venue_notes,
-          latitude,
-          longitude
-        )
-      `)
+      .select('*')
       .eq('event_id', id)
       .single();
 
     if (!error && data) {
-      setEvent(data as EventRow);
+      if (data.venue_id) {
+        const { data: venueData } = await supabase
+          .from('venues')
+          .select('*')
+          .eq('venue_id', data.venue_id)
+          .single();
+
+        if (venueData) {
+          setEvent({ ...data, venues: [venueData] } as EventRow);
+        } else {
+          setEvent(data as EventRow);
+        }
+      } else {
+        setEvent(data as EventRow);
+      }
     }
 
     setLoading(false);
@@ -127,14 +123,16 @@ export default function EventDetailsScreen() {
     );
   }
 
-  const venue = event.venues?.[0];
+  const venue = event.venues?.[0] || null;
 
   const renderTabContent = () => {
     switch (activeTab) {
       case 0:
-        return venue ? <DetailsSection venue={venue} eventType={event.event_type} /> : null;
+        return <DetailsSection event={event} venue={venue} />;
+
       case 1:
-        return <AvailabilitySection initialStatus={event.availability_status} />;
+        return <AvailabilitySection initialStatus={event.event_status} />;
+
       case 2:
         return (
           <ScheduleSection
@@ -147,16 +145,19 @@ export default function EventDetailsScreen() {
             busLeaveTime={event.bus_leave_time}
           />
         );
+
       case 3:
         return (
           <DocumentsSection
             setlistUrl={event.setlist_url}
             eventinfoUrl={event.eventinfo_url}
-            promoMaterial={event.promo_material}
+            promoMaterial={null}
           />
         );
+
       case 4:
-        return <TravelSection venue={venue} />;
+        return <TravelSection venue={venue || undefined} />;
+
       case 5:
         return (
           <FinanceSection
@@ -171,8 +172,9 @@ export default function EventDetailsScreen() {
             otherCosts={event.other_costs}
           />
         );
+
       default:
-        return venue ? <DetailsSection venue={venue} eventType={event.event_type} /> : null;
+        return <DetailsSection event={event} venue={venue} />;
     }
   };
 
@@ -182,14 +184,40 @@ export default function EventDetailsScreen() {
         options={{
           title: venue?.event_venue_name || 'Event Details',
           headerLeft: () => (
-            <View style={Platform.select({ ios: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'relative', opacity: 1 }, default: { paddingLeft: 12 } })}>
+            <View
+              style={Platform.select({
+                ios: {
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  position: 'relative',
+                  opacity: 1,
+                },
+                default: { paddingLeft: 12 },
+              })}
+            >
               <TouchableOpacity onPress={() => router.back()}>
                 <Ionicons name="arrow-back-outline" size={26} color="#fff" />
               </TouchableOpacity>
             </View>
           ),
           headerRight: () => (
-            <View style={Platform.select({ ios: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'relative', opacity: 1 }, default: { paddingRight: 12 } })}>
+            <View
+              style={Platform.select({
+                ios: {
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  position: 'relative',
+                  opacity: 1,
+                },
+                default: { paddingRight: 12 },
+              })}
+            >
               <TouchableOpacity onPress={() => router.push('/')}>
                 <Ionicons name="home-outline" size={26} color="#fff" />
               </TouchableOpacity>
@@ -199,12 +227,7 @@ export default function EventDetailsScreen() {
       />
 
       <View style={styles.container}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.tabBar}
-          contentContainerStyle={styles.tabBarContent}
-        >
+        <View style={[styles.tabBar, styles.tabBarContent]}>
           {tabs.map((tab, index) => (
             <TouchableOpacity
               key={index}
@@ -216,9 +239,15 @@ export default function EventDetailsScreen() {
               </Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
 
-        {renderTabContent()}
+        <ScrollView
+          style={styles.contentWrapper}
+          contentContainerStyle={{ paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {renderTabContent()}
+        </ScrollView>
       </View>
     </>
   );
@@ -238,6 +267,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
+    flexDirection: 'row',
   },
   tabBarContent: {
     paddingHorizontal: 8,
@@ -258,5 +288,9 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: '#008080',
+  },
+  contentWrapper: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
   },
 });

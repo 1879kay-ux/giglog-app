@@ -20,7 +20,8 @@ export default function DocumentsSection({
 
   return (
     <ScrollView style={styles.container}>
-      <InfoCard title="Documents">
+      <View style={styles.content}>
+        <InfoCard title="Documents">
         {documents.map((doc, index) => (
           <View key={index} style={styles.docRow}>
             <Text style={styles.label}>{doc.label}</Text>
@@ -34,6 +35,7 @@ export default function DocumentsSection({
           Document links will appear here when available
         </Text>
       </InfoCard>
+      </View>
     </ScrollView>
   );
 }
@@ -41,8 +43,9 @@ export default function DocumentsSection({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  content: {
     padding: 16,
-    backgroundColor: '#f5f5f5',
   },
   docRow: {
     flexDirection: 'row',

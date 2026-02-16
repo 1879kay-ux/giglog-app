@@ -2,7 +2,16 @@ import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+    ActivityIndicator,
+    FlatList,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 interface Venue {
     venue_id: string;
@@ -17,6 +26,8 @@ export default function VenuesScreen() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const [search, setSearch] = useState('');
+
     useEffect(() => {
         fetchVenues();
     }, []);
@@ -26,36 +37,17 @@ export default function VenuesScreen() {
             setLoading(true);
             setError(null);
 
-            // Log current Supabase auth/session to verify anon key loaded
-            try {
-                const sessionRes = await supabase.auth.getSession();
-                console.log('supabase.getSession ->', sessionRes);
-            } catch (sessErr) {
-                console.warn('supabase.getSession error ->', sessErr);
-            }
-
-            // Query the correct columns for your schema
             const query = "venue_id,event_venue_name,city,postcode";
-            console.log('Fetching venues with select:', query);
 
             const { data, error: fetchError } = await supabase
                 .from('venues')
                 .select(query)
                 .order('event_venue_name', { ascending: true });
 
-            console.log('Ordering applied: event_venue_name ASC');
-
-            console.log('Supabase response data:', data);
-            console.log('Supabase response error:', fetchError);
-
-            if (fetchError) {
-                // If RLS or other permission issues occur, Supabase returns an error
-                throw fetchError;
-            }
+            if (fetchError) throw fetchError;
 
             setVenues((data as Venue[]) || []);
         } catch (err) {
-            console.error('fetchVenues caught error ->', err);
             setError(err instanceof Error ? err.message : 'Failed to fetch venues');
         } finally {
             setLoading(false);
@@ -65,6 +57,11 @@ export default function VenuesScreen() {
     const handleVenuePress = (venueId: string) => {
         router.push({ pathname: '/venue/[id]', params: { id: venueId } });
     };
+
+    const filteredVenues = venues.filter((v) => {
+        const haystack = `${v.event_venue_name} ${v.city} ${v.postcode ?? ''}`.toLowerCase();
+        return haystack.includes(search.toLowerCase());
+    });
 
     const renderVenueCard = ({ item }: { item: Venue }) => (
         <TouchableOpacity style={styles.card} onPress={() => handleVenuePress(item.venue_id)}>
@@ -106,14 +103,36 @@ export default function VenuesScreen() {
                 options={{
                     title: 'Venues',
                     headerLeft: () => (
-                        <View style={Platform.select({ ios: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'relative', opacity: 1 }, default: { paddingLeft: 12 } })}>
+                        <View
+                            style={Platform.select({
+                                ios: {
+                                    width: 36,
+                                    height: 36,
+                                    borderRadius: 18,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                },
+                                default: { paddingLeft: 12 },
+                            })}
+                        >
                             <TouchableOpacity onPress={() => router.back()}>
                                 <Ionicons name="arrow-back-outline" size={26} color="#fff" />
                             </TouchableOpacity>
                         </View>
                     ),
                     headerRight: () => (
-                        <View style={Platform.select({ ios: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'relative', opacity: 1 }, default: { paddingRight: 12 } })}>
+                        <View
+                            style={Platform.select({
+                                ios: {
+                                    width: 36,
+                                    height: 36,
+                                    borderRadius: 18,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                },
+                                default: { paddingRight: 12 },
+                            })}
+                        >
                             <TouchableOpacity onPress={() => router.push('/')}>
                                 <Ionicons name="home-outline" size={26} color="#fff" />
                             </TouchableOpacity>
@@ -121,10 +140,32 @@ export default function VenuesScreen() {
                     ),
                 }}
             />
+
             <View style={styles.container}>
-                <Text style={styles.countText}>{venues.length} venues</Text>
+
+                {/* ⭐ SEARCH BAR */}
+                <View style={styles.searchBar}>
+                    <Ionicons name="search-outline" size={20} color="#666" />
+
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search venues..."
+                        placeholderTextColor="#999"
+                        value={search}
+                        onChangeText={setSearch}
+                    />
+
+                    {search.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearch('')}>
+                            <Ionicons name="close-circle" size={20} color="#999" />
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                <Text style={styles.countText}>{filteredVenues.length} venues</Text>
+
                 <FlatList
-                    data={venues}
+                    data={filteredVenues}
                     keyExtractor={(item) => item.venue_id}
                     renderItem={renderVenueCard}
                     contentContainerStyle={styles.listContent}
@@ -139,6 +180,28 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
     },
+
+    /* ⭐ SEARCH BAR */
+    searchBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        marginHorizontal: 12,
+        marginTop: 12,
+        marginBottom: 4,
+        borderWidth: 1,
+        borderColor: '#008080',
+    },
+    searchInput: {
+        flex: 1,
+        marginLeft: 8,
+        fontSize: 14,
+        color: '#333',
+    },
+
     listContent: {
         padding: 12,
     },
@@ -162,11 +225,6 @@ const styles = StyleSheet.create({
         paddingRight: 12,
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    image: {
-        width: '100%',
-        height: 200,
-        backgroundColor: '#e0e0e0',
     },
     content: {
         padding: 12,
@@ -210,7 +268,7 @@ const styles = StyleSheet.create({
     },
     countText: {
         paddingHorizontal: 12,
-        paddingTop: 12,
+        paddingTop: 6,
         paddingBottom: 6,
         fontSize: 14,
         color: '#333',

@@ -2,7 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { createClient } from '@supabase/supabase-js';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 const supabase = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,
@@ -25,6 +34,8 @@ export default function EventsListScreen() {
   const router = useRouter();
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     loadEvents();
@@ -53,6 +64,16 @@ export default function EventsListScreen() {
     setLoading(false);
   }
 
+  const filteredEvents = events.filter((item) => {
+    const venue = item.venues?.[0];
+    const venueName = venue?.event_venue_name ?? '';
+    const city = venue?.city ?? '';
+    const status = item.event_status ?? '';
+
+    const haystack = `${venueName} ${city} ${item.event_date} ${status}`.toLowerCase();
+    return haystack.includes(search.toLowerCase());
+  });
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -67,14 +88,36 @@ export default function EventsListScreen() {
         options={{
           title: 'Events',
           headerLeft: () => (
-            <View style={Platform.select({ ios: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'relative', opacity: 1 }, default: { paddingLeft: 12 } })}>
+            <View
+              style={Platform.select({
+                ios: {
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                },
+                default: { paddingLeft: 12 },
+              })}
+            >
               <TouchableOpacity onPress={() => router.back()}>
                 <Ionicons name="arrow-back-outline" size={26} color="#fff" />
               </TouchableOpacity>
             </View>
           ),
           headerRight: () => (
-            <View style={Platform.select({ ios: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'relative', opacity: 1 }, default: { paddingRight: 12 } })}>
+            <View
+              style={Platform.select({
+                ios: {
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                },
+                default: { paddingRight: 12 },
+              })}
+            >
               <TouchableOpacity onPress={() => router.push('/')}>
                 <Ionicons name="home-outline" size={26} color="#fff" />
               </TouchableOpacity>
@@ -82,9 +125,30 @@ export default function EventsListScreen() {
           ),
         }}
       />
+
       <View style={styles.container}>
+
+        {/* ⭐ SEARCH BAR */}
+        <View style={styles.searchBar}>
+          <Ionicons name="search-outline" size={20} color="#666" />
+
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search events..."
+            placeholderTextColor="#999"
+            value={search}
+            onChangeText={setSearch}
+          />
+
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')}>
+              <Ionicons name="close-circle" size={20} color="#999" />
+            </TouchableOpacity>
+          )}
+        </View>
+
         <FlatList
-          data={events}
+          data={filteredEvents}
           keyExtractor={(item) => item.event_id}
           renderItem={({ item }) => {
             const venue = item.venues?.[0];
@@ -95,7 +159,9 @@ export default function EventsListScreen() {
             return (
               <TouchableOpacity
                 style={styles.eventItem}
-                onPress={() => router.push({ pathname: '/events/[id]', params: { id: item.event_id } })}
+                onPress={() =>
+                  router.push({ pathname: '/events/[id]', params: { id: item.event_id } })
+                }
               >
                 <Text style={styles.eventDate}>{item.event_date}</Text>
                 <Text style={styles.eventVenue}>{venueName}</Text>
@@ -116,10 +182,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+
+  /* ⭐ SEARCH BAR */
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: 12,
+    marginTop: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#008080',
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#333',
+  },
+
   eventItem: {
     padding: 16,
     backgroundColor: '#fff',

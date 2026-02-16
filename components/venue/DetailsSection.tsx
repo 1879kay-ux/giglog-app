@@ -2,60 +2,129 @@ import InfoCard from '@/components/InfoCard';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 type VenueRow = {
-  event_venue_name: string;
+  event_venue_name: string | null;
   address: string | null;
   city: string | null;
   postcode: string | null;
-  venue_contact_name?: string | null;
-  venue_contact_phone?: string | null;
-  venue_contact_email?: string | null;
-  capacity?: number | null;
-  capacity_notes?: string | null;
-  venue_notes?: string | null;
+  venue_contact_name: string | null;
+  venue_contact_phone: string | null;
+  venue_contact_email: string | null;
+  capacity: number | null;
+  venue_notes: string | null;
+};
+
+type EventRow = {
+  event_date: string | null;
+  event_type: string | null;
+  event_status: string | null;
+  promoter_contact_name: string | null;
+  promoter_contact_phone: string | null;
+  promoter_contact_email: string | null;
 };
 
 type DetailsSectionProps = {
-  venue: VenueRow;
-  eventType?: string | null;
+  event: EventRow | null;
+  venue: VenueRow | null;
 };
 
-export default function DetailsSection({ venue, eventType }: DetailsSectionProps) {
+export default function DetailsSection({ event, venue }: DetailsSectionProps) {
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '—';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-GB', { 
+        weekday: 'short', 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
-      <InfoCard title="Event Type">
-        <Text style={styles.value}>{eventType || 'Not specified'}</Text>
-      </InfoCard>
+      <View style={styles.content}>
+        {/* Event Overview */}
+        <InfoCard title="Event Overview">
+          <View style={styles.row}>
+            <Text style={styles.label}>Date</Text>
+            <Text style={styles.value}>{formatDate(event?.event_date)}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Event Name</Text>
+            <Text style={styles.value}>{venue?.event_venue_name || '—'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>City</Text>
+            <Text style={styles.value}>{venue?.city || '—'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Status</Text>
+            <Text style={styles.value}>{event?.event_status || '—'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Type</Text>
+            <Text style={styles.value}>{event?.event_type || '—'}</Text>
+          </View>
+        </InfoCard>
 
-      <InfoCard title="Venue">
-        <Text style={styles.value}>{venue.event_venue_name}</Text>
-        {venue.address && <Text style={styles.value}>{venue.address}</Text>}
-        {venue.city && <Text style={styles.value}>{venue.city}</Text>}
-        {venue.postcode && <Text style={styles.value}>{venue.postcode}</Text>}
-      </InfoCard>
+        {/* Venue Details */}
+        <InfoCard title="Venue Details">
+          <View style={styles.row}>
+            <Text style={styles.label}>Venue Name</Text>
+            <Text style={styles.value}>{venue?.event_venue_name || '—'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Address</Text>
+            <Text style={styles.value}>
+              {venue?.address || '—'}
+              {venue?.postcode && ` ${venue.postcode}`}
+            </Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Contact Name</Text>
+            <Text style={styles.value}>{venue?.venue_contact_name || '—'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Contact Phone</Text>
+            <Text style={styles.value}>{venue?.venue_contact_phone || '—'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Contact Email</Text>
+            <Text style={styles.value}>{venue?.venue_contact_email || '—'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Capacity</Text>
+            <Text style={styles.value}>
+              {venue?.capacity || '—'}
+            </Text>
+          </View>
+          {venue?.venue_notes && (
+            <View style={styles.row}>
+              <Text style={styles.label}>Venue Notes</Text>
+              <Text style={styles.value}>{venue.venue_notes}</Text>
+            </View>
+          )}
+        </InfoCard>
 
-      <InfoCard title="Venue Contact">
-        <Text style={styles.value}>
-          {venue.venue_contact_name || '—'}
-        </Text>
-        {venue.venue_contact_phone && (
-          <Text style={styles.value}>{venue.venue_contact_phone}</Text>
-        )}
-        {venue.venue_contact_email && (
-          <Text style={styles.value}>{venue.venue_contact_email}</Text>
-        )}
-      </InfoCard>
-
-      <InfoCard title="Capacity">
-        <Text style={styles.value}>
-          {venue.capacity || '—'} {venue.capacity_notes && `(${venue.capacity_notes})`}
-        </Text>
-      </InfoCard>
-
-      <InfoCard title="Venue Notes">
-        <Text style={styles.value}>
-          {venue.venue_notes || 'No notes'}
-        </Text>
-      </InfoCard>
+        {/* Promoter Contact */}
+        <InfoCard title="Promoter Contact">
+          <View style={styles.row}>
+            <Text style={styles.label}>Name</Text>
+            <Text style={styles.value}>{event?.promoter_contact_name || '—'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Phone</Text>
+            <Text style={styles.value}>{event?.promoter_contact_phone || '—'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Email</Text>
+            <Text style={styles.value}>{event?.promoter_contact_email || '—'}</Text>
+          </View>
+        </InfoCard>
+      </View>
     </ScrollView>
   );
 }
@@ -63,12 +132,28 @@ export default function DetailsSection({ venue, eventType }: DetailsSectionProps
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  content: {
     padding: 16,
-    backgroundColor: '#f5f5f5',
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    flex: 0,
+    width: 100,
   },
   value: {
-    fontSize: 16,
-    marginBottom: 4,
+    fontSize: 14,
     color: '#333',
+    flex: 1,
+    textAlign: 'right',
   },
 });

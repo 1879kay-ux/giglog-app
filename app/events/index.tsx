@@ -27,14 +27,14 @@ type EventRow = {
   event_id: string;
   event_date: string;
   event_status: string | null;
-  venues: VenueRow[] | null;
+  event_type: string | null;
+  venues: VenueRow | null;   // ⭐ SINGLE OBJECT, NOT ARRAY
 };
 
 export default function EventsListScreen() {
   const router = useRouter();
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -50,7 +50,8 @@ export default function EventsListScreen() {
         event_id,
         event_date,
         event_status,
-        venues (
+        event_type,
+        venues:venue_id (
           event_venue_name,
           city
         )
@@ -58,19 +59,36 @@ export default function EventsListScreen() {
       .order('event_date', { ascending: true });
 
     if (!error && data) {
-      setEvents(data as EventRow[]);
-    }
+  setEvents(data as unknown as EventRow[]);
+}
 
     setLoading(false);
   }
 
+  // -----------------------------
+  // DATE FORMATTER (WITH WEEKDAY)
+  // -----------------------------
+  function formatDisplayDate(dateString: string) {
+    const date = new Date(dateString);
+
+    const formatted = new Intl.DateTimeFormat('en-GB', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    }).format(date);
+
+    return formatted.replace(',', '').toUpperCase();
+  }
+
   const filteredEvents = events.filter((item) => {
-    const venue = item.venues?.[0];
+    const venue = item.venues;
     const venueName = venue?.event_venue_name ?? '';
     const city = venue?.city ?? '';
     const status = item.event_status ?? '';
+    const type = item.event_type ?? '';
 
-    const haystack = `${venueName} ${city} ${item.event_date} ${status}`.toLowerCase();
+    const haystack = `${venueName} ${city} ${item.event_date} ${status} ${type}`.toLowerCase();
     return haystack.includes(search.toLowerCase());
   });
 
@@ -87,6 +105,11 @@ export default function EventsListScreen() {
       <Stack.Screen
         options={{
           title: 'Events',
+          headerTitleAlign: 'center',
+          headerStyle: { backgroundColor: '#008080' },
+          headerTitleStyle: { color: '#fff', fontWeight: '700', fontSize: 18 },
+          headerTintColor: '#fff',
+
           headerLeft: () => (
             <View
               style={Platform.select({
@@ -100,11 +123,15 @@ export default function EventsListScreen() {
                 default: { paddingLeft: 12 },
               })}
             >
-              <TouchableOpacity onPress={() => router.back()}>
+              <TouchableOpacity
+                onPress={() => router.back()}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
                 <Ionicons name="arrow-back-outline" size={26} color="#fff" />
               </TouchableOpacity>
             </View>
           ),
+
           headerRight: () => (
             <View
               style={Platform.select({
@@ -118,7 +145,10 @@ export default function EventsListScreen() {
                 default: { paddingRight: 12 },
               })}
             >
-              <TouchableOpacity onPress={() => router.push('/')}>
+              <TouchableOpacity
+                onPress={() => router.push('/')}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
                 <Ionicons name="home-outline" size={26} color="#fff" />
               </TouchableOpacity>
             </View>
@@ -128,7 +158,7 @@ export default function EventsListScreen() {
 
       <View style={styles.container}>
 
-        {/* ⭐ SEARCH BAR */}
+        {/* SEARCH BAR */}
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={20} color="#666" />
 
@@ -147,14 +177,24 @@ export default function EventsListScreen() {
           )}
         </View>
 
+        {/* ADD EVENT BUTTON */}
+        <TouchableOpacity
+          style={styles.addEventButton}
+          onPress={() => router.push('/events/add')}
+        >
+          <Ionicons name="add-circle-outline" size={20} color="#fff" />
+          <Text style={styles.addEventButtonText}>Add Event</Text>
+        </TouchableOpacity>
+
         <FlatList
           data={filteredEvents}
           keyExtractor={(item) => item.event_id}
           renderItem={({ item }) => {
-            const venue = item.venues?.[0];
+            const venue = item.venues;
             const venueName = venue?.event_venue_name ?? 'Unknown venue';
             const city = venue?.city ?? 'Unknown city';
             const status = item.event_status ?? 'Unknown';
+            const type = item.event_type ?? 'Event';
 
             return (
               <TouchableOpacity
@@ -163,10 +203,27 @@ export default function EventsListScreen() {
                   router.push({ pathname: '/events/[id]', params: { id: item.event_id } })
                 }
               >
-                <Text style={styles.eventDate}>{item.event_date}</Text>
-                <Text style={styles.eventVenue}>{venueName}</Text>
-                <Text style={styles.eventCity}>{city}</Text>
-                <Text style={styles.eventStatus}>Status: {status}</Text>
+                <View style={styles.eventRow}>
+                  <View style={{ flex: 1 }}>
+
+                    {/* DATE */}
+                    <Text style={styles.eventDate}>
+                      {formatDisplayDate(item.event_date)}
+                    </Text>
+
+                    {/* VENUE + CITY */}
+                    <Text style={styles.eventVenue}>
+                      {venueName}, {city}
+                    </Text>
+
+                    {/* TYPE + STATUS */}
+                    <Text style={styles.eventMeta}>
+                      {type}, {status}
+                    </Text>
+                  </View>
+
+                  <Ionicons name="chevron-forward-outline" size={24} color="#333" />
+                </View>
               </TouchableOpacity>
             );
           }}
@@ -188,7 +245,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
 
-  /* ⭐ SEARCH BAR */
+  // SEARCH
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -198,7 +255,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginHorizontal: 12,
     marginTop: 12,
-    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#008080',
   },
@@ -209,6 +265,26 @@ const styles = StyleSheet.create({
     color: '#333',
   },
 
+  // ADD EVENT BUTTON
+  addEventButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4FB3B3',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginHorizontal: 12,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  addEventButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+
+  // EVENT ROW
   eventItem: {
     padding: 16,
     backgroundColor: '#fff',
@@ -216,23 +292,32 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     marginVertical: 8,
   },
+  eventRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  // DATE
   eventDate: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+
+  // VENUE + CITY
+  eventVenue: {
     fontSize: 18,
     fontWeight: '700',
+    color: '#000',
     marginBottom: 4,
   },
-  eventVenue: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  eventCity: {
+
+  // TYPE + STATUS
+  eventMeta: {
     fontSize: 14,
-    color: '#555',
-    marginBottom: 4,
-  },
-  eventStatus: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 6,
+    color: '#444',
+    marginTop: 2,
   },
 });

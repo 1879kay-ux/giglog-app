@@ -56,7 +56,7 @@ export default function AddVenueModal() {
       return;
     }
 
-    // ⭐ THIS IS THE FIX — DO NOT CHANGE IT
+    // ⭐ DO NOT CHANGE — this is correct
     router.replace({
       pathname: '/events/add',
       params: {
@@ -75,6 +75,7 @@ export default function AddVenueModal() {
         }}
       />
 
+      {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Add Venue</Text>
       </View>
@@ -83,8 +84,9 @@ export default function AddVenueModal() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
 
+          {/* NAME */}
           <Text style={styles.label}>
             Venue Name <Text style={styles.required}>*</Text>
           </Text>
@@ -95,6 +97,7 @@ export default function AddVenueModal() {
             placeholder="Venue name"
           />
 
+          {/* CITY */}
           <Text style={styles.label}>
             City <Text style={styles.required}>*</Text>
           </Text>
@@ -105,6 +108,7 @@ export default function AddVenueModal() {
             placeholder="City"
           />
 
+          {/* POSTCODE */}
           <Text style={styles.label}>Postcode</Text>
           <TextInput
             style={styles.input}
@@ -113,6 +117,7 @@ export default function AddVenueModal() {
             placeholder="Postcode"
           />
 
+          {/* NOTES */}
           <Text style={styles.label}>Notes</Text>
           <TextInput
             style={[styles.input, { height: 100 }]}
@@ -122,6 +127,7 @@ export default function AddVenueModal() {
             multiline
           />
 
+          {/* SAVE BUTTON */}
           <TouchableOpacity style={styles.saveButton} onPress={saveVenue}>
             <Ionicons name="save-outline" size={20} color="#fff" />
             <Text style={styles.saveButtonText}>Save Venue</Text>
@@ -144,16 +150,19 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
+
   label: {
     fontSize: 16,
     fontWeight: '700',
-    marginTop: 16,
+    marginTop: 20,
     marginBottom: 6,
   },
+
   required: {
     color: 'red',
     fontWeight: '900',
   },
+
   input: {
     backgroundColor: '#fff',
     borderWidth: 1,
@@ -162,16 +171,18 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
   },
+
   saveButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#008080',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 8,
-    marginTop: 30,
+    marginTop: 40,
     justifyContent: 'center',
   },
+
   saveButtonText: {
     color: '#fff',
     fontSize: 16,

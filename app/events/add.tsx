@@ -102,10 +102,10 @@ export default function AddEventScreen() {
   }
 
   async function saveEvent() {
-    if (!eventType) return Alert.alert('Missing Information', 'Select an event type.');
-    if (!eventDate) return Alert.alert('Missing Information', 'Choose a date.');
-    if (!eventStatus) return Alert.alert('Missing Information', 'Select a status.');
     if (!selectedVenue) return Alert.alert('Missing Information', 'Choose a venue.');
+    if (!eventDate) return Alert.alert('Missing Information', 'Choose a date.');
+    if (!eventType) return Alert.alert('Missing Information', 'Select an event type.');
+    if (!eventStatus) return Alert.alert('Missing Information', 'Select a status.');
 
     const payload = {
       event_type: eventType,
@@ -161,7 +161,130 @@ export default function AddEventScreen() {
       >
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
 
-          {/* EVENT TYPE */}
+          {/* VENUE FIRST */}
+          <Text style={styles.label}>
+            Venue <Text style={styles.required}>*</Text>
+          </Text>
+
+          <View style={styles.searchRow}>
+            <Ionicons name="search-outline" size={18} color="#666" style={{ marginRight: 6 }} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search venue..."
+              value={venueSearch}
+              onChangeText={handleVenueSearch}
+            />
+            {venueSearch.length > 0 && (
+              <TouchableOpacity onPress={clearVenueSearch}>
+                <Ionicons name="close-circle" size={20} color="#999" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {noMatch && (
+            <View style={{ marginTop: 10 }}>
+              <Text style={{ color: '#c62828', fontWeight: '600' }}>
+                No venues match "{venueSearch}"
+              </Text>
+
+              <TouchableOpacity
+                style={styles.addVenueButton}
+                onPress={() => router.push('/(modals)/venue/add')}
+              >
+                <Ionicons name="add-circle-outline" size={18} color="#fff" />
+                <Text style={styles.addVenueButtonText}>Add New Venue</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {venueSearch.length === 0 && (
+            <View style={styles.venueList}>
+              <FlatList
+                nestedScrollEnabled={true}
+                data={allVenues}
+                keyExtractor={item => item.venue_id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.venueItem}
+                    onPress={() => {
+                      setSelectedVenue(item);
+                      setVenueSearch(`${item.event_venue_name} (${item.city})`);
+                    }}
+                  >
+                    <Text style={styles.venueName}>{item.event_venue_name}</Text>
+                    <Text style={styles.venueCity}>{item.city}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            </View>
+          )}
+
+          {venueSearch.length > 0 && venueResults.length > 0 && (
+            <View style={styles.venueList}>
+              <FlatList
+                nestedScrollEnabled={true}
+                data={venueResults}
+                keyExtractor={item => item.venue_id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.venueItem}
+                    onPress={() => {
+                      setSelectedVenue(item);
+                      setVenueSearch(`${item.event_venue_name} (${item.city})`);
+                    }}
+                  >
+                    <Text style={styles.venueName}>{item.event_venue_name}</Text>
+                    <Text style={styles.venueCity}>{item.city}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            </View>
+          )}
+
+          {/* DATE SECOND */}
+          <Text style={styles.label}>
+            Event Date <Text style={styles.required}>*</Text>
+          </Text>
+
+          {Platform.OS === 'web' ? (
+            <View style={styles.dateRow}>
+              {/* @ts-ignore */}
+              <input
+                type="date"
+                value={eventDate}
+                onChange={(e: any) => setEventDate(e.target.value)}
+                style={{
+                  width: 150,
+                  padding: 10,
+                  fontSize: 16,
+                  borderRadius: 8,
+                  border: '1px solid #008080',
+                }}
+              />
+            </View>
+          ) : (
+            <View style={styles.dateRow}>
+              <TouchableOpacity
+                style={styles.dateBox}
+                onPress={() => setShowPicker(true)}
+              >
+                <Text style={{ fontSize: 16 }}>
+                  {eventDate ? formatDisplayDate(eventDate) : 'Select date'}
+                </Text>
+              </TouchableOpacity>
+
+              {showPicker && (
+                <DateTimePicker
+                  value={eventDate ? new Date(eventDate) : new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
+                  onChange={onNativeDateChange}
+                />
+              )}
+            </View>
+          )}
+
+          {/* EVENT TYPE THIRD */}
           <Text style={styles.label}>
             Event Type <Text style={styles.required}>*</Text>
           </Text>
@@ -180,52 +303,7 @@ export default function AddEventScreen() {
             ))}
           </View>
 
-          {/* DATE */}
-          <Text style={styles.label}>
-            Event Date <Text style={styles.required}>*</Text>
-          </Text>
-
-          {Platform.OS === 'web' ? (
-            <View style={{ marginTop: 4 }}>
-              {/* @ts-ignore */}
-              <input
-                type="date"
-                value={eventDate}
-                style={{
-                  width: '100%',
-                  padding: 10,
-                  fontSize: 16,
-                  borderRadius: 8,
-                  border: '1px solid #008080',
-                }}
-                onChange={(e: any) => {
-                  setEventDate(e.target.value);
-                }}
-              />
-            </View>
-          ) : (
-            <>
-              <TouchableOpacity
-                style={styles.input}
-                onPress={() => setShowPicker(true)}
-              >
-                <Text style={{ fontSize: 16 }}>
-                  {eventDate ? formatDisplayDate(eventDate) : 'Select date'}
-                </Text>
-              </TouchableOpacity>
-
-              {showPicker && (
-                <DateTimePicker
-                  value={eventDate ? new Date(eventDate) : new Date()}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
-                  onChange={onNativeDateChange}
-                />
-              )}
-            </>
-          )}
-
-          {/* STATUS */}
+          {/* STATUS FOURTH */}
           <Text style={styles.label}>
             Status <Text style={styles.required}>*</Text>
           </Text>
@@ -250,89 +328,6 @@ export default function AddEventScreen() {
             })}
           </View>
 
-          {/* VENUE SEARCH */}
-          <Text style={styles.label}>
-            Venue <Text style={styles.required}>*</Text>
-          </Text>
-
-          <View style={styles.searchRow}>
-            <Ionicons name="search-outline" size={18} color="#666" style={{ marginRight: 6 }} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search venue..."
-              value={venueSearch}
-              onChangeText={handleVenueSearch}
-            />
-            {venueSearch.length > 0 && (
-              <TouchableOpacity onPress={clearVenueSearch}>
-                <Ionicons name="close-circle" size={20} color="#999" />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* NO MATCH */}
-          {noMatch && (
-            <View style={{ marginTop: 10 }}>
-              <Text style={{ color: '#c62828', fontWeight: '600' }}>
-                No venues match "{venueSearch}"
-              </Text>
-
-              <TouchableOpacity
-                style={styles.addVenueButton}
-                onPress={() => router.push('/(modals)/venue/add')}
-              >
-                <Ionicons name="add-circle-outline" size={18} color="#fff" />
-                <Text style={styles.addVenueButtonText}>Add New Venue</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* FULL LIST */}
-          {venueSearch.length === 0 && (
-            <View style={styles.venueList}>
-              <FlatList
-                nestedScrollEnabled={true}
-                data={allVenues}
-                keyExtractor={item => item.venue_id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.venueItem}
-                    onPress={() => {
-                      setSelectedVenue(item);
-                      setVenueSearch(`${item.event_venue_name} (${item.city})`);
-                    }}
-                  >
-                    <Text style={styles.venueName}>{item.event_venue_name}</Text>
-                    <Text style={styles.venueCity}>{item.city}</Text>
-                  </TouchableOpacity>
-                )}
-              />
-            </View>
-          )}
-
-          {/* FILTERED LIST */}
-          {venueSearch.length > 0 && venueResults.length > 0 && (
-            <View style={styles.venueList}>
-              <FlatList
-                nestedScrollEnabled={true}
-                data={venueResults}
-                keyExtractor={item => item.venue_id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.venueItem}
-                    onPress={() => {
-                      setSelectedVenue(item);
-                      setVenueSearch(`${item.event_venue_name} (${item.city})`);
-                    }}
-                  >
-                    <Text style={styles.venueName}>{item.event_venue_name}</Text>
-                    <Text style={styles.venueCity}>{item.city}</Text>
-                  </TouchableOpacity>
-                )}
-              />
-            </View>
-          )}
-
           {/* SAVE */}
           <TouchableOpacity style={styles.saveButton} onPress={saveEvent}>
             <Ionicons name="save-outline" size={20} color="#fff" />
@@ -346,21 +341,62 @@ export default function AddEventScreen() {
 }
 
 const styles = StyleSheet.create({
-  label: { fontSize: 16, fontWeight: '700', marginTop: 16, marginBottom: 6 },
-  required: { color: 'red', fontWeight: '900' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, backgroundColor: '#ddd' },
-  chipSelected: { backgroundColor: '#008080' },
-  chipText: { color: '#333', fontWeight: '600' },
-  chipTextSelected: { color: '#fff' },
-  input: {
+  label: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 20,
+    marginBottom: 6,
+  },
+
+  required: {
+    color: 'red',
+    fontWeight: '900',
+  },
+
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 4,
+  },
+
+  chip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: '#ddd',
+  },
+
+  chipSelected: {
+    backgroundColor: '#008080',
+  },
+
+  chipText: {
+    color: '#333',
+    fontWeight: '600',
+  },
+
+  chipTextSelected: {
+    color: '#fff',
+  },
+
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    marginTop: 4,
+  },
+
+  dateBox: {
+    width: 150,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#008080',
     borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
   },
+
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -370,39 +406,74 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
+    marginTop: 4,
   },
-  searchInput: { flex: 1, fontSize: 16 },
+
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+  },
+
   venueList: {
-    marginTop: 8,
+    marginTop: 10,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#ddd',
     borderRadius: 8,
-    maxHeight: 200,
+    maxHeight: 220,
     backgroundColor: '#fff',
   },
-  venueItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  venueName: { fontSize: 16, fontWeight: '600' },
-  venueCity: { fontSize: 14, color: '#666' },
+
+  venueItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+
+  venueName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  venueCity: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
+
   addVenueButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#008080',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 6,
-    marginTop: 8,
+    marginTop: 10,
     alignSelf: 'flex-start',
   },
-  addVenueButtonText: { color: '#fff', fontSize: 14, fontWeight: '600', marginLeft: 6 },
+
+  addVenueButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+
   saveButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#008080',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 8,
-    marginTop: 30,
+    marginTop: 40,
     justifyContent: 'center',
   },
-  saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '700', marginLeft: 8 },
+
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
 });

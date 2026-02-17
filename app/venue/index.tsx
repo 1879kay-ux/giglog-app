@@ -98,7 +98,7 @@ export default function VenuesScreen() {
     }
 
     return (
-        <>
+        <View style={{ flex: 1 }}>
             <Stack.Screen
                 options={{
                     title: 'Venues',
@@ -143,7 +143,7 @@ export default function VenuesScreen() {
 
             <View style={styles.container}>
 
-                {/* ⭐ SEARCH BAR */}
+                {/* SEARCH BAR */}
                 <View style={styles.searchBar}>
                     <Ionicons name="search-outline" size={20} color="#666" />
 
@@ -162,6 +162,15 @@ export default function VenuesScreen() {
                     )}
                 </View>
 
+                {/* ADD VENUE BUTTON */}
+                <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={() => router.push('/venue/add')}
+                >
+                    <Ionicons name="add-circle-outline" size={20} color="#fff" />
+                    <Text style={styles.addButtonText}>Add Venue</Text>
+                </TouchableOpacity>
+
                 <Text style={styles.countText}>{filteredVenues.length} venues</Text>
 
                 <FlatList
@@ -171,7 +180,7 @@ export default function VenuesScreen() {
                     contentContainerStyle={styles.listContent}
                 />
             </View>
-        </>
+        </View>
     );
 }
 
@@ -181,7 +190,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
 
-    /* ⭐ SEARCH BAR */
     searchBar: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -200,6 +208,23 @@ const styles = StyleSheet.create({
         marginLeft: 8,
         fontSize: 14,
         color: '#333',
+    },
+
+    addButton: {
+        backgroundColor: '#4FB3B3',
+        paddingVertical: 14,
+        borderRadius: 8,
+        marginHorizontal: 12,
+        marginTop: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    addButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+        marginLeft: 8,
     },
 
     listContent: {

@@ -189,7 +189,7 @@ export default function AddEventScreen() {
 
               <TouchableOpacity
                 style={styles.addVenueButton}
-                onPress={() => router.push('/(modals)/venue/add')}
+                onPress={() => router.push('/(modals)/add')}
               >
                 <Ionicons name="add-circle-outline" size={18} color="#fff" />
                 <Text style={styles.addVenueButtonText}>Add New Venue</Text>

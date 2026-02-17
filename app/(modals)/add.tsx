@@ -1,6 +1,10 @@
+// Add Venue Modal Screen
+// This screen lives in app/(modals)/add.tsx so Expo Router treats it as a modal.
+// Custom header is rendered inside the component; default header is hidden via _layout.tsx.
+
 import { Ionicons } from '@expo/vector-icons';
 import { createClient } from '@supabase/supabase-js';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
@@ -10,8 +14,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
-  View,
+  TouchableOpacity
 } from 'react-native';
 
 export const unstable_settings = {
@@ -56,7 +59,6 @@ export default function AddVenueModal() {
       return;
     }
 
-    // ⭐ DO NOT CHANGE — this is correct
     router.replace({
       pathname: '/events/add',
       params: {
@@ -68,17 +70,8 @@ export default function AddVenueModal() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          headerShown: false,
-          presentation: 'modal',
-        }}
-      />
-
       {/* HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Add Venue</Text>
-      </View>
+      
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}

@@ -1,18 +1,20 @@
 import { Stack } from 'expo-router';
 
-export default function RootLayout() {
+export default function ModalsLayout() {
   return (
     <Stack
       screenOptions={{
+        presentation: 'modal',
         headerStyle: { backgroundColor: '#008080' },
-        headerTitleStyle: { color: '#fff', fontWeight: '700' },
         headerTintColor: '#fff',
         headerTitleAlign: 'center',
       }}
     >
       <Stack.Screen
-        name="(modals)"
-        options={{ headerShown: false }}
+        name="add"
+        options={{
+          title: 'Add Venue',
+        }}
       />
     </Stack>
   );

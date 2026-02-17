@@ -2,8 +2,8 @@ import DetailsSection from '@/components/venue/DetailsSection';
 import DocumentsSection from '@/components/venue/DocumentsSection';
 import FinanceSection from '@/components/venue/FinanceSection';
 import ScheduleSection from '@/components/venue/ScheduleSection';
+import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { createClient } from '@supabase/supabase-js';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -25,14 +25,6 @@ import {
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-
-/* ---------------------------------------------------------
-   SUPABASE
---------------------------------------------------------- */
-const supabase = createClient(
-  process.env.EXPO_PUBLIC_SUPABASE_URL!,
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 const isSmallScreen = Dimensions.get('window').height < 700;
 
@@ -121,9 +113,9 @@ function AvailabilitySection({ initialStatus }: { initialStatus: string | null }
   type IoniconName = keyof typeof Ionicons.glyphMap;
 
   const options: { key: string; icon: IoniconName; color: string }[] = [
-    { key: 'Available', icon: 'checkmark-circle-outline', color: '#2ECC71' }, // green
-    { key: 'Provisional', icon: 'help-circle-outline', color: '#F1C40F' },   // amber
-    { key: 'Unavailable', icon: 'close-circle-outline', color: '#E74C3C' },  // red
+    { key: 'Available', icon: 'checkmark-circle-outline', color: '#2ECC71' },
+    { key: 'Provisional', icon: 'help-circle-outline', color: '#F1C40F' },
+    { key: 'Unavailable', icon: 'close-circle-outline', color: '#E74C3C' },
   ];
 
   return (
@@ -145,19 +137,8 @@ function AvailabilitySection({ initialStatus }: { initialStatus: string | null }
               ]}
               onPress={() => setStatus(opt.key)}
             >
-              <Ionicons
-                name={opt.icon}
-                size={28}
-                color={selected ? '#fff' : '#008080'}
-              />
-              <Text
-                style={[
-                  styles.avLabel,
-                  selected && { color: '#fff' },
-                ]}
-              >
-                {opt.key}
-              </Text>
+              <Ionicons name={opt.icon} size={28} color={selected ? '#fff' : '#008080'} />
+              <Text style={[styles.avLabel, selected && { color: '#fff' }]}>{opt.key}</Text>
             </TouchableOpacity>
           );
         })}
@@ -180,8 +161,12 @@ function AvailabilitySection({ initialStatus }: { initialStatus: string | null }
    MAIN SCREEN
 --------------------------------------------------------- */
 export default function EventDetailsScreen() {
-  const { id } = useLocalSearchParams();
   const router = useRouter();
+
+  // Safer id handling
+  const params = useLocalSearchParams<{ id?: string | string[] }>();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+
   const [event, setEvent] = useState<EventRow | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -200,10 +185,13 @@ export default function EventDetailsScreen() {
   };
 
   useEffect(() => {
+    if (!id) return;
     loadEvent();
   }, [id]);
 
   async function loadEvent() {
+    if (!id) return;
+
     setLoading(true);
 
     const { data } = await supabase
@@ -264,17 +252,31 @@ export default function EventDetailsScreen() {
       <View style={styles.container}>
         {/* EVENT SUMMARY */}
         <View style={styles.eventSummary}>
-          <Text style={styles.eventSummaryDate}>
-            {formatEventDate(event.event_date)}
-          </Text>
-          <Text style={styles.eventSummaryType}>
-            {event.event_type || 'Event'} • {event.event_status || 'Status'}
-          </Text>
-          <Text style={styles.eventSummaryVenue}>
-            {venue?.event_venue_name}
-            {venue?.city ? `, ${venue.city}` : ''}
-          </Text>
-        </View>
+  <Text style={styles.eventSummaryDate}>{formatEventDate(event.event_date)}</Text>
+
+  <Text style={styles.eventSummaryVenue}>
+    {venue?.event_venue_name}
+    {venue?.city ? `, ${venue.city}` : ''}
+  </Text>
+
+  <Text style={styles.eventSummaryMeta}>
+    {(event.event_type || 'Event')}
+    {event.event_status ? `, ${event.event_status}` : ''}
+  </Text>
+</View>
+
+
+        {/* EDIT EVENT BUTTON */}
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => {
+            if (!id) return;
+            router.push(`/events/${id}/edit`);
+          }}
+        >
+          <Ionicons name="create-outline" size={18} color="#fff" />
+          <Text style={styles.editButtonText}>Edit Event</Text>
+        </TouchableOpacity>
 
         <ScrollView
           style={styles.scroll}
@@ -326,11 +328,7 @@ export default function EventDetailsScreen() {
             open={openSections.documents}
             onPress={() => toggleSection('documents')}
           >
-            <DocumentsSection
-              setlistUrl={event.setlist_url}
-              eventinfoUrl={event.eventinfo_url}
-              promoMaterial={null}
-            />
+            <DocumentsSection setlistUrl={event.setlist_url} eventinfoUrl={event.eventinfo_url} promoMaterial={null} />
           </Section>
 
           {/* TRAVEL */}
@@ -459,30 +457,65 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  /* EVENT SUMMARY */
+    /* EVENT SUMMARY */
   eventSummary: {
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingTop: 10,
+    paddingBottom: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
     marginBottom: 12,
   },
   eventSummaryDate: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#222',
-    marginBottom: 4,
-  },
-  eventSummaryType: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#444',
+    letterSpacing: 0.4,
+    color: '#111',
+    textTransform: 'uppercase',
     marginBottom: 4,
   },
   eventSummaryVenue: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#111',
+    marginBottom: 2,
+  },
+  eventSummaryMeta: {
     fontSize: 14,
-    color: '#555',
+    color: '#444',
+    fontWeight: '600',
+  },
+
+
+  /* EDIT BUTTON */
+editButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 8,
+
+  backgroundColor: '#4FB3B3',
+
+  alignSelf: 'flex-start',
+  minWidth: 170,
+
+  marginHorizontal: 16,
+  marginTop: 6,
+  marginBottom: 16,
+
+  paddingVertical: 10,
+  paddingHorizontal: 14,
+
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: '#2AA3A3',
+},
+
+
+  editButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 
   scroll: {

@@ -13,7 +13,9 @@ export default function RootLayout() {
       {/* Register each screen explicitly */}
       <Stack.Screen name="venue/index" options={{ title: 'Venues' }} />
       <Stack.Screen name="venue/add" options={{ title: 'Add Venue' }} />
-      <Stack.Screen name="venue/[id]" options={{ title: 'Venue Details' }} />
+      <Stack.Screen name="venue/[id]/index" options={{ title: 'Venue Details' }} />
+      <Stack.Screen name="venue/[id]/edit" options={{ title: 'Edit Venue' }} />
+
 
       {/* Modals */}
       <Stack.Screen name="(modals)" options={{ headerShown: false }} />

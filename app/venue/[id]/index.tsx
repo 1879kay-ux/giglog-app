@@ -1,12 +1,10 @@
-import InfoCard from '@/components/InfoCard';
+import ActionButton from '@/components/ui/ActionButton';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Linking,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,39 +12,76 @@ import {
   View,
 } from 'react-native';
 
-export default function VenueDetailsScreen() {
-  const { id } = useLocalSearchParams();
+type VenueRow = {
+  venue_id: string;
+  event_venue_name: string | null;
+  city: string | null;
+  address: string | null;
+  postcode: string | null;
+
+  venue_contact_name: string | null;
+  venue_contact_phone: string | null;
+  venue_contact_email: string | null;
+
+  venue_notes: string | null;
+  capacity: number | null;
+  capacity_notes: string | null;
+  is_active: boolean | null;
+};
+
+function Field({ label, value }: { label: string; value: string | null }) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={styles.fieldValue}>{value && value.trim() ? value : '—'}</Text>
+    </View>
+  );
+}
+
+export default function VenueDetailScreen() {
   const router = useRouter();
-  const [venue, setVenue] = useState<any>(null);
+
+  const params = useLocalSearchParams<{ id?: string | string[] }>();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+
+  const [venue, setVenue] = useState<VenueRow | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!id) return;
     loadVenue();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   async function loadVenue() {
-    const { data } = await supabase
+    if (!id) return;
+
+    setLoading(true);
+
+    const { data, error } = await supabase
       .from('venues')
-      .select('*')
+      .select(
+        'venue_id,event_venue_name,city,address,postcode,venue_contact_name,venue_contact_phone,venue_contact_email,venue_notes,capacity,capacity_notes,is_active'
+      )
       .eq('venue_id', id)
       .single();
 
-    setVenue(data);
+    if (!error) setVenue(data as VenueRow);
     setLoading(false);
   }
 
-  function openMap() {
-    if (!venue) return;
-    const query = encodeURIComponent(
-      `${venue.event_venue_name}, ${venue.address}, ${venue.city}, ${venue.postcode}`
+  if (loading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#333" />
+      </View>
     );
-    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
   }
 
-  if (loading || !venue) {
+  if (!venue) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
+      <View style={styles.loading}>
+        <Text style={{ color: '#333' }}>Venue not found.</Text>
       </View>
     );
   }
@@ -56,20 +91,15 @@ export default function VenueDetailsScreen() {
       <Stack.Screen
         options={{
           title: 'Venue Details',
-          headerStyle: { backgroundColor: '#008080' },
-          headerTitleStyle: { color: '#fff', fontWeight: '700' },
-          headerTitleAlign: 'center',
-
           headerLeft: () => (
-            <View style={Platform.select({ ios: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'relative', opacity: 1 }, default: { paddingLeft: 12 } })}>
+            <View style={styles.headerIconWrapper}>
               <TouchableOpacity onPress={() => router.back()}>
                 <Ionicons name="arrow-back-outline" size={26} color="#fff" />
               </TouchableOpacity>
             </View>
           ),
-
           headerRight: () => (
-            <View style={Platform.select({ ios: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'relative', opacity: 1 }, default: { paddingRight: 12 } })}>
+            <View style={styles.headerIconWrapper}>
               <TouchableOpacity onPress={() => router.push('/')}>
                 <Ionicons name="home-outline" size={26} color="#fff" />
               </TouchableOpacity>
@@ -78,74 +108,104 @@ export default function VenueDetailsScreen() {
         }}
       />
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>{venue.event_venue_name}</Text>
-
-        <InfoCard title="Address">
-          <Text style={styles.cardText}>{venue.address}</Text>
-          <Text style={styles.cardText}>{venue.city}</Text>
-          <Text style={styles.cardText}>{venue.postcode}</Text>
-
-          <TouchableOpacity style={styles.mapButton} onPress={openMap}>
-            <Text style={styles.mapButtonText}>Open in Maps</Text>
-          </TouchableOpacity>
-        </InfoCard>
-
-        <InfoCard title="Capacity">
-          <Text style={styles.cardText}>{venue.capacity}</Text>
-        </InfoCard>
-
-        <InfoCard title="Capacity Notes">
-          <Text style={styles.cardText}>
-            {venue.capacity_notes || 'No capacity notes provided'}
+      <View style={styles.container}>
+        {/* VENUE INFO BLOCK */}
+        <View style={styles.summary}>
+          <Text style={styles.title}>{venue.event_venue_name ?? 'Venue'}</Text>
+          <Text style={styles.subtitle}>
+            {(venue.city ?? '—')}
+            {venue.postcode ? `, ${venue.postcode}` : ''}
           </Text>
-        </InfoCard>
+        </View>
 
-        <InfoCard title="Venue Contact">
-          <Text style={styles.cardText}>Name: {venue.venue_contact_name}</Text>
-          <Text style={styles.cardText}>Phone: {venue.venue_contact_phone}</Text>
-          <Text style={styles.cardText}>Email: {venue.venue_contact_email}</Text>
-        </InfoCard>
+        {/* EDIT VENUE BUTTON */}
+        <ActionButton
+          label="Edit Venue"
+          icon="create-outline"
+          onPress={() => router.push(`/venue/${venue.venue_id}/edit`)}
+        />
 
-        <InfoCard title="Venue Notes">
-          <Text style={styles.cardText}>
-            {venue.venue_notes || 'No venue notes provided'}
-          </Text>
-        </InfoCard>
-      </ScrollView>
+        <ScrollView contentContainerStyle={styles.content}>
+          <Field label="Address" value={venue.address} />
+          <Field label="Postcode" value={venue.postcode} />
+          <Field label="Contact" value={venue.venue_contact_name} />
+          <Field label="Phone" value={venue.venue_contact_phone} />
+          <Field label="Email" value={venue.venue_contact_email} />
+          <Field label="Capacity" value={venue.capacity != null ? String(venue.capacity) : null} />
+          <Field label="Capacity notes" value={venue.capacity_notes} />
+          <Field label="Notes" value={venue.venue_notes} />
+          <Field
+            label="Active"
+            value={venue.is_active == null ? null : venue.is_active ? 'Yes' : 'No'}
+          />
+        </ScrollView>
+      </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  content: { padding: 16 },
-
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 16,
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
   },
 
-  cardText: {
-    fontSize: 16,
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+
+  headerIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  summary: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#111',
+    marginBottom: 2,
+  },
+  subtitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#444',
+  },
+
+  content: {
+    padding: 16,
+    paddingBottom: 28,
+  },
+
+  field: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e6e6e6',
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#666',
     marginBottom: 4,
   },
-
-  mapButton: {
-    marginTop: 12,
-    backgroundColor: '#008080',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-
-  mapButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
+  fieldValue: {
+    fontSize: 15,
+    color: '#111',
   },
 });

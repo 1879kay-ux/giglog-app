@@ -1,3 +1,4 @@
+import ActionButton from '@/components/ui/ActionButton';
 import { Ionicons } from '@expo/vector-icons';
 import { createClient } from '@supabase/supabase-js';
 import { Stack, useRouter } from 'expo-router';
@@ -178,13 +179,12 @@ export default function EventsListScreen() {
         </View>
 
         {/* ADD EVENT BUTTON */}
-        <TouchableOpacity
-          style={styles.addEventButton}
-          onPress={() => router.push('/events/add')}
-        >
-          <Ionicons name="add-circle-outline" size={20} color="#fff" />
-          <Text style={styles.addEventButtonText}>Add Event</Text>
-        </TouchableOpacity>
+<ActionButton
+  label="Add Event"
+  icon="add-circle-outline"
+  onPress={() => router.push('/events/add')}
+/>
+
 
         <FlatList
           data={filteredEvents}

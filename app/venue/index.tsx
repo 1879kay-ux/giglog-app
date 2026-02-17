@@ -1,3 +1,4 @@
+import ActionButton from '@/components/ui/ActionButton';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
@@ -55,8 +56,9 @@ export default function VenuesScreen() {
     };
 
     const handleVenuePress = (venueId: string) => {
-        router.push({ pathname: '/venue/[id]', params: { id: venueId } });
-    };
+  router.push(`/venue/${venueId}`);
+};
+
 
     const filteredVenues = venues.filter((v) => {
         const haystack = `${v.event_venue_name} ${v.city} ${v.postcode ?? ''}`.toLowerCase();
@@ -163,13 +165,11 @@ export default function VenuesScreen() {
                 </View>
 
                 {/* ADD VENUE BUTTON */}
-                <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={() => router.push('/venue/add')}
-                >
-                    <Ionicons name="add-circle-outline" size={20} color="#fff" />
-                    <Text style={styles.addButtonText}>Add Venue</Text>
-                </TouchableOpacity>
+                <ActionButton
+  label="Add Venue"
+  icon="add-circle-outline"
+  onPress={() => router.push('/venue/add')}
+/>
 
                 <Text style={styles.countText}>{filteredVenues.length} venues</Text>
 

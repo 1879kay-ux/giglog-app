@@ -1,8 +1,8 @@
 import ActionButton from '@/components/ui/ActionButton';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -29,9 +29,12 @@ export default function VenuesScreen() {
 
     const [search, setSearch] = useState('');
 
-    useEffect(() => {
-        fetchVenues();
-    }, []);
+    useFocusEffect(
+  useCallback(() => {
+    fetchVenues();
+  }, [])
+);
+
 
     const fetchVenues = async () => {
         try {

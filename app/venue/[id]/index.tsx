@@ -5,7 +5,6 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -71,23 +70,6 @@ export default function VenueDetailScreen() {
     setLoading(false);
   }
 
-  const openGoogleMaps = async () => {
-    if (!venue) return;
-
-    const queryParts = [
-      venue.event_venue_name,
-      venue.address,
-      venue.city,
-      venue.postcode,
-    ].filter(Boolean);
-
-    const query = encodeURIComponent(queryParts.join(', '));
-    const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
-
-    const canOpen = await Linking.canOpenURL(url);
-    if (canOpen) Linking.openURL(url);
-  };
-
   if (loading) {
     return (
       <View style={styles.loading}>
@@ -146,13 +128,6 @@ export default function VenueDetailScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           <Field label="Address" value={venue.address} />
           <Field label="Postcode" value={venue.postcode} />
-
-          {/* GOOGLE MAPS BUTTON */}
-          <TouchableOpacity style={styles.mapButton} onPress={openGoogleMaps}>
-            <Ionicons name="map-outline" size={18} color="#fff" />
-            <Text style={styles.mapButtonText}>Open in Google Maps</Text>
-          </TouchableOpacity>
-
           <Field label="Contact" value={venue.venue_contact_name} />
           <Field label="Phone" value={venue.venue_contact_phone} />
           <Field label="Email" value={venue.venue_contact_email} />
@@ -232,22 +207,5 @@ const styles = StyleSheet.create({
   fieldValue: {
     fontSize: 15,
     color: '#111',
-  },
-
-  mapButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#008080',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  mapButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
   },
 });

@@ -1,8 +1,8 @@
 import ActionButton from '@/components/ui/ActionButton';
 import { Ionicons } from '@expo/vector-icons';
 import { createClient } from '@supabase/supabase-js';
-import { Stack, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -38,9 +38,12 @@ export default function EventsListScreen() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
+  useFocusEffect(
+  useCallback(() => {
     loadEvents();
-  }, []);
+  }, [])
+);
+
 
   async function loadEvents() {
     setLoading(true);

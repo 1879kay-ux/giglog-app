@@ -1,16 +1,21 @@
-import { ReactNode } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-type InfoCardProps = {
+export type InfoCardProps = {
   title: string;
-  children: ReactNode;
+  children: React.ReactNode;
+  right?: React.ReactNode;
 };
 
-export default function InfoCard({ title, children }: InfoCardProps) {
+export default function InfoCard({ title, right, children }: InfoCardProps) {
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>{title}</Text>
-      {children}
+      <View style={styles.header}>
+        <Text style={styles.title}>{title}</Text>
+        {right ? <View style={styles.right}>{right}</View> : null}
+      </View>
+
+      <View style={styles.body}>{children}</View>
     </View>
   );
 }
@@ -18,18 +23,22 @@ export default function InfoCard({ title, children }: InfoCardProps) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 10,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    borderRadius: 14,
+    padding: 14,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 8,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
+  title: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#111',
+  },
+  right: {
+    marginLeft: 12,
+  },
+  body: {},
 });

@@ -2,7 +2,7 @@ import ActionButton from '@/components/ui/ActionButton';
 import { Ionicons } from '@expo/vector-icons';
 import { createClient } from '@supabase/supabase-js';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -13,6 +13,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
+// ...
+
+
 
 const supabase = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,

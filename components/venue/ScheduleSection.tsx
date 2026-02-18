@@ -1,7 +1,12 @@
 import InfoCard from '@/components/InfoCard';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 type ScheduleSectionProps = {
+  eventId: string;
+
   callTime?: string | null;
   loadinTime?: string | null;
   soundcheckTime?: string | null;
@@ -10,8 +15,8 @@ type ScheduleSectionProps = {
   offstage?: string | null;
   venueCurfew?: string | null;
 
-  travelVenue?: string | null;   // renamed from call_time
-  departVenue?: string | null;   // renamed from bus_leave_time
+  travelVenue?: string | null; // renamed from call_time
+  departVenue?: string | null; // renamed from bus_leave_time
 
   scheduleNotes?: string | null;
 };
@@ -28,6 +33,7 @@ function formatTime(value?: string | null) {
 }
 
 export default function ScheduleSection({
+  eventId,
   callTime,
   loadinTime,
   soundcheckTime,
@@ -39,6 +45,16 @@ export default function ScheduleSection({
   departVenue,
   scheduleNotes,
 }: ScheduleSectionProps) {
+  const router = useRouter();
+
+  const headerIconBtn = (onPress: () => void) => (
+    <Pressable onPress={onPress} hitSlop={10} style={styles.headerBtn}>
+      <Ionicons name="create-outline" size={18} color="#008080" />
+    </Pressable>
+  );
+
+  const editSchedule = headerIconBtn(() => router.push(`/events/${eventId}/edit/schedule`));
+
   const timeFields = [
     { label: 'Travel to Venue', value: travelVenue ?? callTime }, // supports old + new
     { label: 'Load-in', value: loadinTime },
@@ -53,11 +69,13 @@ export default function ScheduleSection({
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
-        <InfoCard title="Schedule">
+        <InfoCard title="Schedule" right={editSchedule}>
           {timeFields.map((field, index) => {
             const display = formatTime(field.value) ?? '—';
+            const isLast = index === timeFields.length - 1;
+
             return (
-              <View key={index} style={styles.timeRow}>
+              <View key={field.label} style={[styles.timeRow, isLast && styles.timeRowLast]}>
                 <Text style={styles.label}>{field.label}</Text>
                 <Text style={styles.value}>{display}</Text>
               </View>
@@ -80,12 +98,22 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16 },
 
+  headerBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: '#E9F6F6',
+  },
+
   timeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+  },
+  timeRowLast: {
+    borderBottomWidth: 0,
   },
   label: { fontSize: 14, fontWeight: '600', color: '#666' },
   value: { fontSize: 14, color: '#333' },

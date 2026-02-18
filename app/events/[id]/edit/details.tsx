@@ -1,7 +1,8 @@
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -153,11 +154,14 @@ export default function EditEventDetailsScreen() {
     []
   );
 
-  useEffect(() => {
+  useFocusEffect(
+  useCallback(() => {
     if (!id) return;
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    load(); // <-- use YOUR real function name
+  }, [id])
+);
+
+
 
   async function load() {
     if (!id) return;

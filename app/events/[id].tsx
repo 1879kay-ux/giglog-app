@@ -2,14 +2,17 @@ import DetailsSection from '@/components/venue/DetailsSection';
 import DocumentsSection from '@/components/venue/DocumentsSection';
 import FinanceSection from '@/components/venue/FinanceSection';
 import ScheduleSection from '@/components/venue/ScheduleSection';
+import TravelSection from '@/components/venue/TravelSection';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   LayoutAnimation,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -56,6 +59,13 @@ type VenueRow = {
   venue_notes: string | null;
 };
 
+type ProfileRow = {
+  id: string;
+  display_name: string | null;
+  default_departure_address: string | null;
+  default_departure_postcode: string | null;
+};
+
 type EventRow = {
   event_id: string;
   event_date: string;
@@ -67,16 +77,20 @@ type EventRow = {
   promoter_contact_phone: string | null;
   promoter_contact_email: string | null;
 
-  call_time: string | null;
+  travel_venue: string | null;
   loadin_time: string | null;
   soundcheck_time: string | null;
+  doors: string | null;
   onstage: string | null;
   offstage: string | null;
   venue_curfew: string | null;
-  bus_leave_time: string | null;
+  depart_venue: string | null;
+  schedule_notes: string | null;
 
   setlist_url: string | null;
   eventinfo_url: string | null;
+  promo_material_url: string | null;
+  doc_other_url: string | null;
 
   income_fee: number | null;
   fee_type: string | null;
@@ -89,20 +103,19 @@ type EventRow = {
   foh_eng_cost: number | null;
   other_costs: number | null;
 
+  // per-event departure override (optional)
+  departure_address: string | null;
+  departure_postcode: string | null;
+
   venue_id: string | null;
   venues: VenueRow[] | null;
 };
 
+
 /* ---------------------------------------------------------
    SECTION KEYS
 --------------------------------------------------------- */
-type SectionKey =
-  | 'details'
-  | 'availability'
-  | 'schedule'
-  | 'documents'
-  | 'travel'
-  | 'finance';
+type SectionKey = 'details' | 'availability' | 'schedule' | 'documents' | 'travel' | 'finance';
 
 /* ---------------------------------------------------------
    AVAILABILITY SECTION (OPTION C + COLOUR CODING)
@@ -123,7 +136,7 @@ function AvailabilitySection({ initialStatus }: { initialStatus: string | null }
       <Text style={styles.heading}>Your Availability</Text>
 
       <View style={styles.avRow}>
-        {options.map(opt => {
+        {options.map((opt) => {
           const selected = status === opt.key;
           return (
             <TouchableOpacity
@@ -181,24 +194,29 @@ export default function EventDetailsScreen() {
 
   const toggleSection = (key: SectionKey) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  useEffect(() => {
-    if (!id) return;
-    loadEvent();
-  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return;
+      loadEvent();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id])
+  );
 
   async function loadEvent() {
     if (!id) return;
 
     setLoading(true);
 
-    const { data } = await supabase
-      .from('events')
-      .select('*')
-      .eq('event_id', id)
-      .single();
+    const { data, error } = await supabase.from('events').select('*').eq('event_id', id).single();
+
+    if (error) {
+      setLoading(false);
+      Alert.alert('Error', error.message);
+      return;
+    }
 
     if (data) {
       if (data.venue_id) {
@@ -208,7 +226,7 @@ export default function EventDetailsScreen() {
           .eq('venue_id', data.venue_id)
           .single();
 
-        setEvent({ ...data, venues: venueData ? [venueData] : [] } as EventRow);
+        setEvent({ ...(data as any), venues: venueData ? [venueData] : [] } as EventRow);
       } else {
         setEvent(data as EventRow);
       }
@@ -226,6 +244,74 @@ export default function EventDetailsScreen() {
   }
 
   const venue = event.venues?.[0] || null;
+
+  // ---------------------------------------------------------
+  // TRAVEL HELPERS
+  // ---------------------------------------------------------
+  const venueDest =
+    [venue?.address, venue?.city, venue?.postcode].filter(Boolean).join(', ') ||
+    venue?.postcode ||
+    '';
+
+  const departureOrigin =
+    [event.departure_address, event.departure_postcode].filter(Boolean).join(', ') ||
+    event.departure_postcode ||
+    '';
+
+  function enc(s: string) {
+    return encodeURIComponent(s.trim());
+  }
+
+  async function openUrl(url: string) {
+    try {
+      const can = await Linking.canOpenURL(url);
+      if (!can) throw new Error('cannot open');
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert("Can't open maps", 'Check the address/postcode and try again.');
+    }
+  }
+
+  function openToVenue(app: 'apple' | 'google' | 'waze') {
+    if (!venueDest) {
+      Alert.alert('Venue location missing', 'Add an address or postcode to the venue.');
+      return;
+    }
+
+    const d = enc(venueDest);
+
+    const url =
+      app === 'apple'
+        ? `http://maps.apple.com/?daddr=${d}&dirflg=d`
+        : app === 'google'
+        ? `https://www.google.com/maps/dir/?api=1&destination=${d}&travelmode=driving`
+        : `https://waze.com/ul?q=${d}&navigate=yes`;
+
+    openUrl(url);
+  }
+
+  function openFromDeparture(app: 'apple' | 'google' | 'waze') {
+    if (!departureOrigin) {
+      Alert.alert('Departure location not set', 'Add a departure address or postcode.');
+      return;
+    }
+    if (!venueDest) {
+      Alert.alert('Venue location missing', 'Add an address or postcode to the venue.');
+      return;
+    }
+
+    const o = enc(departureOrigin);
+    const d = enc(venueDest);
+
+    const url =
+      app === 'apple'
+        ? `http://maps.apple.com/?saddr=${o}&daddr=${d}&dirflg=d`
+        : app === 'google'
+        ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`
+        : `https://waze.com/ul?q=${d}&navigate=yes`;
+
+    openUrl(url);
+  }
 
   return (
     <>
@@ -252,19 +338,18 @@ export default function EventDetailsScreen() {
       <View style={styles.container}>
         {/* EVENT SUMMARY */}
         <View style={styles.eventSummary}>
-  <Text style={styles.eventSummaryDate}>{formatEventDate(event.event_date)}</Text>
+          <Text style={styles.eventSummaryDate}>{formatEventDate(event.event_date)}</Text>
 
-  <Text style={styles.eventSummaryVenue}>
-    {venue?.event_venue_name}
-    {venue?.city ? `, ${venue.city}` : ''}
-  </Text>
+          <Text style={styles.eventSummaryVenue}>
+            {venue?.event_venue_name}
+            {venue?.city ? `, ${venue.city}` : ''}
+          </Text>
 
-  <Text style={styles.eventSummaryMeta}>
-    {(event.event_type || 'Event')}
-    {event.event_status ? `, ${event.event_status}` : ''}
-  </Text>
-</View>
-
+          <Text style={styles.eventSummaryMeta}>
+            {event.event_type || 'Event'}
+            {event.event_status ? `, ${event.event_status}` : ''}
+          </Text>
+        </View>
 
         {/* EDIT EVENT BUTTON */}
         <TouchableOpacity
@@ -290,7 +375,12 @@ export default function EventDetailsScreen() {
             open={openSections.details}
             onPress={() => toggleSection('details')}
           >
-            <DetailsSection event={event} venue={venue} />
+            <DetailsSection
+              eventId={event.event_id}
+              event={event}
+              venue={venue}
+              venueId={event.venue_id ?? null}
+            />
           </Section>
 
           {/* AVAILABILITY */}
@@ -311,13 +401,16 @@ export default function EventDetailsScreen() {
             onPress={() => toggleSection('schedule')}
           >
             <ScheduleSection
-              callTime={event.call_time}
+              eventId={event.event_id}
+              travelVenue={event.travel_venue}
               loadinTime={event.loadin_time}
               soundcheckTime={event.soundcheck_time}
+              doors={event.doors}
               onstage={event.onstage}
               offstage={event.offstage}
               venueCurfew={event.venue_curfew}
-              busLeaveTime={event.bus_leave_time}
+              departVenue={event.depart_venue}
+              scheduleNotes={event.schedule_notes}
             />
           </Section>
 
@@ -328,44 +421,32 @@ export default function EventDetailsScreen() {
             open={openSections.documents}
             onPress={() => toggleSection('documents')}
           >
-            <DocumentsSection setlistUrl={event.setlist_url} eventinfoUrl={event.eventinfo_url} promoMaterial={null} />
+            <DocumentsSection
+              eventId={event.event_id}
+              setlistUrl={event.setlist_url}
+              eventinfoUrl={event.eventinfo_url}
+              promoMaterialUrl={event.promo_material_url}
+              docOtherUrl={event.doc_other_url}
+            />
           </Section>
 
-          {/* TRAVEL */}
-          <Section
-            title="Travel"
-            icon="navigate-outline"
-            open={openSections.travel}
-            onPress={() => toggleSection('travel')}
-          >
-            <View>
-              <View style={styles.travelRow}>
-                <Text style={styles.travelLabel}>Homebase → Venue</Text>
-                <View style={styles.travelButtonRow}>
-                  <TravelButton label="Apple" />
-                  <TravelButton label="Google" />
-                  <TravelButton label="Waze" />
-                </View>
-              </View>
+{/* TRAVEL */}
+<Section
+  title="Travel"
+  icon="navigate-outline"
+  open={openSections.travel}
+  onPress={() => toggleSection('travel')}
+>
+  <TravelSection
+    eventId={event.event_id}
+    venueAddress={venue?.address}
+    venueCity={venue?.city}
+    venuePostcode={venue?.postcode}
+    departureAddress={event.departure_address}
+    departurePostcode={event.departure_postcode}
+  />
+</Section>
 
-              <View style={styles.travelRow}>
-                <Text style={styles.travelLabel}>Current Location → Venue</Text>
-                <View style={styles.travelButtonRow}>
-                  <TravelButton label="Apple" />
-                  <TravelButton label="Google" />
-                  <TravelButton label="Waze" />
-                </View>
-              </View>
-
-              <View style={styles.travelLocationBox}>
-                <Text style={styles.travelLocationTitle}>Venue Location</Text>
-                <Text style={styles.travelLocationText}>{venue?.address}</Text>
-                <Text style={styles.travelLocationText}>
-                  {venue?.city} {venue?.postcode}
-                </Text>
-              </View>
-            </View>
-          </Section>
 
           {/* FINANCE */}
           <Section
@@ -426,9 +507,9 @@ function Section({
 /* ---------------------------------------------------------
    TRAVEL BUTTON
 --------------------------------------------------------- */
-function TravelButton({ label }: { label: string }) {
+function TravelButton({ label, onPress }: { label: string; onPress?: () => void }) {
   return (
-    <TouchableOpacity style={styles.travelButton}>
+    <TouchableOpacity style={styles.travelButton} onPress={onPress} activeOpacity={0.8}>
       <Text style={styles.travelButtonText}>{label}</Text>
     </TouchableOpacity>
   );
@@ -457,7 +538,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-    /* EVENT SUMMARY */
+  /* EVENT SUMMARY */
   eventSummary: {
     paddingHorizontal: 16,
     paddingTop: 10,
@@ -487,30 +568,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-
   /* EDIT BUTTON */
-editButton: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 8,
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
 
-  backgroundColor: '#4FB3B3',
+    backgroundColor: '#4FB3B3',
 
-  alignSelf: 'flex-start',
-  minWidth: 170,
+    alignSelf: 'flex-start',
+    minWidth: 170,
 
-  marginHorizontal: 16,
-  marginTop: 6,
-  marginBottom: 16,
+    marginHorizontal: 16,
+    marginTop: 6,
+    marginBottom: 16,
 
-  paddingVertical: 10,
-  paddingHorizontal: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
 
-  borderRadius: 12,
-  borderWidth: 1,
-  borderColor: '#2AA3A3',
-},
-
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2AA3A3',
+  },
 
   editButtonText: {
     color: '#fff',

@@ -57,7 +57,7 @@ export default function FinanceSection({
           <Text style={styles.value}>{formatCurrency(fuel)}</Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.label}>Depreciation</Text>
+          <Text style={styles.label}>Dep Fees</Text>
           <Text style={styles.value}>{formatCurrency(depCost)}</Text>
         </View>
         <View style={styles.row}>

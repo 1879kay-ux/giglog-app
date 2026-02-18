@@ -1,7 +1,7 @@
 import EditEventHeader from '@/components/events/EditEventHeader';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type SectionKey = 'details' | 'schedule' | 'documents' | 'finance';
@@ -12,6 +12,16 @@ export default function EditEventMenuScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
+  // bump this whenever the screen comes back into focus
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return;
+      setRefreshKey((k) => k + 1);
+    }, [id])
+  );
+
   const go = (section: SectionKey) => {
     if (!id) return;
     router.push(`/events/${id}/edit/${section}`);
@@ -20,7 +30,9 @@ export default function EditEventMenuScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Edit Event' }} />
-      {id ? <EditEventHeader eventId={id} /> : null}
+
+      {/* key forces remount so header reloads latest data */}
+      {id ? <EditEventHeader key={`${id}-${refreshKey}`} eventId={id} /> : null}
 
       <View style={styles.container}>
         <Text style={styles.subtitle}>Choose what you want to edit</Text>

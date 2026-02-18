@@ -114,7 +114,7 @@ export default function AddEventScreen() {
       return;
     }
 
-    const filtered = allVenues.filter(v =>
+    const filtered = allVenues.filter((v) =>
       `${v.event_venue_name} (${v.city})`.toLowerCase().includes(q)
     );
 
@@ -154,6 +154,155 @@ export default function AddEventScreen() {
     router.back();
   }
 
+  const FormContent = (
+    <>
+      {/* VENUE FIRST */}
+      <Text style={styles.label}>
+        Venue <Text style={styles.required}>*</Text>
+      </Text>
+
+      <View style={styles.searchRow}>
+        <Ionicons name="search-outline" size={18} color="#666" style={{ marginRight: 6 }} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search venue..."
+          value={venueSearch}
+          onChangeText={handleVenueSearch}
+        />
+        {venueSearch.length > 0 && (
+          <TouchableOpacity onPress={clearVenueSearch}>
+            <Ionicons name="close-circle" size={20} color="#999" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {noMatch && (
+        <View style={{ marginTop: 10 }}>
+          <Text style={{ color: '#c62828', fontWeight: '600' }}>
+            No venues match "{venueSearch}"
+          </Text>
+
+          <TouchableOpacity style={styles.addVenueButton} onPress={() => router.push('/(modals)/add')}>
+            <Ionicons name="add-circle-outline" size={18} color="#fff" />
+            <Text style={styles.addVenueButtonText}>Add New Venue</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {(venueSearch.length === 0 || venueResults.length > 0) && (
+        <View style={styles.venueList}>
+          <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+            {(venueSearch.length === 0 ? allVenues : venueResults).map((item) => (
+              <TouchableOpacity
+                key={item.venue_id}
+                style={styles.venueItem}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setSelectedVenue(item);
+                  setVenueSearch(`${item.event_venue_name} (${item.city})`);
+                  setNoMatch(false);
+                }}
+              >
+                <Text style={styles.venueName}>{item.event_venue_name}</Text>
+                <Text style={styles.venueCity}>{item.city}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* DATE SECOND */}
+      <Text style={styles.label}>
+        Event Date <Text style={styles.required}>*</Text>
+      </Text>
+
+      <View style={styles.dateRow}>
+        <View style={styles.dateBoxWide}>
+          <Text style={styles.dateText}>{formatDisplayDate(eventDate)}</Text>
+
+          <TouchableOpacity
+            onPress={() => {
+              Keyboard.dismiss();
+              setCalendarOpen(true);
+            }}
+            style={styles.calendarIconBtn}
+            accessibilityLabel="Pick date"
+          >
+            <Ionicons name="calendar-outline" size={18} color="#008080" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <Modal
+        visible={calendarOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCalendarOpen(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setCalendarOpen(false)}>
+          <Pressable style={styles.calendarModal} onPress={() => {}}>
+            <Calendar
+              current={eventDate}
+              enableSwipeMonths
+              markedDates={{
+                [eventDate]: { selected: true, selectedColor: '#4FB3B3' },
+              }}
+              onDayPress={(day) => {
+                setEventDate(day.dateString);
+                setCalendarOpen(false);
+              }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* EVENT TYPE THIRD */}
+      <Text style={styles.label}>
+        Event Type <Text style={styles.required}>*</Text>
+      </Text>
+
+      <View style={styles.chipRow}>
+        {eventTypes.map((type) => (
+          <TouchableOpacity
+            key={type}
+            style={[styles.chip, eventType === type && styles.chipSelected]}
+            onPress={() => setEventType(type)}
+          >
+            <Text style={[styles.chipText, eventType === type && styles.chipTextSelected]}>
+              {type}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* STATUS FOURTH */}
+      <Text style={styles.label}>
+        Status <Text style={styles.required}>*</Text>
+      </Text>
+
+      <View style={styles.chipRow}>
+        {['Confirmed', 'Provisional', 'Cancelled'].map((status) => {
+          const selected = eventStatus === status;
+          return (
+            <TouchableOpacity
+              key={status}
+              style={[styles.chip, selected && { backgroundColor: statusColors[status] }]}
+              onPress={() => setEventStatus(status)}
+            >
+              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{status}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* SAVE */}
+      <TouchableOpacity style={styles.saveButton} onPress={saveEvent}>
+        <Ionicons name="save-outline" size={20} color="#fff" />
+        <Text style={styles.saveButtonText}>Save Event</Text>
+      </TouchableOpacity>
+    </>
+  );
+
   return (
     <>
       <Stack.Screen
@@ -171,161 +320,25 @@ export default function AddEventScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        {Platform.OS === 'web' ? (
           <ScrollView
             contentContainerStyle={{ padding: 16, paddingBottom: 180 }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* VENUE FIRST */}
-            {/* VENUE FIRST */}
-<Text style={styles.label}>
-  Venue <Text style={styles.required}>*</Text>
-</Text>
-
-<View style={styles.searchRow}>
-  <Ionicons name="search-outline" size={18} color="#666" style={{ marginRight: 6 }} />
-  <TextInput
-    style={styles.searchInput}
-    placeholder="Search venue..."
-    value={venueSearch}
-    onChangeText={handleVenueSearch}
-  />
-  {venueSearch.length > 0 && (
-    <TouchableOpacity onPress={clearVenueSearch}>
-      <Ionicons name="close-circle" size={20} color="#999" />
-    </TouchableOpacity>
-  )}
-</View>
-
-{noMatch && (
-  <View style={{ marginTop: 10 }}>
-    <Text style={{ color: '#c62828', fontWeight: '600' }}>
-      No venues match "{venueSearch}"
-    </Text>
-
-    <TouchableOpacity style={styles.addVenueButton} onPress={() => router.push('/(modals)/add')}>
-      <Ionicons name="add-circle-outline" size={18} color="#fff" />
-      <Text style={styles.addVenueButtonText}>Add New Venue</Text>
-    </TouchableOpacity>
-  </View>
-)}
-
-{(venueSearch.length === 0 || venueResults.length > 0) && (
-  <View style={styles.venueList}>
-    <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-      {(venueSearch.length === 0 ? allVenues : venueResults).map((item) => (
-        <TouchableOpacity
-          key={item.venue_id}
-          style={styles.venueItem}
-          onPress={() => {
-            Keyboard.dismiss();
-            setSelectedVenue(item);
-            setVenueSearch(`${item.event_venue_name} (${item.city})`);
-            setNoMatch(false);
-          }}
-        >
-          <Text style={styles.venueName}>{item.event_venue_name}</Text>
-          <Text style={styles.venueCity}>{item.city}</Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  </View>
-)}
-
-            {/* DATE SECOND */}
-            <Text style={styles.label}>
-              Event Date <Text style={styles.required}>*</Text>
-            </Text>
-
-            <View style={styles.dateRow}>
-              <View style={styles.dateBoxWide}>
-                <Text style={styles.dateText}>{formatDisplayDate(eventDate)}</Text>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    setCalendarOpen(true);
-                  }}
-                  style={styles.calendarIconBtn}
-                  accessibilityLabel="Pick date"
-                >
-                  <Ionicons name="calendar-outline" size={18} color="#008080" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <Modal
-              visible={calendarOpen}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setCalendarOpen(false)}
-            >
-              <Pressable style={styles.modalBackdrop} onPress={() => setCalendarOpen(false)}>
-                <Pressable style={styles.calendarModal} onPress={() => {}}>
-                  <Calendar
-                    current={eventDate}
-                    enableSwipeMonths
-                    markedDates={{
-                      [eventDate]: { selected: true, selectedColor: '#4FB3B3' },
-                    }}
-                    onDayPress={(day) => {
-                      setEventDate(day.dateString);
-                      setCalendarOpen(false);
-                    }}
-                  />
-                </Pressable>
-              </Pressable>
-            </Modal>
-
-            {/* EVENT TYPE THIRD */}
-            <Text style={styles.label}>
-              Event Type <Text style={styles.required}>*</Text>
-            </Text>
-
-            <View style={styles.chipRow}>
-              {eventTypes.map(type => (
-                <TouchableOpacity
-                  key={type}
-                  style={[styles.chip, eventType === type && styles.chipSelected]}
-                  onPress={() => setEventType(type)}
-                >
-                  <Text style={[styles.chipText, eventType === type && styles.chipTextSelected]}>
-                    {type}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* STATUS FOURTH */}
-            <Text style={styles.label}>
-              Status <Text style={styles.required}>*</Text>
-            </Text>
-
-            <View style={styles.chipRow}>
-              {['Confirmed', 'Provisional', 'Cancelled'].map(status => {
-                const selected = eventStatus === status;
-                return (
-                  <TouchableOpacity
-                    key={status}
-                    style={[styles.chip, selected && { backgroundColor: statusColors[status] }]}
-                    onPress={() => setEventStatus(status)}
-                  >
-                    <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                      {status}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* SAVE */}
-            <TouchableOpacity style={styles.saveButton} onPress={saveEvent}>
-              <Ionicons name="save-outline" size={20} color="#fff" />
-              <Text style={styles.saveButtonText}>Save Event</Text>
-            </TouchableOpacity>
+            {FormContent}
           </ScrollView>
-        </TouchableWithoutFeedback>
+        ) : (
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <ScrollView
+              contentContainerStyle={{ padding: 16, paddingBottom: 180 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {FormContent}
+            </ScrollView>
+          </TouchableWithoutFeedback>
+        )}
       </KeyboardAvoidingView>
     </>
   );

@@ -1,20 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { createClient } from '@supabase/supabase-js';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Alert,
-  FlatList,
+  Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
+
+import { Calendar } from 'react-native-calendars';
 
 const supabase = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,
@@ -27,12 +31,33 @@ type VenueRow = {
   city: string;
 };
 
+function todayIsoDate() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatDisplayDate(isoDate: string) {
+  if (!isoDate) return 'Select date';
+  const d = new Date(`${isoDate}T00:00:00`);
+  return d
+    .toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+    .replace(',', '');
+}
+
 export default function AddEventScreen() {
   const router = useRouter();
 
   const [eventType, setEventType] = useState<string | null>(null);
-  const [eventDate, setEventDate] = useState('');
-  const [showPicker, setShowPicker] = useState(false);
+  const [eventDate, setEventDate] = useState<string>(todayIsoDate());
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [eventStatus, setEventStatus] = useState<string | null>(null);
 
   const [venueSearch, setVenueSearch] = useState('');
@@ -49,8 +74,11 @@ export default function AddEventScreen() {
     Cancelled: '#c62828',
   };
 
-  // ⭐ RETURN FROM ADD VENUE
-  const { newVenueName, newVenueCity } = useLocalSearchParams();
+  // RETURN FROM ADD VENUE
+  const { newVenueName, newVenueCity } = useLocalSearchParams<{
+    newVenueName?: string;
+    newVenueCity?: string;
+  }>();
 
   useEffect(() => {
     if (newVenueName && newVenueCity) {
@@ -66,12 +94,12 @@ export default function AddEventScreen() {
   async function loadVenues() {
     const { data } = await supabase
       .from('venues')
-      .select('*')
+      .select('venue_id,event_venue_name,city')
       .order('event_venue_name', { ascending: true });
 
     if (data) {
-      setAllVenues(data);
-      setVenueResults(data);
+      setAllVenues(data as VenueRow[]);
+      setVenueResults(data as VenueRow[]);
     }
   }
 
@@ -102,6 +130,8 @@ export default function AddEventScreen() {
   }
 
   async function saveEvent() {
+    Keyboard.dismiss();
+
     if (!selectedVenue) return Alert.alert('Missing Information', 'Choose a venue.');
     if (!eventDate) return Alert.alert('Missing Information', 'Choose a date.');
     if (!eventType) return Alert.alert('Missing Information', 'Select an event type.');
@@ -109,7 +139,7 @@ export default function AddEventScreen() {
 
     const payload = {
       event_type: eventType,
-      event_date: eventDate,
+      event_date: eventDate, // YYYY-MM-DD
       event_status: eventStatus,
       venue_id: selectedVenue.venue_id,
     };
@@ -117,30 +147,11 @@ export default function AddEventScreen() {
     const { error } = await supabase.from('events').insert(payload);
 
     if (error) {
-      Alert.alert('Error', 'Could not save event.');
+      Alert.alert('Error', `Could not save event.\n\n${error.message}`);
       return;
     }
 
     router.back();
-  }
-
-  function formatDisplayDate(value: string) {
-    if (!value) return '';
-    const d = new Date(value);
-    if (isNaN(d.getTime())) return value;
-    return d.toLocaleDateString();
-  }
-
-  function onNativeDateChange(event: any, selectedDate?: Date) {
-    if (event.type === 'dismissed') {
-      setShowPicker(false);
-      return;
-    }
-    if (selectedDate) {
-      const iso = selectedDate.toISOString().split('T')[0];
-      setEventDate(iso);
-    }
-    setShowPicker(false);
   }
 
   return (
@@ -158,183 +169,163 @@ export default function AddEventScreen() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <ScrollView
+            contentContainerStyle={{ padding: 16, paddingBottom: 180 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* VENUE FIRST */}
+            {/* VENUE FIRST */}
+<Text style={styles.label}>
+  Venue <Text style={styles.required}>*</Text>
+</Text>
 
-          {/* VENUE FIRST */}
-          <Text style={styles.label}>
-            Venue <Text style={styles.required}>*</Text>
-          </Text>
+<View style={styles.searchRow}>
+  <Ionicons name="search-outline" size={18} color="#666" style={{ marginRight: 6 }} />
+  <TextInput
+    style={styles.searchInput}
+    placeholder="Search venue..."
+    value={venueSearch}
+    onChangeText={handleVenueSearch}
+  />
+  {venueSearch.length > 0 && (
+    <TouchableOpacity onPress={clearVenueSearch}>
+      <Ionicons name="close-circle" size={20} color="#999" />
+    </TouchableOpacity>
+  )}
+</View>
 
-          <View style={styles.searchRow}>
-            <Ionicons name="search-outline" size={18} color="#666" style={{ marginRight: 6 }} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search venue..."
-              value={venueSearch}
-              onChangeText={handleVenueSearch}
-            />
-            {venueSearch.length > 0 && (
-              <TouchableOpacity onPress={clearVenueSearch}>
-                <Ionicons name="close-circle" size={20} color="#999" />
-              </TouchableOpacity>
-            )}
-          </View>
+{noMatch && (
+  <View style={{ marginTop: 10 }}>
+    <Text style={{ color: '#c62828', fontWeight: '600' }}>
+      No venues match "{venueSearch}"
+    </Text>
 
-          {noMatch && (
-            <View style={{ marginTop: 10 }}>
-              <Text style={{ color: '#c62828', fontWeight: '600' }}>
-                No venues match "{venueSearch}"
-              </Text>
+    <TouchableOpacity style={styles.addVenueButton} onPress={() => router.push('/(modals)/add')}>
+      <Ionicons name="add-circle-outline" size={18} color="#fff" />
+      <Text style={styles.addVenueButtonText}>Add New Venue</Text>
+    </TouchableOpacity>
+  </View>
+)}
 
-              <TouchableOpacity
-                style={styles.addVenueButton}
-                onPress={() => router.push('/(modals)/add')}
-              >
-                <Ionicons name="add-circle-outline" size={18} color="#fff" />
-                <Text style={styles.addVenueButtonText}>Add New Venue</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+{(venueSearch.length === 0 || venueResults.length > 0) && (
+  <View style={styles.venueList}>
+    <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+      {(venueSearch.length === 0 ? allVenues : venueResults).map((item) => (
+        <TouchableOpacity
+          key={item.venue_id}
+          style={styles.venueItem}
+          onPress={() => {
+            Keyboard.dismiss();
+            setSelectedVenue(item);
+            setVenueSearch(`${item.event_venue_name} (${item.city})`);
+            setNoMatch(false);
+          }}
+        >
+          <Text style={styles.venueName}>{item.event_venue_name}</Text>
+          <Text style={styles.venueCity}>{item.city}</Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  </View>
+)}
 
-          {venueSearch.length === 0 && (
-            <View style={styles.venueList}>
-              <FlatList
-                nestedScrollEnabled={true}
-                data={allVenues}
-                keyExtractor={item => item.venue_id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.venueItem}
-                    onPress={() => {
-                      setSelectedVenue(item);
-                      setVenueSearch(`${item.event_venue_name} (${item.city})`);
-                    }}
-                  >
-                    <Text style={styles.venueName}>{item.event_venue_name}</Text>
-                    <Text style={styles.venueCity}>{item.city}</Text>
-                  </TouchableOpacity>
-                )}
-              />
-            </View>
-          )}
+            {/* DATE SECOND */}
+            <Text style={styles.label}>
+              Event Date <Text style={styles.required}>*</Text>
+            </Text>
 
-          {venueSearch.length > 0 && venueResults.length > 0 && (
-            <View style={styles.venueList}>
-              <FlatList
-                nestedScrollEnabled={true}
-                data={venueResults}
-                keyExtractor={item => item.venue_id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.venueItem}
-                    onPress={() => {
-                      setSelectedVenue(item);
-                      setVenueSearch(`${item.event_venue_name} (${item.city})`);
-                    }}
-                  >
-                    <Text style={styles.venueName}>{item.event_venue_name}</Text>
-                    <Text style={styles.venueCity}>{item.city}</Text>
-                  </TouchableOpacity>
-                )}
-              />
-            </View>
-          )}
-
-          {/* DATE SECOND */}
-          <Text style={styles.label}>
-            Event Date <Text style={styles.required}>*</Text>
-          </Text>
-
-          {Platform.OS === 'web' ? (
             <View style={styles.dateRow}>
-              {/* @ts-ignore */}
-              <input
-                type="date"
-                value={eventDate}
-                onChange={(e: any) => setEventDate(e.target.value)}
-                style={{
-                  width: 150,
-                  padding: 10,
-                  fontSize: 16,
-                  borderRadius: 8,
-                  border: '1px solid #008080',
-                }}
-              />
-            </View>
-          ) : (
-            <View style={styles.dateRow}>
-              <TouchableOpacity
-                style={styles.dateBox}
-                onPress={() => setShowPicker(true)}
-              >
-                <Text style={{ fontSize: 16 }}>
-                  {eventDate ? formatDisplayDate(eventDate) : 'Select date'}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.dateBoxWide}>
+                <Text style={styles.dateText}>{formatDisplayDate(eventDate)}</Text>
 
-              {showPicker && (
-                <DateTimePicker
-                  value={eventDate ? new Date(eventDate) : new Date()}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
-                  onChange={onNativeDateChange}
-                />
-              )}
-            </View>
-          )}
-
-          {/* EVENT TYPE THIRD */}
-          <Text style={styles.label}>
-            Event Type <Text style={styles.required}>*</Text>
-          </Text>
-
-          <View style={styles.chipRow}>
-            {eventTypes.map(type => (
-              <TouchableOpacity
-                key={type}
-                style={[styles.chip, eventType === type && styles.chipSelected]}
-                onPress={() => setEventType(type)}
-              >
-                <Text style={[styles.chipText, eventType === type && styles.chipTextSelected]}>
-                  {type}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* STATUS FOURTH */}
-          <Text style={styles.label}>
-            Status <Text style={styles.required}>*</Text>
-          </Text>
-
-          <View style={styles.chipRow}>
-            {['Confirmed', 'Provisional', 'Cancelled'].map(status => {
-              const selected = eventStatus === status;
-              return (
                 <TouchableOpacity
-                  key={status}
-                  style={[
-                    styles.chip,
-                    selected && { backgroundColor: statusColors[status] },
-                  ]}
-                  onPress={() => setEventStatus(status)}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setCalendarOpen(true);
+                  }}
+                  style={styles.calendarIconBtn}
+                  accessibilityLabel="Pick date"
                 >
-                  <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                    {status}
+                  <Ionicons name="calendar-outline" size={18} color="#008080" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <Modal
+              visible={calendarOpen}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setCalendarOpen(false)}
+            >
+              <Pressable style={styles.modalBackdrop} onPress={() => setCalendarOpen(false)}>
+                <Pressable style={styles.calendarModal} onPress={() => {}}>
+                  <Calendar
+                    current={eventDate}
+                    enableSwipeMonths
+                    markedDates={{
+                      [eventDate]: { selected: true, selectedColor: '#4FB3B3' },
+                    }}
+                    onDayPress={(day) => {
+                      setEventDate(day.dateString);
+                      setCalendarOpen(false);
+                    }}
+                  />
+                </Pressable>
+              </Pressable>
+            </Modal>
+
+            {/* EVENT TYPE THIRD */}
+            <Text style={styles.label}>
+              Event Type <Text style={styles.required}>*</Text>
+            </Text>
+
+            <View style={styles.chipRow}>
+              {eventTypes.map(type => (
+                <TouchableOpacity
+                  key={type}
+                  style={[styles.chip, eventType === type && styles.chipSelected]}
+                  onPress={() => setEventType(type)}
+                >
+                  <Text style={[styles.chipText, eventType === type && styles.chipTextSelected]}>
+                    {type}
                   </Text>
                 </TouchableOpacity>
-              );
-            })}
-          </View>
+              ))}
+            </View>
 
-          {/* SAVE */}
-          <TouchableOpacity style={styles.saveButton} onPress={saveEvent}>
-            <Ionicons name="save-outline" size={20} color="#fff" />
-            <Text style={styles.saveButtonText}>Save Event</Text>
-          </TouchableOpacity>
+            {/* STATUS FOURTH */}
+            <Text style={styles.label}>
+              Status <Text style={styles.required}>*</Text>
+            </Text>
 
-        </ScrollView>
+            <View style={styles.chipRow}>
+              {['Confirmed', 'Provisional', 'Cancelled'].map(status => {
+                const selected = eventStatus === status;
+                return (
+                  <TouchableOpacity
+                    key={status}
+                    style={[styles.chip, selected && { backgroundColor: statusColors[status] }]}
+                    onPress={() => setEventStatus(status)}
+                  >
+                    <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                      {status}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* SAVE */}
+            <TouchableOpacity style={styles.saveButton} onPress={saveEvent}>
+              <Ionicons name="save-outline" size={20} color="#fff" />
+              <Text style={styles.saveButtonText}>Save Event</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </>
   );
@@ -387,14 +378,48 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  dateBox: {
-    width: 150,
+  dateBoxWide: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: 220,
     paddingVertical: 10,
     paddingHorizontal: 12,
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#008080',
     borderRadius: 8,
+  },
+
+  dateText: {
+    fontSize: 16,
+    color: '#111',
+    fontWeight: '600',
+  },
+
+  calendarIconBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#cfe8e8',
+    backgroundColor: '#f3fbfb',
+  },
+
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    padding: 16,
+  },
+
+  calendarModal: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 10,
+    overflow: 'hidden',
   },
 
   searchRow: {

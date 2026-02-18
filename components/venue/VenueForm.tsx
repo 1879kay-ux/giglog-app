@@ -1,12 +1,16 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import { Venue } from "../../types/venue";
 
@@ -40,149 +44,160 @@ export default function VenueForm({
 
   const validate = () => {
     const newErrors: any = {};
-
     if (!form.event_venue_name?.trim()) newErrors.event_venue_name = "Required";
     if (!form.city?.trim()) newErrors.city = "Required";
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = () => {
-    console.log("🟢 Save button pressed");
-
     if (!validate()) return;
 
     const finalVenue: Venue = {
       ...form,
-      venue_id: form.venue_id || Date.now().toString(),
+      // NOTE: Add Venue screen does NOT send venue_id to DB, so this is only used in edit flows if needed.
+      venue_id: form.venue_id || "",
       is_active: form.is_active ?? true,
       capacity: form.capacity ?? null,
     } as Venue;
-
-    console.log("📦 Final venue object:", finalVenue);
 
     onSubmit(finalVenue);
   };
 
   return (
-    <ScrollView
-  contentContainerStyle={[styles.container, { paddingBottom: 120 }]}
-  keyboardShouldPersistTaps="handled"
->
-      {/* VENUE NAME */}
-      <Text style={styles.label}>
-        Venue Name <Text style={styles.required}>*</Text>
-      </Text>
-      <TextInput
-        style={[styles.input, errors.event_venue_name && styles.inputError]}
-        value={form.event_venue_name}
-        onChangeText={(t) => update("event_venue_name", t)}
-      />
-      {errors.event_venue_name && (
-        <Text style={styles.errorText}>{errors.event_venue_name}</Text>
-      )}
-
-      {/* ADDRESS */}
-      <Text style={styles.label}>Address</Text>
-      <TextInput
-        style={styles.input}
-        value={form.address}
-        onChangeText={(t) => update("address", t)}
-      />
-
-      {/* CITY */}
-      <Text style={styles.label}>
-        City <Text style={styles.required}>*</Text>
-      </Text>
-      <TextInput
-        style={[styles.input, errors.city && styles.inputError]}
-        value={form.city}
-        onChangeText={(t) => update("city", t)}
-      />
-      {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
-
-      {/* POSTCODE */}
-      <Text style={styles.label}>Postcode</Text>
-      <TextInput
-        style={styles.input}
-        value={form.postcode}
-        onChangeText={(t) => update("postcode", t)}
-      />
-
-      {/* CONTACT NAME */}
-      <Text style={styles.label}>Contact Name</Text>
-      <TextInput
-        style={styles.input}
-        value={form.venue_contact_name}
-        onChangeText={(t) => update("venue_contact_name", t)}
-      />
-
-      {/* CONTACT PHONE */}
-      <Text style={styles.label}>Contact Phone</Text>
-      <TextInput
-        style={styles.input}
-        value={form.venue_contact_phone}
-        onChangeText={(t) => update("venue_contact_phone", t)}
-      />
-
-      {/* CONTACT EMAIL */}
-      <Text style={styles.label}>Contact Email</Text>
-      <TextInput
-        style={styles.input}
-        value={form.venue_contact_email}
-        onChangeText={(t) => update("venue_contact_email", t)}
-      />
-
-      {/* CAPACITY */}
-      <Text style={styles.label}>Capacity</Text>
-      <TextInput
-        style={styles.input}
-        keyboardType="numeric"
-        value={form.capacity?.toString() ?? ""}
-        onChangeText={(t) => update("capacity", t ? Number(t) : null)}
-      />
-
-      {/* CAPACITY NOTES */}
-      <Text style={styles.label}>Capacity Notes</Text>
-      <TextInput
-        style={[styles.input, styles.multiline]}
-        multiline
-        value={form.capacity_notes}
-        onChangeText={(t) => update("capacity_notes", t)}
-      />
-
-      {/* VENUE NOTES */}
-      <Text style={styles.label}>Venue Notes</Text>
-      <TextInput
-        style={[styles.input, styles.multiline]}
-        multiline
-        value={form.venue_notes}
-        onChangeText={(t) => update("venue_notes", t)}
-      />
-
-      {/* ACTIVE TOGGLE */}
-      <View style={styles.toggleRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.label}>Active</Text>
-          <Text style={styles.helperText}>
-            Toggle off if venue is closed or inactive
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <ScrollView
+          contentContainerStyle={[styles.container, { paddingBottom: 160 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* VENUE NAME */}
+          <Text style={styles.label}>
+            Venue Name <Text style={styles.required}>*</Text>
           </Text>
-        </View>
-        <Switch
-          value={form.is_active}
-          onValueChange={(v) => update("is_active", v)}
-        />
-      </View>
+          <TextInput
+            style={[styles.input, errors.event_venue_name && styles.inputError]}
+            value={form.event_venue_name}
+            onChangeText={(t) => update("event_venue_name", t)}
+            returnKeyType="next"
+          />
+          {errors.event_venue_name && (
+            <Text style={styles.errorText}>{errors.event_venue_name}</Text>
+          )}
 
-      {/* SAVE BUTTON */}
-      <TouchableOpacity
-        style={styles.saveButton}
-        onPress={handleSubmit}
-      >
-        <Text style={styles.saveButtonText}>Save Venue</Text>
-      </TouchableOpacity>
-    </ScrollView>
+          {/* ADDRESS */}
+          <Text style={styles.label}>Address</Text>
+          <TextInput
+            style={styles.input}
+            value={form.address ?? ""}
+            onChangeText={(t) => update("address", t)}
+            returnKeyType="next"
+          />
+
+          {/* CITY */}
+          <Text style={styles.label}>
+            City <Text style={styles.required}>*</Text>
+          </Text>
+          <TextInput
+            style={[styles.input, errors.city && styles.inputError]}
+            value={form.city ?? ""}
+            onChangeText={(t) => update("city", t)}
+            returnKeyType="next"
+          />
+          {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
+
+          {/* POSTCODE */}
+          <Text style={styles.label}>Postcode</Text>
+          <TextInput
+            style={styles.input}
+            value={form.postcode ?? ""}
+            onChangeText={(t) => update("postcode", t)}
+            returnKeyType="next"
+          />
+
+          {/* CONTACT NAME */}
+          <Text style={styles.label}>Contact Name</Text>
+          <TextInput
+            style={styles.input}
+            value={form.venue_contact_name ?? ""}
+            onChangeText={(t) => update("venue_contact_name", t)}
+            returnKeyType="next"
+          />
+
+          {/* CONTACT PHONE */}
+          <Text style={styles.label}>Contact Phone</Text>
+          <TextInput
+            style={styles.input}
+            value={form.venue_contact_phone ?? ""}
+            onChangeText={(t) => update("venue_contact_phone", t)}
+            returnKeyType="next"
+          />
+
+          {/* CONTACT EMAIL */}
+          <Text style={styles.label}>Contact Email</Text>
+          <TextInput
+            style={styles.input}
+            value={form.venue_contact_email ?? ""}
+            onChangeText={(t) => update("venue_contact_email", t)}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            returnKeyType="next"
+          />
+
+          {/* CAPACITY */}
+          <Text style={styles.label}>Capacity</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={form.capacity?.toString() ?? ""}
+            onChangeText={(t) => update("capacity", t ? Number(t) : null)}
+            returnKeyType="next"
+          />
+
+          {/* CAPACITY NOTES */}
+          <Text style={styles.label}>Capacity Notes</Text>
+          <TextInput
+            style={[styles.input, styles.multiline]}
+            multiline
+            value={form.capacity_notes ?? ""}
+            onChangeText={(t) => update("capacity_notes", t)}
+          />
+
+          {/* VENUE NOTES */}
+          <Text style={styles.label}>Venue Notes</Text>
+          <TextInput
+            style={[styles.input, styles.multiline]}
+            multiline
+            value={form.venue_notes ?? ""}
+            onChangeText={(t) => update("venue_notes", t)}
+          />
+
+          {/* ACTIVE TOGGLE */}
+          <View style={styles.toggleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Active</Text>
+              <Text style={styles.helperText}>
+                Toggle off if venue is closed or inactive
+              </Text>
+            </View>
+            <Switch
+              value={!!form.is_active}
+              onValueChange={(v) => update("is_active", v)}
+            />
+          </View>
+
+          {/* SAVE BUTTON */}
+          <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
+            <Text style={styles.saveButtonText}>Save Venue</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -190,11 +205,13 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     gap: 12,
+    backgroundColor: "#f5f5f5",
   },
   label: {
     fontWeight: "600",
     marginBottom: 4,
     fontSize: 14,
+    color: "#111",
   },
   required: {
     color: "red",
@@ -202,9 +219,9 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: "#fff",
     padding: 10,
-    borderRadius: 6,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#ddd",
   },
   inputError: {
     borderColor: "red",
@@ -224,6 +241,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 12,
     marginBottom: 12,
+    gap: 12,
   },
   helperText: {
     fontSize: 12,
@@ -233,8 +251,8 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: "#4FB3B3",
     padding: 16,
-    borderRadius: 8,
-    marginTop: 20,
+    borderRadius: 12,
+    marginTop: 10,
   },
   saveButtonText: {
     color: "white",

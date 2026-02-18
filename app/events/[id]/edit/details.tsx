@@ -5,11 +5,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
@@ -225,7 +229,7 @@ export default function EditEventDetailsScreen() {
     const { error } = await supabase
       .from('events')
       .update({
-        event_date: eventDate, // <-- date picker value
+        event_date: eventDate,
         event_type: eventType,
         event_status: eventStatus,
         promoter_contact_name: promoterName.trim() || null,
@@ -254,136 +258,150 @@ export default function EditEventDetailsScreen() {
     );
   }
 
-  // Fallback if eventDate not set for some reason
   const safeDate = eventDate || event.event_date;
 
   return (
     <>
       <Stack.Screen options={{ title: 'Edit Details' }} />
 
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* Context header block so you always know what event you are editing */}
-        <View style={styles.summary}>
-          <Text style={styles.summaryDate}>{formatEventDate(safeDate)}</Text>
-          <Text style={styles.summaryVenue}>
-            {venue?.event_venue_name ?? 'Venue'}
-            {venue?.city ? `, ${venue.city}` : ''}
-          </Text>
-          <Text style={styles.summaryMeta}>
-            {(eventType ?? event.event_type ?? 'Event')}
-            {eventStatus ? `, ${eventStatus}` : event.event_status ? `, ${event.event_status}` : ''}
-          </Text>
-        </View>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <ScrollView
+            contentContainerStyle={[styles.container, { paddingBottom: 180 }]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Context header block */}
+            <View style={styles.summary}>
+              <Text style={styles.summaryDate}>{formatEventDate(safeDate)}</Text>
+              <Text style={styles.summaryVenue}>
+                {venue?.event_venue_name ?? 'Venue'}
+                {venue?.city ? `, ${venue.city}` : ''}
+              </Text>
+              <Text style={styles.summaryMeta}>
+                {(eventType ?? event.event_type ?? 'Event')}
+                {eventStatus
+                  ? `, ${eventStatus}`
+                  : event.event_status
+                    ? `, ${event.event_status}`
+                    : ''}
+              </Text>
+            </View>
 
-        {/* EVENT OVERVIEW */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Event Overview</Text>
+            {/* EVENT OVERVIEW */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Event Overview</Text>
 
-          {/* DATE ROW (tap calendar icon to open month picker) */}
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Date</Text>
+              {/* DATE ROW */}
+              <View style={styles.row}>
+                <Text style={styles.rowLabel}>Date</Text>
 
-            <TouchableOpacity
-              style={styles.dateValueWrap}
-              onPress={() => setShowCalendar(v => !v)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.rowValue}>{formatEventDate(safeDate)}</Text>
-              <Ionicons name="calendar-outline" size={18} color="#008080" />
-            </TouchableOpacity>
-          </View>
+                <TouchableOpacity
+                  style={styles.dateValueWrap}
+                  onPress={() => setShowCalendar(v => !v)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.rowValue}>{formatEventDate(safeDate)}</Text>
+                  <Ionicons name="calendar-outline" size={18} color="#008080" />
+                </TouchableOpacity>
+              </View>
 
-          {showCalendar && (
-            <View style={styles.calendarWrap}>
-              <Calendar
-                current={safeDate}
-                enableSwipeMonths
-                markedDates={{
-                  [safeDate]: { selected: true, selectedColor: '#4FB3B3' },
-                }}
-                onDayPress={(day) => {
-                  setEventDate(day.dateString); // YYYY-MM-DD
-                  setShowCalendar(false);
-                }}
+              {showCalendar && (
+                <View style={styles.calendarWrap}>
+                  <Calendar
+                    current={safeDate}
+                    enableSwipeMonths
+                    markedDates={{
+                      [safeDate]: { selected: true, selectedColor: '#4FB3B3' },
+                    }}
+                    onDayPress={(day) => {
+                      setEventDate(day.dateString);
+                      setShowCalendar(false);
+                    }}
+                  />
+                </View>
+              )}
+
+              <ChipGroup
+                label="Event Type"
+                value={eventType}
+                options={typeOptions}
+                onChange={setEventType}
+              />
+
+              <ChipGroup
+                label="Status"
+                value={eventStatus}
+                options={statusOptions}
+                onChange={setEventStatus}
               />
             </View>
-          )}
 
-          
-          <ChipGroup
-            label="Event Type"
-            value={eventType}
-            options={typeOptions}
-            onChange={setEventType}
-          />
+            {/* VENUE DETAILS */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Venue Details</Text>
+              <InfoRow label="Venue Name" value={venue?.event_venue_name ?? null} />
+              <InfoRow label="Address" value={venue?.address ?? null} />
+              <InfoRow label="Postcode" value={venue?.postcode ?? null} />
+              <InfoRow label="Contact Name" value={venue?.venue_contact_name ?? null} />
+              <InfoRow label="Contact Phone" value={venue?.venue_contact_phone ?? null} />
+              <InfoRow label="Contact Email" value={venue?.venue_contact_email ?? null} />
+              <InfoRow label="Capacity" value={venue?.capacity != null ? String(venue.capacity) : null} />
+              <InfoRow label="Venue Notes" value={venue?.venue_notes ?? null} />
 
-          <ChipGroup
-            label="Status"
-            value={eventStatus}
-            options={statusOptions}
-            onChange={setEventStatus}
-          />
-        </View>
+              <Text style={styles.helper}>
+                If you need to change venue details, edit the venue record.
+              </Text>
 
-        {/* VENUE DETAILS (read-only, with edit venue jump) */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Venue Details</Text>
-          <InfoRow label="Venue Name" value={venue?.event_venue_name ?? null} />
-          <InfoRow label="Address" value={venue?.address ?? null} />
-          <InfoRow label="Postcode" value={venue?.postcode ?? null} />
-          <InfoRow label="Contact Name" value={venue?.venue_contact_name ?? null} />
-          <InfoRow label="Contact Phone" value={venue?.venue_contact_phone ?? null} />
-          <InfoRow label="Contact Email" value={venue?.venue_contact_email ?? null} />
-          <InfoRow label="Capacity" value={venue?.capacity != null ? String(venue.capacity) : null} />
-          <InfoRow label="Venue Notes" value={venue?.venue_notes ?? null} />
+              {!!event.venue_id && (
+                <TouchableOpacity
+                  style={styles.secondaryButton}
+                  onPress={() => router.push(`/venue/${event.venue_id}/edit`)}
+                >
+                  <Ionicons name="create-outline" size={18} color="#fff" />
+                  <Text style={styles.secondaryButtonText}>Edit Venue</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
-          <Text style={styles.helper}>
-            If you need to change venue details, edit the venue record.
-          </Text>
+            {/* PROMOTER CONTACT */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Promoter Contact</Text>
 
-          {!!event.venue_id && (
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={() => router.push(`/venue/${event.venue_id}/edit`)}
-            >
-              <Ionicons name="create-outline" size={18} color="#fff" />
-              <Text style={styles.secondaryButtonText}>Edit Venue</Text>
+              <Text style={styles.inputLabel}>Name</Text>
+              <TextInput style={styles.input} value={promoterName} onChangeText={setPromoterName} />
+
+              <Text style={styles.inputLabel}>Phone</Text>
+              <TextInput style={styles.input} value={promoterPhone} onChangeText={setPromoterPhone} />
+
+              <Text style={styles.inputLabel}>Email</Text>
+              <TextInput style={styles.input} value={promoterEmail} onChangeText={setPromoterEmail} />
+            </View>
+
+            {/* NOTES */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Notes</Text>
+              <TextInput
+                style={[styles.input, styles.multiline]}
+                multiline
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Add any notes for this event..."
+                placeholderTextColor="#999"
+              />
+            </View>
+
+            {/* SAVE */}
+            <TouchableOpacity style={styles.saveButton} onPress={onSave} disabled={saving}>
+              <Text style={styles.saveButtonText}>{saving ? 'Saving…' : 'Save'}</Text>
             </TouchableOpacity>
-          )}
-        </View>
-
-        {/* PROMOTER CONTACT (editable) */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Promoter Contact</Text>
-
-          <Text style={styles.inputLabel}>Name</Text>
-          <TextInput style={styles.input} value={promoterName} onChangeText={setPromoterName} />
-
-          <Text style={styles.inputLabel}>Phone</Text>
-          <TextInput style={styles.input} value={promoterPhone} onChangeText={setPromoterPhone} />
-
-          <Text style={styles.inputLabel}>Email</Text>
-          <TextInput style={styles.input} value={promoterEmail} onChangeText={setPromoterEmail} />
-        </View>
-
-        {/* NOTES (editable) */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Notes</Text>
-          <TextInput
-            style={[styles.input, styles.multiline]}
-            multiline
-            value={notes}
-            onChangeText={setNotes}
-            placeholder="Add any notes for this event..."
-            placeholderTextColor="#999"
-          />
-        </View>
-
-        {/* SAVE */}
-        <TouchableOpacity style={styles.saveButton} onPress={onSave} disabled={saving}>
-          <Text style={styles.saveButtonText}>{saving ? 'Saving…' : 'Save'}</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </>
   );
 }
@@ -398,7 +416,6 @@ const styles = StyleSheet.create({
 
   container: {
     padding: 16,
-    paddingBottom: 28,
     backgroundColor: '#f5f5f5',
   },
 

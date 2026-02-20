@@ -14,6 +14,7 @@ import {
   LayoutAnimation,
   Linking,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -79,7 +80,7 @@ type EventRow = {
 
   travel_venue: string | null;
   loadin_time: string | null;
-  soundcheck_time: string | null;
+  soundcheck: string | null;
   doors: string | null;
   onstage: string | null;
   offstage: string | null;
@@ -110,7 +111,6 @@ type EventRow = {
   venue_id: string | null;
   venues: VenueRow[] | null;
 };
-
 
 /* ---------------------------------------------------------
    SECTION KEYS
@@ -284,8 +284,8 @@ export default function EventDetailsScreen() {
       app === 'apple'
         ? `http://maps.apple.com/?daddr=${d}&dirflg=d`
         : app === 'google'
-        ? `https://www.google.com/maps/dir/?api=1&destination=${d}&travelmode=driving`
-        : `https://waze.com/ul?q=${d}&navigate=yes`;
+          ? `https://www.google.com/maps/dir/?api=1&destination=${d}&travelmode=driving`
+          : `https://waze.com/ul?q=${d}&navigate=yes`;
 
     openUrl(url);
   }
@@ -307,8 +307,8 @@ export default function EventDetailsScreen() {
       app === 'apple'
         ? `http://maps.apple.com/?saddr=${o}&daddr=${d}&dirflg=d`
         : app === 'google'
-        ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`
-        : `https://waze.com/ul?q=${d}&navigate=yes`;
+          ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`
+          : `https://waze.com/ul?q=${d}&navigate=yes`;
 
     openUrl(url);
   }
@@ -404,7 +404,7 @@ export default function EventDetailsScreen() {
               eventId={event.event_id}
               travelVenue={event.travel_venue}
               loadinTime={event.loadin_time}
-              soundcheckTime={event.soundcheck_time}
+              soundcheck={event.soundcheck}
               doors={event.doors}
               onstage={event.onstage}
               offstage={event.offstage}
@@ -430,23 +430,22 @@ export default function EventDetailsScreen() {
             />
           </Section>
 
-{/* TRAVEL */}
-<Section
-  title="Travel"
-  icon="navigate-outline"
-  open={openSections.travel}
-  onPress={() => toggleSection('travel')}
->
-  <TravelSection
-    eventId={event.event_id}
-    venueAddress={venue?.address}
-    venueCity={venue?.city}
-    venuePostcode={venue?.postcode}
-    departureAddress={event.departure_address}
-    departurePostcode={event.departure_postcode}
-  />
-</Section>
-
+          {/* TRAVEL */}
+          <Section
+            title="Travel"
+            icon="navigate-outline"
+            open={openSections.travel}
+            onPress={() => toggleSection('travel')}
+          >
+            <TravelSection
+              eventId={event.event_id}
+              venueAddress={venue?.address}
+              venueCity={venue?.city}
+              venuePostcode={venue?.postcode}
+              departureAddress={event.departure_address}
+              departurePostcode={event.departure_postcode}
+            />
+          </Section>
 
           {/* FINANCE */}
           <Section
@@ -490,14 +489,18 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <View style={styles.sectionWrapper}>
-      <TouchableOpacity style={styles.sectionHeader} onPress={onPress}>
-        <View style={styles.sectionHeaderLeft}>
+    <View style={styles.sectionWrapper} pointerEvents="box-none">
+      <Pressable
+        style={styles.sectionHeader}
+        onPress={onPress}
+        accessibilityRole="button"
+      >
+        <View style={styles.sectionHeaderLeft} pointerEvents="none">
           <Ionicons name={icon} size={18} color="#fff" />
           <Text style={styles.sectionHeaderText}>{title}</Text>
         </View>
         <Text style={styles.sectionHeaderChevron}>{open ? '▾' : '▸'}</Text>
-      </TouchableOpacity>
+      </Pressable>
 
       {open && <View style={styles.sectionContent}>{children}</View>}
     </View>

@@ -1,7 +1,8 @@
+// app/events/add.tsx
+
 import { Ionicons } from '@expo/vector-icons';
-import { createClient } from '@supabase/supabase-js';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Keyboard,
@@ -18,12 +19,8 @@ import {
   View,
 } from 'react-native';
 
+import { supabase } from '@/lib/supabase';
 import { Calendar } from 'react-native-calendars';
-
-const supabase = createClient(
-  process.env.EXPO_PUBLIC_SUPABASE_URL!,
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 type VenueRow = {
   venue_id: string;
@@ -84,6 +81,7 @@ export default function AddEventScreen() {
     if (newVenueName && newVenueCity) {
       const formatted = `${newVenueName} (${newVenueCity})`;
       setVenueSearch(formatted);
+      // optional: you could auto-select the new venue here if you pass back venue_id too
     }
   }, [newVenueName, newVenueCity]);
 
@@ -92,10 +90,15 @@ export default function AddEventScreen() {
   }, []);
 
   async function loadVenues() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('venues')
       .select('venue_id,event_venue_name,city')
       .order('event_venue_name', { ascending: true });
+
+    if (error) {
+      Alert.alert('Error', `Could not load venues.\n\n${error.message}`);
+      return;
+    }
 
     if (data) {
       setAllVenues(data as VenueRow[]);
@@ -111,6 +114,7 @@ export default function AddEventScreen() {
     if (q === '') {
       setVenueResults(allVenues);
       setNoMatch(false);
+      setSelectedVenue(null);
       return;
     }
 
@@ -120,6 +124,9 @@ export default function AddEventScreen() {
 
     setVenueResults(filtered);
     setNoMatch(filtered.length === 0);
+
+    // if user starts typing again, assume they’re changing selection
+    setSelectedVenue(null);
   }
 
   function clearVenueSearch() {
@@ -154,8 +161,12 @@ export default function AddEventScreen() {
     router.back();
   }
 
-  const FormContent = (
-    <>
+  const content = (
+    <ScrollView
+      contentContainerStyle={{ padding: 16, paddingBottom: 180 }}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       {/* VENUE FIRST */}
       <Text style={styles.label}>
         Venue <Text style={styles.required}>*</Text>
@@ -168,6 +179,8 @@ export default function AddEventScreen() {
           placeholder="Search venue..."
           value={venueSearch}
           onChangeText={handleVenueSearch}
+          autoCorrect={false}
+          autoCapitalize="none"
         />
         {venueSearch.length > 0 && (
           <TouchableOpacity onPress={clearVenueSearch}>
@@ -300,7 +313,7 @@ export default function AddEventScreen() {
         <Ionicons name="save-outline" size={20} color="#fff" />
         <Text style={styles.saveButtonText}>Save Event</Text>
       </TouchableOpacity>
-    </>
+    </ScrollView>
   );
 
   return (
@@ -320,23 +333,12 @@ export default function AddEventScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
+        {/* On web, TouchableWithoutFeedback can block TextInput focus */}
         {Platform.OS === 'web' ? (
-          <ScrollView
-            contentContainerStyle={{ padding: 16, paddingBottom: 180 }}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {FormContent}
-          </ScrollView>
+          content
         ) : (
           <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <ScrollView
-              contentContainerStyle={{ padding: 16, paddingBottom: 180 }}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              {FormContent}
-            </ScrollView>
+            {content}
           </TouchableWithoutFeedback>
         )}
       </KeyboardAvoidingView>

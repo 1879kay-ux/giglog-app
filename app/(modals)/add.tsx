@@ -3,7 +3,6 @@
 // Custom header is rendered inside the component; default header is hidden via _layout.tsx.
 
 import { Ionicons } from '@expo/vector-icons';
-import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -21,10 +20,7 @@ export const unstable_settings = {
   initialRouteName: 'add',
 };
 
-const supabase = createClient(
-  process.env.EXPO_PUBLIC_SUPABASE_URL!,
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { supabase } from '@/lib/supabase';
 
 export default function AddVenueModal() {
   const router = useRouter();

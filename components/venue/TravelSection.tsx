@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
   eventId: string;
@@ -47,7 +47,16 @@ export default function TravelSection({
   const goEditEvent = () => router.push(`/events/${eventId}/edit/travel`);
   const goDefaults = () => router.push('/settings/travel');
 
+  const [showWebPicker, setShowWebPicker] = useState(false);
+
   const onPressPencil = () => {
+    // Web: use an in-app modal (Alert.alert buttons are unreliable on web)
+    if (Platform.OS === 'web') {
+      setShowWebPicker(true);
+      return;
+    }
+
+    // Native: nice 3-button alert
     Alert.alert(
       'Departure location',
       'What do you want to change?',
@@ -226,6 +235,43 @@ export default function TravelSection({
           {venueCity ?? ''} {venuePostcode ?? ''}
         </Text>
       </View>
+
+      {/* WEB PICKER MODAL */}
+      {Platform.OS === 'web' && showWebPicker ? (
+        <View style={styles.webModalOverlay} pointerEvents="auto">
+          <View style={styles.webModalCard}>
+            <Text style={styles.webModalTitle}>Departure location</Text>
+            <Text style={styles.webModalText}>What do you want to change?</Text>
+
+            <Pressable
+              style={styles.webModalBtn}
+              onPress={() => {
+                setShowWebPicker(false);
+                goDefaults();
+              }}
+            >
+              <Text style={styles.webModalBtnText}>Default for all events</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.webModalBtn}
+              onPress={() => {
+                setShowWebPicker(false);
+                goEditEvent();
+              }}
+            >
+              <Text style={styles.webModalBtnText}>This event only</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.webModalBtn, styles.webModalBtnCancel]}
+              onPress={() => setShowWebPicker(false)}
+            >
+              <Text style={styles.webModalBtnText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -241,6 +287,7 @@ function Chip({ label, onPress }: { label: string; onPress: () => void }) {
 const styles = StyleSheet.create({
   wrap: {
     paddingVertical: 4,
+    position: 'relative',
   },
 
   blockHeader: {
@@ -324,5 +371,59 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 13,
     color: '#555',
+  },
+
+  // Web modal (3 options)
+  webModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+    zIndex: 9999,
+  },
+
+  webModalCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+  },
+
+  webModalTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#111',
+    marginBottom: 6,
+  },
+
+  webModalText: {
+    fontSize: 13,
+    color: '#444',
+    marginBottom: 12,
+  },
+
+  webModalBtn: {
+    backgroundColor: '#E9F6F6',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginTop: 8,
+  },
+
+  webModalBtnCancel: {
+    backgroundColor: '#f2f2f2',
+  },
+
+  webModalBtnText: {
+    color: '#008080',
+    fontSize: 13,
+    fontWeight: '800',
+    textAlign: 'center',
   },
 });

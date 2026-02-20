@@ -1,7 +1,18 @@
 import { supabase } from '@/lib/supabase';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 type ProfileRow = {
   id: string;
@@ -9,8 +20,8 @@ type ProfileRow = {
   default_departure_postcode: string | null;
 };
 
-function clean(v: string) {
-  const t = v.trim();
+function clean(v?: string | null) {
+  const t = (v ?? '').trim();
   return t.length ? t : null;
 }
 
@@ -69,11 +80,11 @@ export default function TravelDefaultsScreen() {
       return;
     }
 
+    // Only write the columns we KNOW exist
     const payload = {
       id: userId,
       default_departure_address: clean(address),
       default_departure_postcode: clean(postcode),
-      updated_at: new Date().toISOString(),
     };
 
     // Upsert so it works even if the profile row doesn’t exist yet
@@ -93,33 +104,51 @@ export default function TravelDefaultsScreen() {
     <>
       <Stack.Screen options={{ title: 'Travel Defaults' }} />
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.card}>
             <Text style={styles.title}>Default departure location</Text>
-            <Text style={styles.sub}>Used for all events unless you override it on a specific event.</Text>
+            <Text style={styles.sub}>
+              Used for all events unless you override it on a specific event.
+            </Text>
 
-            <Text style={styles.label}>Departure address</Text>
-            <TextInput
-              style={styles.input}
-              value={address}
-              onChangeText={setAddress}
-              placeholder="e.g. Rehearsal Room, 12 High St"
-              placeholderTextColor="#999"
-            />
+            {loading ? (
+              <View style={styles.loadingRow}>
+                <ActivityIndicator />
+                <Text style={styles.loadingText}>Loading…</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.label}>Departure address</Text>
+                <TextInput
+                  style={styles.input}
+                  value={address}
+                  onChangeText={setAddress}
+                  placeholder="e.g. Rehearsal Room, 12 High St"
+                  placeholderTextColor="#999"
+                />
 
-            <Text style={styles.label}>Departure postcode</Text>
-            <TextInput
-              style={styles.input}
-              value={postcode}
-              onChangeText={setPostcode}
-              placeholder="e.g. NE1 1AA"
-              placeholderTextColor="#999"
-              autoCapitalize="characters"
-            />
+                <Text style={styles.label}>Departure postcode</Text>
+                <TextInput
+                  style={styles.input}
+                  value={postcode}
+                  onChangeText={setPostcode}
+                  placeholder="e.g. NE1 1AA"
+                  placeholderTextColor="#999"
+                  autoCapitalize="characters"
+                />
+              </>
+            )}
           </View>
 
-          <TouchableOpacity style={styles.saveBtn} onPress={onSave} disabled={saving || loading}>
+          <TouchableOpacity
+            style={[styles.saveBtn, (saving || loading) && styles.saveBtnDisabled]}
+            onPress={onSave}
+            disabled={saving || loading}
+          >
             <Text style={styles.saveText}>{saving ? 'Saving…' : 'Save defaults'}</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -130,9 +159,19 @@ export default function TravelDefaultsScreen() {
 
 const styles = StyleSheet.create({
   container: { padding: 16, paddingBottom: 28, backgroundColor: '#f5f5f5' },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#e6e6e6' },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e6e6e6',
+  },
   title: { fontSize: 16, fontWeight: '900', color: '#111' },
   sub: { marginTop: 6, fontSize: 12, color: '#666', lineHeight: 16 },
+
+  loadingRow: { marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  loadingText: { fontSize: 12, color: '#666', fontWeight: '700' },
+
   label: { marginTop: 14, fontSize: 12, fontWeight: '900', color: '#444' },
   input: {
     marginTop: 6,
@@ -145,6 +184,13 @@ const styles = StyleSheet.create({
     color: '#111',
     backgroundColor: '#fff',
   },
-  saveBtn: { marginTop: 12, backgroundColor: '#4FB3B3', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  saveBtn: {
+    marginTop: 12,
+    backgroundColor: '#4FB3B3',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  saveBtnDisabled: { opacity: 0.6 },
   saveText: { color: '#fff', fontSize: 16, fontWeight: '900' },
 });

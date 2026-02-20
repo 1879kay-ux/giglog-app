@@ -40,9 +40,25 @@ export default function TravelSection({
   departurePostcode,
 }: Props) {
   const router = useRouter();
-  const goEdit = () => router.push(`/events/${eventId}/edit/travel`);
+
+  // Where the pencil should take you:
+  // - Default for all events: /settings/travel
+  // - This event only: /events/[id]/edit/travel
+  const goEditEvent = () => router.push(`/events/${eventId}/edit/travel`);
   const goDefaults = () => router.push('/settings/travel');
 
+  const onPressPencil = () => {
+    Alert.alert(
+      'Departure location',
+      'What do you want to change?',
+      [
+        { text: 'Default for all events', onPress: goDefaults },
+        { text: 'This event only', onPress: goEditEvent },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+      { cancelable: true }
+    );
+  };
 
   const [profile, setProfile] = useState<ProfileRow | null>(null);
 
@@ -84,8 +100,11 @@ export default function TravelSection({
   }, [venueAddress, venueCity, venuePostcode]);
 
   // effective departure = event override first, otherwise profile default
-  const effectiveDepartureAddress = clean(departureAddress) ?? clean(profile?.default_departure_address) ?? null;
-  const effectiveDeparturePostcode = clean(departurePostcode) ?? clean(profile?.default_departure_postcode) ?? null;
+  const effectiveDepartureAddress =
+    clean(departureAddress) ?? clean(profile?.default_departure_address) ?? null;
+
+  const effectiveDeparturePostcode =
+    clean(departurePostcode) ?? clean(profile?.default_departure_postcode) ?? null;
 
   const departureOrigin = useMemo(() => {
     return (
@@ -161,7 +180,7 @@ export default function TravelSection({
         <View style={styles.blockHeader}>
           <Text style={styles.travelLabel}>Departure Location → Venue</Text>
 
-          <Pressable onPress={goEdit} hitSlop={10} style={styles.headerBtn}>
+          <Pressable onPress={onPressPencil} hitSlop={10} style={styles.headerBtn}>
             <Ionicons name="create-outline" size={18} color="#008080" />
           </Pressable>
         </View>
@@ -175,12 +194,12 @@ export default function TravelSection({
         <View style={styles.locationBox}>
           <View style={styles.locationHeaderRow}>
             <Text style={styles.locationTitle}>Departure Location</Text>
-            {showingProfileDefault ? (
-  <Pressable onPress={goDefaults} style={styles.badge}>
-    <Text style={styles.badgeText}>Default</Text>
-  </Pressable>
-) : null}
 
+            {showingProfileDefault ? (
+              <Pressable onPress={goDefaults} style={styles.badge} hitSlop={8}>
+                <Text style={styles.badgeText}>Default</Text>
+              </Pressable>
+            ) : null}
           </View>
 
           <Text style={styles.locationText}>{effectiveDepartureAddress ?? 'Not set'}</Text>

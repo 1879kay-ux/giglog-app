@@ -1,223 +1,379 @@
-import InfoCard from '@/components/InfoCard';
-import { supabase } from '@/lib/supabase';
-import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import InfoCard from "@/components/InfoCard";
+import { supabase } from "@/lib/supabase";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
+} from "react-native";
 
-type AvailabilitySectionProps = {
-  initialStatus?: string | null;
+type AvailabilityLabel = "awaiting" | "available" | "provisional" | "unavailable";
+type MemberType = "musician" | "crew";
+
+type AvailabilityRow = {
+  event_id: string;
+  event_date: string;
+
+  member_id: string;
+  display_name: string | null;
+  email: string | null;
+
+  member_type: MemberType | null;
+  band_role: string | null;
+  band_role_other: string | null;
+  band_positions: string[] | null;
+  band_positions_other: string[] | null;
+
+  availability_status: "available" | "provisional" | "unavailable" | null;
+  availability_label: AvailabilityLabel;
+};
+
+type Props = {
   eventId: string;
 };
 
-type BandAvailabilityRow = {
-  member_id: string;
-  display_name: string | null;
-  band_positions: string[] | null;
-  status: 'unknown' | 'available' | 'provisional' | 'unavailable' | string;
-  responded_at: string | null;
-};
+export default function AvailabilitySection({ eventId }: Props) {
+  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<AvailabilityRow[]>([]);
+  const [saving, setSaving] = useState(false);
 
-export default function AvailabilitySection({ initialStatus, eventId }: AvailabilitySectionProps) {
-  const [userStatus, setUserStatus] = useState<'available' | 'provisional' | 'unavailable'>(
-    (initialStatus as 'available' | 'provisional' | 'unavailable') || 'available'
-  );
+  // Temporary test harness until auth is wired
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
-  const [bandAvailability, setBandAvailability] = useState<BandAvailabilityRow[]>([]);
-  const [loadingBand, setLoadingBand] = useState(false);
+  async function load() {
+    if (!eventId) return;
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("v_event_availability")
+      .select("*")
+      .eq("event_id", eventId)
+      .order("display_name", { ascending: true });
+
+    if (error) {
+      console.log("availability view error", error);
+      Alert.alert("Error", error.message);
+      setRows([]);
+      setLoading(false);
+      return;
+    }
+
+    const list = (data as AvailabilityRow[]) ?? [];
+    setRows(list);
+
+    if (!selectedMemberId) {
+      const firstMusician = list.find((r) => r.member_type === "musician");
+      setSelectedMemberId(firstMusician?.member_id ?? list[0]?.member_id ?? null);
+    }
+
+    setLoading(false);
+  }
 
   useEffect(() => {
-    if (!eventId) return;
-
-    const loadAvailability = async () => {
-      setLoadingBand(true);
-
-      const { data, error } = await supabase
-        .from('v_event_availability')
-        .select('member_id, display_name, band_positions, status, responded_at')
-        .eq('event_id', eventId)
-        .order('display_name', { ascending: true });
-
-      if (error) {
-        console.log('loadAvailability error', error);
-        setLoadingBand(false);
-        return;
-      }
-
-      setBandAvailability((data as BandAvailabilityRow[]) ?? []);
-      setLoadingBand(false);
-    };
-
-    loadAvailability();
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
-  const getChipStyle = (status: 'available' | 'provisional' | 'unavailable') => {
-    const isSelected = userStatus === status;
-    if (isSelected) {
-      switch (status) {
-        case 'available':
-          return { backgroundColor: '#4caf50' };
-        case 'provisional':
-          return { backgroundColor: '#ff9800' };
-        case 'unavailable':
-          return { backgroundColor: '#f44336' };
+  const musicians = useMemo(
+    () => rows.filter((r) => (r.member_type ?? "musician") === "musician"),
+    [rows]
+  );
+
+  const crew = useMemo(() => rows.filter((r) => (r.member_type ?? "crew") === "crew"), [rows]);
+
+  const selectedRow = useMemo(
+    () => rows.find((r) => r.member_id === selectedMemberId) ?? null,
+    [rows, selectedMemberId]
+  );
+
+  const selectedLabel: AvailabilityLabel = selectedRow?.availability_label ?? "awaiting";
+
+  const counts = useMemo(() => {
+    const base = { awaiting: 0, available: 0, provisional: 0, unavailable: 0 };
+    for (const r of musicians) base[r.availability_label] += 1;
+    return base;
+  }, [musicians]);
+
+  const roleDisplay = (r: AvailabilityRow) => {
+    if ((r.band_role ?? "") === "Other") return r.band_role_other ?? "Other";
+    return r.band_role ?? "";
+  };
+
+  const instrumentsDisplay = (r: AvailabilityRow) => {
+    const preset = r.band_positions ?? [];
+    const custom = r.band_positions_other ?? [];
+    const all = [...preset, ...custom].filter(Boolean);
+    return all.join(", ");
+  };
+
+  async function setAvailability(label: AvailabilityLabel) {
+    if (!selectedMemberId) return;
+
+    setSaving(true);
+    try {
+      if (label === "awaiting") {
+        const { error } = await supabase
+          .from("event_availability")
+          .delete()
+          .eq("event_id", eventId)
+          .eq("member_id", selectedMemberId);
+
+        if (error) throw error;
+      } else {
+        const status =
+          label === "available"
+            ? "available"
+            : label === "provisional"
+              ? "provisional"
+              : "unavailable";
+
+        const { error } = await supabase
+          .from("event_availability")
+          .upsert({ event_id: eventId, member_id: selectedMemberId, status }, { onConflict: "event_id,member_id" });
+
+        if (error) throw error;
       }
+
+      await load();
+    } catch (e: any) {
+      console.log("setAvailability error", e);
+      Alert.alert("Error", e?.message ?? "Failed to update availability");
+    } finally {
+      setSaving(false);
     }
-    return { backgroundColor: '#e0e0e0' };
+  }
+
+  const chip = (label: AvailabilityLabel, text: string) => {
+    const selected = selectedLabel === label;
+
+    const bg =
+      label === "available"
+        ? "#2ECC71"
+        : label === "provisional"
+          ? "#F1C40F"
+          : label === "unavailable"
+            ? "#E74C3C"
+            : "#e0e0e0";
+
+    return (
+      <Pressable
+        key={label}
+        style={[styles.chip, selected ? { backgroundColor: bg, borderColor: bg } : null]}
+        disabled={saving || !selectedMemberId}
+        onPress={() => setAvailability(label)}
+      >
+        <Text style={[styles.chipText, selected ? { color: "#fff" } : null]}>{text}</Text>
+      </Pressable>
+    );
   };
 
-  const getChipTextColor = (status: 'available' | 'provisional' | 'unavailable') => {
-    return userStatus === status ? '#fff' : '#333';
-  };
-
-  const formatStatus = (status: string) => {
-    if (!status || status === 'unknown') return 'Awaiting';
-    return status.charAt(0).toUpperCase() + status.slice(1);
-  };
-
-  const positionsText = (positions: string[] | null) => {
-    if (!positions || positions.length === 0) return '';
-    return positions.join(', ');
-  };
+  if (loading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="small" />
+      </View>
+    );
+  }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <InfoCard title="Your Availability">
-          <View style={styles.chipContainer}>
-            <TouchableOpacity
-              style={[styles.chip, getChipStyle('available')]}
-              onPress={() => setUserStatus('available')}
-            >
-              <Text style={[styles.chipText, { color: getChipTextColor('available') }]}>
-                Available
-              </Text>
-            </TouchableOpacity>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <InfoCard title="Your Availability">
+        <Text style={styles.smallNote}>
+          Temporary test mode: choose a person below to set their status. Auth will replace this.
+        </Text>
 
-            <TouchableOpacity
-              style={[styles.chip, getChipStyle('provisional')]}
-              onPress={() => setUserStatus('provisional')}
-            >
-              <Text style={[styles.chipText, { color: getChipTextColor('provisional') }]}>
-                Provisional
-              </Text>
-            </TouchableOpacity>
+        <Pressable
+          style={styles.selector}
+          onPress={() => {
+            if (rows.length === 0) return;
+            const idx = rows.findIndex((r) => r.member_id === selectedMemberId);
+            const next = rows[(idx + 1) % rows.length];
+            setSelectedMemberId(next.member_id);
+          }}
+        >
+          <Text style={styles.selectorLabel}>Acting as:</Text>
+          <Text style={styles.selectorValue}>
+            {selectedRow?.display_name ?? "Select member"}{" "}
+            {selectedRow?.member_type ? `(${selectedRow.member_type})` : ""}
+          </Text>
+          <Text style={styles.selectorHint}>Tap to change</Text>
+        </Pressable>
 
-            <TouchableOpacity
-              style={[styles.chip, getChipStyle('unavailable')]}
-              onPress={() => setUserStatus('unavailable')}
-            >
-              <Text style={[styles.chipText, { color: getChipTextColor('unavailable') }]}>
-                Unavailable
-              </Text>
-            </TouchableOpacity>
+        <View style={styles.chipRow}>
+          {chip("available", "Available")}
+          {chip("provisional", "Provisional")}
+          {chip("unavailable", "Unavailable")}
+        </View>
+
+        <View style={styles.chipRow}>{chip("awaiting", "Clear to Awaiting")}</View>
+
+        {saving ? <Text style={styles.saving}>Saving…</Text> : null}
+      </InfoCard>
+
+      <InfoCard title="Event Summary">
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryItem}>Awaiting: {counts.awaiting}</Text>
+          <Text style={styles.summaryItem}>Available: {counts.available}</Text>
+          <Text style={styles.summaryItem}>Provisional: {counts.provisional}</Text>
+          <Text style={styles.summaryItem}>Unavailable: {counts.unavailable}</Text>
+        </View>
+        <Text style={styles.smallNote}>Summary currently counts musicians only.</Text>
+      </InfoCard>
+
+      <InfoCard title="Musicians">
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.cell, styles.cellHeader, { flex: 1.2 }]}>Member</Text>
+            <Text style={[styles.cell, styles.cellHeader, { flex: 1.6 }]}>Instruments</Text>
+            <Text style={[styles.cell, styles.cellHeader, { flex: 1 }]}>Status</Text>
           </View>
-        </InfoCard>
 
-        <InfoCard title="Band Availability">
-          <View style={styles.table}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.tableCell, styles.tableCellHeader]}>Member</Text>
-              <Text style={[styles.tableCell, styles.tableCellHeader]}>Status</Text>
+          {musicians.map((r) => (
+            <View key={r.member_id} style={styles.tableRow}>
+              <Text style={[styles.cell, { flex: 1.2 }]} numberOfLines={1}>
+                {r.display_name ?? "Unnamed"}
+              </Text>
+              <Text style={[styles.cell, { flex: 1.6 }]} numberOfLines={1}>
+                {instrumentsDisplay(r) || "—"}
+              </Text>
+
+              <View style={[styles.statusPill, { backgroundColor: statusBg(r.availability_label) }]}>
+                <Text style={[styles.statusText, { color: statusText(r.availability_label) }]}>
+                  {labelText(r.availability_label)}
+                </Text>
+              </View>
             </View>
+          ))}
 
-            {loadingBand ? (
-              <View style={styles.tableRow}>
-                <Text style={styles.tableCell}>Loading…</Text>
-                <Text style={styles.tableCell}> </Text>
-              </View>
-            ) : bandAvailability.length === 0 ? (
-              <View style={styles.tableRow}>
-                <Text style={styles.tableCell}>No members found</Text>
-                <Text style={styles.tableCell}>—</Text>
-              </View>
-            ) : (
-              bandAvailability.map((row) => (
-                <View style={styles.tableRow} key={row.member_id}>
-                  <View style={[styles.tableCell, styles.memberCell]}>
-                    <Text style={styles.memberName}>{row.display_name ?? 'Unnamed'}</Text>
-                    {positionsText(row.band_positions) ? (
-                      <Text style={styles.memberMeta}>{positionsText(row.band_positions)}</Text>
-                    ) : null}
-                  </View>
+          {musicians.length === 0 ? <Text style={styles.empty}>No musicians found.</Text> : null}
+        </View>
+      </InfoCard>
 
-                  <Text style={styles.tableCell}>{formatStatus(row.status)}</Text>
-                </View>
-              ))
-            )}
-
-            <Text style={styles.note}>Data synced from band schedule</Text>
+      <InfoCard title="Crew">
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.cell, styles.cellHeader, { flex: 1.4 }]}>Member</Text>
+            <Text style={[styles.cell, styles.cellHeader, { flex: 1.6 }]}>Role</Text>
+            <Text style={[styles.cell, styles.cellHeader, { flex: 1 }]}>Status</Text>
           </View>
-        </InfoCard>
-      </View>
+
+          {crew.map((r) => (
+            <View key={r.member_id} style={styles.tableRow}>
+              <Text style={[styles.cell, { flex: 1.4 }]} numberOfLines={1}>
+                {r.display_name ?? "Unnamed"}
+              </Text>
+              <Text style={[styles.cell, { flex: 1.6 }]} numberOfLines={1}>
+                {roleDisplay(r) || "—"}
+              </Text>
+
+              <View style={[styles.statusPill, { backgroundColor: statusBg(r.availability_label) }]}>
+                <Text style={[styles.statusText, { color: statusText(r.availability_label) }]}>
+                  {labelText(r.availability_label)}
+                </Text>
+              </View>
+            </View>
+          ))}
+
+          {crew.length === 0 ? <Text style={styles.empty}>No crew found.</Text> : null}
+        </View>
+      </InfoCard>
     </ScrollView>
   );
 }
 
+function labelText(v: AvailabilityLabel) {
+  if (v === "awaiting") return "Awaiting";
+  if (v === "available") return "Available";
+  if (v === "provisional") return "Provisional";
+  return "Unavailable";
+}
+
+function statusBg(v: AvailabilityLabel) {
+  if (v === "available") return "#E8F7EE"; // light green
+  if (v === "provisional") return "#FFF6DF"; // light amber
+  if (v === "unavailable") return "#FDEAEA"; // light red
+  return "#F3F3F3"; // light grey
+}
+
+function statusText(v: AvailabilityLabel) {
+  if (v === "available") return "#1E8E3E"; // green
+  if (v === "provisional") return "#B26A00"; // amber
+  if (v === "unavailable") return "#C62828"; // red
+  return "#666"; // grey
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  content: { padding: 16 },
+
+  loading: { paddingVertical: 16, alignItems: "center" },
+
+  smallNote: { fontSize: 12, color: "#666", marginBottom: 10 },
+
+  selector: {
+    backgroundColor: "#f7f7f7",
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+    marginBottom: 12,
   },
-  content: {
-    padding: 16,
-  },
-  chipContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'space-between',
-  },
+  selectorLabel: { fontSize: 12, color: "#666", fontWeight: "700" },
+  selectorValue: { fontSize: 15, color: "#111", fontWeight: "800", marginTop: 2 },
+  selectorHint: { fontSize: 12, color: "#009999", marginTop: 6, fontWeight: "700" },
+
+  chipRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
   chip: {
     flex: 1,
+    backgroundColor: "#fff",
+    borderWidth: 2,
+    borderColor: "#009999",
+    borderRadius: 999,
     paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  chipText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  table: {
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-  },
+  chipText: { fontSize: 12, fontWeight: "800", color: "#009999" },
+
+  saving: { marginTop: 6, fontSize: 12, color: "#666", fontStyle: "italic" },
+
+  summaryRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  summaryItem: { fontSize: 13, fontWeight: "800", color: "#333" },
+
+  table: { borderRadius: 10, overflow: "hidden", backgroundColor: "#fff" },
   tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#f0f0f0',
+    flexDirection: "row",
+    backgroundColor: "#f0f0f0",
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: "#ddd",
   },
   tableRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
+    alignItems: "center",
   },
-  tableCell: {
+  cell: { padding: 12, fontSize: 13, color: "#333" },
+  cellHeader: { fontWeight: "800", color: "#666" },
+
+  statusPill: {
     flex: 1,
-    padding: 12,
-    fontSize: 14,
-    color: '#333',
+    alignSelf: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    marginVertical: 6,
+    marginRight: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  tableCellHeader: {
-    fontWeight: '600',
-    color: '#666',
-  },
-  memberCell: {
-    flexDirection: 'column',
-  },
-  memberName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  memberMeta: {
-    marginTop: 2,
+  statusText: {
     fontSize: 12,
-    color: '#666',
+    fontWeight: "900",
   },
-  note: {
-    fontSize: 12,
-    color: '#999',
-    padding: 12,
-    fontStyle: 'italic',
-  },
+
+  empty: { padding: 12, color: "#666" },
 });

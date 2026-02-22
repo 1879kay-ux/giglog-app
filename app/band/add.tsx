@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { Stack, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -12,9 +12,13 @@ import {
     View,
 } from "react-native";
 
-const BAND_ROLES = [
-  "Band",
-  "Dep Musician",
+const MEMBER_TYPES = ["musician", "crew"] as const;
+type MemberType = (typeof MEMBER_TYPES)[number];
+
+const MUSICIAN_ROLES = ["Band", "Dep Musician", "Other"] as const;
+type MusicianRole = (typeof MUSICIAN_ROLES)[number];
+
+const CREW_ROLES = [
   "Crew",
   "Tour Manager",
   "Merch",
@@ -22,9 +26,11 @@ const BAND_ROLES = [
   "Monitor Engineer",
   "Lighting",
   "Tech",
+  "Other",
 ] as const;
+type CrewRole = (typeof CREW_ROLES)[number];
 
-const BAND_POSITIONS = [
+const INSTRUMENTS = [
   "Lead Vox",
   "Backing Vox",
   "Drums",
@@ -37,85 +43,116 @@ const BAND_POSITIONS = [
   "Trumpet",
   "Trombone",
 ] as const;
+type Instrument = (typeof INSTRUMENTS)[number];
 
-type BandRole = (typeof BAND_ROLES)[number];
-type BandPosition = (typeof BAND_POSITIONS)[number];
+const CREW_ROLE_SET = new Set<string>([
+  "Crew",
+  "Tour Manager",
+  "Merch",
+  "FoH Engineer",
+  "Monitor Engineer",
+  "Lighting",
+  "Tech",
+]);
 
 export default function AddBandMemberScreen() {
   const router = useRouter();
 
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const [bandId, setBandId] = useState<string | null>(null);
 
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<BandRole>("Band");
-  const [positions, setPositions] = useState<BandPosition[]>([]);
+
+  const [memberType, setMemberType] = useState<MemberType>("musician");
+
+  // role handling
+  const [musicianRole, setMusicianRole] = useState<MusicianRole>("Band");
+  const [crewRole, setCrewRole] = useState<CrewRole>("Crew");
+  const [roleOther, setRoleOther] = useState("");
+
+  // instruments (musician only)
+  const [instruments, setInstruments] = useState<Instrument[]>([]);
+  const [customInstruments, setCustomInstruments] = useState<string[]>([]);
+  const [customInstrumentInput, setCustomInstrumentInput] = useState("");
+
   const [isActive, setIsActive] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const isDep = useMemo(() => role === "Dep Musician", [role]);
+  const role = useMemo(() => {
+    return memberType === "musician" ? musicianRole : crewRole;
+  }, [memberType, musicianRole, crewRole]);
 
-  useEffect(() => {
-    const loadDefaultBand = async () => {
-      const { data, error } = await supabase
-        .from("bands")
-        .select("band_id")
-        .order("created_at", { ascending: true })
-        .limit(1);
+  const isDep = useMemo(
+    () => memberType === "musician" && musicianRole === "Dep Musician",
+    [memberType, musicianRole]
+  );
 
-      if (error) {
-        console.log("loadDefaultBand error", error);
-        Alert.alert("Error", "Could not load band. Check Supabase connection.");
-        setLoading(false);
-        return;
-      }
+  const toggleInstrument = (p: Instrument) => {
+    setInstruments((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
+  };
 
-      setBandId(data?.[0]?.band_id ?? null);
-      setLoading(false);
-    };
+  const addCustomInstrument = () => {
+    const v = customInstrumentInput.trim();
+    if (!v) return;
+    setCustomInstruments((prev) => (prev.includes(v) ? prev : [...prev, v]));
+    setCustomInstrumentInput("");
+  };
 
-    loadDefaultBand();
-  }, []);
-
-  const togglePosition = (p: BandPosition) => {
-    setPositions((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
+  const removeCustomInstrument = (p: string) => {
+    setCustomInstruments((prev) => prev.filter((x) => x !== p));
   };
 
   const onSave = async () => {
-    if (!bandId) {
-      Alert.alert("No band", "Band ID not found yet.");
-      return;
-    }
-
     const name = displayName.trim();
     if (!name) {
       Alert.alert("Missing name", "Please enter a display name.");
       return;
     }
 
-    // Email optional (deps/crew may not have one yet)
-    const emailClean = email.trim() || null;
+    const emailClean = email.trim();
+    if (!emailClean) {
+      Alert.alert("Missing email", "Please enter an email address.");
+      return;
+    }
+
+    if (role === "Other" && !roleOther.trim()) {
+      Alert.alert("Missing role", "Please enter a value for Role (Other).");
+      return;
+    }
+
+    // Safety rule: crew roles always force crew member_type
+    const finalMemberType: MemberType =
+      CREW_ROLE_SET.has(role) ? "crew" : memberType;
+
+    // If we forced crew, make sure we don’t save instruments by accident
+    const finalPositions = finalMemberType === "musician" ? instruments : [];
+    const finalPositionsOther = finalMemberType === "musician" ? customInstruments : [];
 
     setSaving(true);
 
-    const { error } = await supabase.from("band_members").insert({
+    const payload: any = {
       display_name: name,
       email: emailClean,
+
+      member_type: finalMemberType,
+
       band_role: role,
-      band_positions: positions, // text[]
+      band_role_other: role === "Other" ? roleOther.trim() || null : null,
+
+      band_positions: finalPositions,
+      band_positions_other: finalPositionsOther,
+
       is_active: isActive,
       is_admin: isAdmin,
-      is_dep: isDep,
-      band_id: bandId,
-    });
+      is_dep: finalMemberType === "musician" && role === "Dep Musician",
+    };
+
+    const { error } = await supabase.from("band_members").insert(payload);
 
     setSaving(false);
 
     if (error) {
-      console.log("insert band_member error", error);
+      console.log("insert member error", error);
       Alert.alert("Error", error.message);
       return;
     }
@@ -123,16 +160,8 @@ export default function AddBandMemberScreen() {
     router.back();
   };
 
-  if (loading) {
-    return (
-      <>
-        <Stack.Screen options={{ title: "Add Member" }} />
-        <View style={styles.loading}>
-          <ActivityIndicator size="large" />
-        </View>
-      </>
-    );
-  }
+  const rolesToRender = memberType === "musician" ? MUSICIAN_ROLES : CREW_ROLES;
+  const selectedRole = role;
 
   return (
     <>
@@ -147,7 +176,7 @@ export default function AddBandMemberScreen() {
           style={styles.input}
         />
 
-        <Text style={styles.label}>Email (optional)</Text>
+        <Text style={styles.label}>Email</Text>
         <TextInput
           value={email}
           onChangeText={setEmail}
@@ -157,14 +186,53 @@ export default function AddBandMemberScreen() {
           style={styles.input}
         />
 
+        <Text style={styles.label}>Member Type</Text>
+        <View style={styles.chipWrap}>
+          {MEMBER_TYPES.map((t) => {
+            const selected = memberType === t;
+            return (
+              <Pressable
+                key={t}
+                onPress={() => {
+                  setMemberType(t);
+
+                  // reset some fields when switching type
+                  setRoleOther("");
+
+                  if (t === "musician") {
+                    setMusicianRole("Band");
+                    setCrewRole("Crew");
+                  } else {
+                    setCrewRole("Crew");
+                    setMusicianRole("Band");
+                    setInstruments([]);
+                    setCustomInstruments([]);
+                    setCustomInstrumentInput("");
+                  }
+                }}
+                style={[styles.chip, selected && styles.chipSelected]}
+              >
+                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                  {t === "musician" ? "Musician" : "Crew"}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
         <Text style={styles.label}>Role</Text>
         <View style={styles.chipWrap}>
-          {BAND_ROLES.map((r) => {
-            const selected = role === r;
+          {rolesToRender.map((r) => {
+            const selected = selectedRole === r;
             return (
               <Pressable
                 key={r}
-                onPress={() => setRole(r)}
+                onPress={() => {
+                  if (memberType === "musician") setMusicianRole(r as MusicianRole);
+                  else setCrewRole(r as CrewRole);
+
+                  if (r !== "Other") setRoleOther("");
+                }}
                 style={[styles.chip, selected && styles.chipSelected]}
               >
                 <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{r}</Text>
@@ -173,21 +241,64 @@ export default function AddBandMemberScreen() {
           })}
         </View>
 
-        <Text style={styles.label}>Positions (multi-select)</Text>
-        <View style={styles.chipWrap}>
-          {BAND_POSITIONS.map((p) => {
-            const selected = positions.includes(p);
-            return (
-              <Pressable
-                key={p}
-                onPress={() => togglePosition(p)}
-                style={[styles.chip, selected && styles.chipSelected]}
-              >
-                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{p}</Text>
+        {selectedRole === "Other" ? (
+          <>
+            <Text style={styles.label}>Role (Other)</Text>
+            <TextInput
+              value={roleOther}
+              onChangeText={setRoleOther}
+              placeholder="e.g. Playback Tech"
+              style={styles.input}
+            />
+          </>
+        ) : null}
+
+        {memberType === "musician" ? (
+          <>
+            <Text style={styles.label}>Instruments (multi-select)</Text>
+            <View style={styles.chipWrap}>
+              {INSTRUMENTS.map((p) => {
+                const selected = instruments.includes(p);
+                return (
+                  <Pressable
+                    key={p}
+                    onPress={() => toggleInstrument(p)}
+                    style={[styles.chip, selected && styles.chipSelected]}
+                  >
+                    <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{p}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={styles.label}>Custom instruments</Text>
+            <View style={styles.customRow}>
+              <TextInput
+                value={customInstrumentInput}
+                onChangeText={setCustomInstrumentInput}
+                placeholder="e.g. Percussion"
+                style={[styles.input, { flex: 1, marginTop: 0, marginBottom: 0 }]}
+              />
+              <Pressable style={styles.addButton} onPress={addCustomInstrument}>
+                <Text style={styles.addButtonText}>Add</Text>
               </Pressable>
-            );
-          })}
-        </View>
+            </View>
+
+            {customInstruments.length > 0 ? (
+              <View style={styles.customChipWrap}>
+                {customInstruments.map((p) => (
+                  <Pressable
+                    key={p}
+                    style={[styles.chip, { borderColor: "#009999" }]}
+                    onPress={() => removeCustomInstrument(p)}
+                  >
+                    <Text style={[styles.chipText, { color: "#009999" }]}>{p} ✕</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </>
+        ) : null}
 
         <View style={styles.toggleRow}>
           <Pressable
@@ -214,20 +325,21 @@ export default function AddBandMemberScreen() {
           disabled={saving}
           style={[styles.saveButton, saving && { opacity: 0.7 }]}
         >
-          <Text style={styles.saveButtonText}>{saving ? "Saving…" : "Save Member"}</Text>
+          {saving ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <ActivityIndicator />
+              <Text style={styles.saveButtonText}>Saving…</Text>
+            </View>
+          ) : (
+            <Text style={styles.saveButtonText}>Save Member</Text>
+          )}
         </Pressable>
-
-        {!bandId ? (
-          <Text style={styles.warn}>Warning: band_id not found. Create a band first.</Text>
-        ) : null}
       </ScrollView>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, justifyContent: "center", alignItems: "center" },
-
   container: { flex: 1, backgroundColor: "#f5f5f5" },
   content: { padding: 16, paddingBottom: 32 },
 
@@ -255,6 +367,17 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 12, fontWeight: "700", color: "#333" },
   chipTextSelected: { color: "#fff" },
 
+  customRow: { flexDirection: "row", gap: 8, alignItems: "center" },
+  addButton: {
+    backgroundColor: "#009999",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    justifyContent: "center",
+  },
+  addButtonText: { color: "#fff", fontWeight: "800" },
+  customChipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
+
   toggleRow: { flexDirection: "row", gap: 10, marginTop: 16 },
   toggle: {
     flex: 1,
@@ -277,6 +400,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   saveButtonText: { color: "#fff", fontSize: 15, fontWeight: "800" },
-
-  warn: { marginTop: 12, color: "#b00020", fontWeight: "700" },
 });

@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
@@ -16,8 +16,7 @@ type Props = {
   departurePostcode?: string | null;
 };
 
-type ProfileRow = {
-  id: string;
+type AppSettingsRow = {
   default_departure_address: string | null;
   default_departure_postcode: string | null;
 };
@@ -41,22 +40,17 @@ export default function TravelSection({
 }: Props) {
   const router = useRouter();
 
-  // Where the pencil should take you:
-  // - Default for all events: /settings/travel
-  // - This event only: /events/[id]/edit/travel
   const goEditEvent = () => router.push(`/events/${eventId}/edit/travel`);
   const goDefaults = () => router.push('/settings/travel');
 
   const [showWebPicker, setShowWebPicker] = useState(false);
 
   const onPressPencil = () => {
-    // Web: use an in-app modal (Alert.alert buttons are unreliable on web)
     if (Platform.OS === 'web') {
       setShowWebPicker(true);
       return;
     }
 
-    // Native: nice 3-button alert
     Alert.alert(
       'Departure location',
       'What do you want to change?',
@@ -69,36 +63,44 @@ export default function TravelSection({
     );
   };
 
-  const [profile, setProfile] = useState<ProfileRow | null>(null);
+  // Shared default (from app_settings)
+  const [defaults, setDefaults] = useState<AppSettingsRow>({
+    default_departure_address: null,
+    default_departure_postcode: null,
+  });
 
-  useEffect(() => {
-    let alive = true;
+  // Key fix: refetch defaults whenever this screen regains focus
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
 
-    (async () => {
-      const { data: auth, error: authErr } = await supabase.auth.getUser();
-      const userId = auth?.user?.id;
+      (async () => {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('default_departure_address, default_departure_postcode')
+          .eq('id', 'global')
+          .maybeSingle();
 
-      if (!alive) return;
+        if (!alive) return;
 
-      if (authErr || !userId) {
-        setProfile(null);
-        return;
-      }
+        if (error) {
+          console.log('TravelSection app_settings read error:', error);
+          // Keep previous defaults if read fails
+          return;
+        }
 
-      const { data: p } = await supabase
-        .from('profiles')
-        .select('id, default_departure_address, default_departure_postcode')
-        .eq('id', userId)
-        .maybeSingle();
+        const row = (data as AppSettingsRow) ?? null;
+        setDefaults({
+          default_departure_address: row?.default_departure_address ?? null,
+          default_departure_postcode: row?.default_departure_postcode ?? null,
+        });
+      })();
 
-      if (!alive) return;
-      setProfile((p as ProfileRow) ?? null);
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, []);
+      return () => {
+        alive = false;
+      };
+    }, [])
+  );
 
   const venueDest = useMemo(() => {
     return (
@@ -108,12 +110,12 @@ export default function TravelSection({
     );
   }, [venueAddress, venueCity, venuePostcode]);
 
-  // effective departure = event override first, otherwise profile default
+  // effective departure = event override first, otherwise global default
   const effectiveDepartureAddress =
-    clean(departureAddress) ?? clean(profile?.default_departure_address) ?? null;
+    clean(departureAddress) ?? clean(defaults.default_departure_address) ?? null;
 
   const effectiveDeparturePostcode =
-    clean(departurePostcode) ?? clean(profile?.default_departure_postcode) ?? null;
+    clean(departurePostcode) ?? clean(defaults.default_departure_postcode) ?? null;
 
   const departureOrigin = useMemo(() => {
     return (
@@ -155,7 +157,7 @@ export default function TravelSection({
     if (!departureOrigin) {
       Alert.alert(
         'Departure location not set',
-        'Set a default departure location in your profile, or tap the pencil to set one for this event.'
+        'Set a default departure location, or set one just for this event.'
       );
       return;
     }
@@ -177,7 +179,7 @@ export default function TravelSection({
     openUrl(url);
   }
 
-  const showingProfileDefault =
+  const showingGlobalDefault =
     !clean(departureAddress) &&
     !clean(departurePostcode) &&
     (!!effectiveDepartureAddress || !!effectiveDeparturePostcode);
@@ -204,7 +206,7 @@ export default function TravelSection({
           <View style={styles.locationHeaderRow}>
             <Text style={styles.locationTitle}>Departure Location</Text>
 
-            {showingProfileDefault ? (
+            {showingGlobalDefault ? (
               <Pressable onPress={goDefaults} style={styles.badge} hitSlop={8}>
                 <Text style={styles.badgeText}>Default</Text>
               </Pressable>
@@ -285,10 +287,7 @@ function Chip({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    paddingVertical: 4,
-    position: 'relative',
-  },
+  wrap: { paddingVertical: 4, position: 'relative' },
 
   blockHeader: {
     flexDirection: 'row',
@@ -306,9 +305,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  travelRow: {
-    marginBottom: 14,
-  },
+  travelRow: { marginBottom: 14 },
 
   travelLabel: {
     fontSize: 14,
@@ -329,11 +326,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 
-  chipText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '800',
-  },
+  chipText: { color: '#fff', fontSize: 12, fontWeight: '800' },
 
   locationBox: {
     marginTop: 10,
@@ -349,11 +342,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
-  locationTitle: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#333',
-  },
+  locationTitle: { fontSize: 12, fontWeight: '900', color: '#333' },
 
   badge: {
     backgroundColor: '#E9F6F6',
@@ -362,18 +351,10 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
 
-  badgeText: {
-    color: '#008080',
-    fontSize: 11,
-    fontWeight: '900',
-  },
+  badgeText: { color: '#008080', fontSize: 11, fontWeight: '900' },
 
-  locationText: {
-    fontSize: 13,
-    color: '#555',
-  },
+  locationText: { fontSize: 13, color: '#555' },
 
-  // Web modal (3 options)
   webModalOverlay: {
     position: 'absolute',
     top: 0,
@@ -402,11 +383,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
 
-  webModalText: {
-    fontSize: 13,
-    color: '#444',
-    marginBottom: 12,
-  },
+  webModalText: { fontSize: 13, color: '#444', marginBottom: 12 },
 
   webModalBtn: {
     backgroundColor: '#E9F6F6',
@@ -416,9 +393,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  webModalBtnCancel: {
-    backgroundColor: '#f2f2f2',
-  },
+  webModalBtnCancel: { backgroundColor: '#f2f2f2' },
 
   webModalBtnText: {
     color: '#008080',

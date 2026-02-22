@@ -3,19 +3,18 @@ import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
-type ProfileRow = {
-  id: string;
+type AppSettingsRow = {
+  id?: string;
   default_departure_address: string | null;
   default_departure_postcode: string | null;
 };
@@ -24,6 +23,8 @@ function clean(v?: string | null) {
   const t = (v ?? '').trim();
   return t.length ? t : null;
 }
+
+type StatusKind = 'ok' | 'error';
 
 export default function TravelDefaultsScreen() {
   const router = useRouter();
@@ -34,70 +35,101 @@ export default function TravelDefaultsScreen() {
   const [address, setAddress] = useState('');
   const [postcode, setPostcode] = useState('');
 
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [statusKind, setStatusKind] = useState<StatusKind>('ok');
+
   useEffect(() => {
     load();
   }, []);
 
+  function setError(message: string) {
+    setStatusKind('error');
+    setStatusMsg(message);
+  }
+
+  function setOk(message: string) {
+    setStatusKind('ok');
+    setStatusMsg(message);
+  }
+
   async function load() {
     setLoading(true);
+    setStatusMsg(null);
 
-    const { data: auth, error: authErr } = await supabase.auth.getUser();
-    const userId = auth?.user?.id;
+    try {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('default_departure_address, default_departure_postcode')
+        .eq('id', 'global')
+        .maybeSingle();
 
-    if (authErr || !userId) {
+      if (error) {
+        setError(`Load failed: ${error.message}`);
+        return;
+      }
+
+      const row = (data as AppSettingsRow) ?? null;
+      setAddress(row?.default_departure_address ?? '');
+      setPostcode(row?.default_departure_postcode ?? '');
+    } finally {
       setLoading(false);
-      Alert.alert('Not signed in', 'Please sign in again.');
-      return;
     }
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, default_departure_address, default_departure_postcode')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (error) {
-      setLoading(false);
-      Alert.alert('Error', error.message);
-      return;
-    }
-
-    const row = (data as ProfileRow) ?? null;
-    setAddress(row?.default_departure_address ?? '');
-    setPostcode(row?.default_departure_postcode ?? '');
-    setLoading(false);
   }
 
   async function onSave() {
+    if (saving || loading) return;
+
     setSaving(true);
+    setStatusMsg(null);
 
-    const { data: auth, error: authErr } = await supabase.auth.getUser();
-    const userId = auth?.user?.id;
+    try {
+      const payload: AppSettingsRow = {
+        default_departure_address: clean(address),
+        default_departure_postcode: clean(postcode),
+      };
 
-    if (authErr || !userId) {
+      // 1) UPDATE first
+      const { data: updated, error: updateErr } = await supabase
+  .from('app_settings')
+  .update(payload)
+  .eq('id', 'global')
+  .select('id, default_departure_address, default_departure_postcode');
+
+console.log('UPDATE result:', { updated, updateErr });
+
+if (updateErr) {
+  setError(`Save failed: ${updateErr.message}`);
+  return;
+}
+
+if (!updated || updated.length === 0) {
+  setError('Save failed: UPDATE affected 0 rows (id=global not matched, or blocked).');
+  return;
+}
+
+      // 2) Fallback UPSERT
+      const { data: upserted, error: upsertErr } = await supabase
+        .from('app_settings')
+        .upsert({ id: 'global', ...payload }, { onConflict: 'id' })
+        .select('id')
+        .maybeSingle();
+
+      if (upsertErr) {
+        console.log('app_settings.upsert error:', upsertErr);
+        setError(`Save blocked: ${upsertErr.message}`);
+        return;
+      }
+
+      if (!upserted?.id) {
+        setError('Save blocked: no row was written.');
+        return;
+      }
+
+      setOk('Saved.');
+      setTimeout(() => router.back(), 400);
+    } finally {
       setSaving(false);
-      Alert.alert('Not signed in', 'Please sign in again.');
-      return;
     }
-
-    // Only write the columns we KNOW exist
-    const payload = {
-      id: userId,
-      default_departure_address: clean(address),
-      default_departure_postcode: clean(postcode),
-    };
-
-    // Upsert so it works even if the profile row doesn’t exist yet
-    const { error } = await supabase.from('profiles').upsert(payload, { onConflict: 'id' });
-
-    setSaving(false);
-
-    if (error) {
-      Alert.alert('Save failed', error.message);
-      return;
-    }
-
-    router.back();
   }
 
   return (
@@ -140,17 +172,32 @@ export default function TravelDefaultsScreen() {
                   placeholderTextColor="#999"
                   autoCapitalize="characters"
                 />
+
+                {statusMsg ? (
+                  <Text
+                    style={[
+                      styles.statusMsg,
+                      statusKind === 'error' ? styles.statusError : styles.statusOk,
+                    ]}
+                  >
+                    {statusMsg}
+                  </Text>
+                ) : null}
               </>
             )}
           </View>
 
-          <TouchableOpacity
-            style={[styles.saveBtn, (saving || loading) && styles.saveBtnDisabled]}
+          <Pressable
+            style={({ pressed }) => [
+              styles.saveBtn,
+              (saving || loading) && styles.saveBtnDisabled,
+              pressed && !(saving || loading) && styles.saveBtnPressed,
+            ]}
             onPress={onSave}
             disabled={saving || loading}
           >
             <Text style={styles.saveText}>{saving ? 'Saving…' : 'Save defaults'}</Text>
-          </TouchableOpacity>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </>
@@ -184,6 +231,15 @@ const styles = StyleSheet.create({
     color: '#111',
     backgroundColor: '#fff',
   },
+
+  statusMsg: {
+    marginTop: 10,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  statusOk: { color: '#008080' },
+  statusError: { color: '#B00020' },
+
   saveBtn: {
     marginTop: 12,
     backgroundColor: '#4FB3B3',
@@ -191,6 +247,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
+  saveBtnPressed: { opacity: 0.85 },
   saveBtnDisabled: { opacity: 0.6 },
   saveText: { color: '#fff', fontSize: 16, fontWeight: '900' },
 });

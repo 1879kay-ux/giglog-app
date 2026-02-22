@@ -2,22 +2,27 @@ import { supabase } from '@/lib/supabase';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type TravelRow = {
   departure_address: string | null;
   departure_postcode: string | null;
 };
+
+function clean(v?: string | null) {
+  const t = (v ?? '').trim();
+  return t.length ? t : null;
+}
 
 export default function EditEventTravelScreen() {
   const router = useRouter();
@@ -54,7 +59,6 @@ export default function EditEventTravelScreen() {
     }
 
     const row = data as TravelRow;
-
     setDepartureAddress(row.departure_address ?? '');
     setDeparturePostcode(row.departure_postcode ?? '');
 
@@ -62,13 +66,13 @@ export default function EditEventTravelScreen() {
   }
 
   async function onSave() {
-    if (!id) return;
+    if (!id || saving) return;
 
     setSaving(true);
 
     const payload = {
-      departure_address: departureAddress.trim() ? departureAddress.trim() : null,
-      departure_postcode: departurePostcode.trim() ? departurePostcode.trim() : null,
+      departure_address: clean(departureAddress),
+      departure_postcode: clean(departurePostcode),
     };
 
     const { error } = await supabase.from('events').update(payload).eq('event_id', id);
@@ -83,36 +87,50 @@ export default function EditEventTravelScreen() {
     router.back();
   }
 
-  async function onClear() {
-    if (!id) return;
+  async function doClear() {
+    if (!id || saving) return;
 
-    Alert.alert(
-      'Use blank departure',
-      'This will clear the departure fields for this event.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: async () => {
-            setSaving(true);
-            const { error } = await supabase
-              .from('events')
-              .update({ departure_address: null, departure_postcode: null })
-              .eq('event_id', id);
+    setSaving(true);
 
-            setSaving(false);
+    const { data, error } = await supabase
+      .from('events')
+      .update({ departure_address: null, departure_postcode: null })
+      .eq('event_id', id)
+      .select('departure_address, departure_postcode')
+      .maybeSingle();
 
-            if (error) {
-              Alert.alert('Clear failed', error.message);
-              return;
-            }
+    setSaving(false);
 
-            router.back();
-          },
-        },
-      ]
-    );
+    if (error) {
+      Alert.alert('Clear failed', error.message);
+      return;
+    }
+
+    // Update UI immediately (so you can SEE it cleared)
+    setDepartureAddress(data?.departure_address ?? '');
+    setDeparturePostcode(data?.departure_postcode ?? '');
+
+    router.back();
+  }
+
+  function onClear() {
+    if (!id || saving) return;
+
+    const msg =
+      'This will clear the departure fields for this event.\n\nAfter clearing, the Travel section will fall back to the default bus departure.';
+
+    // Web confirm (reliable)
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const ok = window.confirm(msg);
+      if (ok) void doClear();
+      return;
+    }
+
+    // Native confirm
+    Alert.alert('Clear for this event', msg, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Clear', style: 'destructive', onPress: () => void doClear() },
+    ]);
   }
 
   if (loading) {

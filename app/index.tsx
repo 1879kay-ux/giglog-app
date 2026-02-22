@@ -32,7 +32,7 @@ export default function HomeScreen() {
           />
 
           <MenuButton
-            label="Band Members"
+            label="Band & Crew"
             icon="users"
            onPress={() => router.push({ pathname: '/band' })}
 

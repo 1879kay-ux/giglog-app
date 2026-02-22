@@ -1,15 +1,53 @@
 import InfoCard from '@/components/InfoCard';
-import { useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type AvailabilitySectionProps = {
   initialStatus?: string | null;
+  eventId: string;
 };
 
-export default function AvailabilitySection({ initialStatus }: AvailabilitySectionProps) {
+type BandAvailabilityRow = {
+  member_id: string;
+  display_name: string | null;
+  band_positions: string[] | null;
+  status: 'unknown' | 'available' | 'provisional' | 'unavailable' | string;
+  responded_at: string | null;
+};
+
+export default function AvailabilitySection({ initialStatus, eventId }: AvailabilitySectionProps) {
   const [userStatus, setUserStatus] = useState<'available' | 'provisional' | 'unavailable'>(
     (initialStatus as 'available' | 'provisional' | 'unavailable') || 'available'
   );
+
+  const [bandAvailability, setBandAvailability] = useState<BandAvailabilityRow[]>([]);
+  const [loadingBand, setLoadingBand] = useState(false);
+
+  useEffect(() => {
+    if (!eventId) return;
+
+    const loadAvailability = async () => {
+      setLoadingBand(true);
+
+      const { data, error } = await supabase
+        .from('v_event_availability')
+        .select('member_id, display_name, band_positions, status, responded_at')
+        .eq('event_id', eventId)
+        .order('display_name', { ascending: true });
+
+      if (error) {
+        console.log('loadAvailability error', error);
+        setLoadingBand(false);
+        return;
+      }
+
+      setBandAvailability((data as BandAvailabilityRow[]) ?? []);
+      setLoadingBand(false);
+    };
+
+    loadAvailability();
+  }, [eventId]);
 
   const getChipStyle = (status: 'available' | 'provisional' | 'unavailable') => {
     const isSelected = userStatus === status;
@@ -28,6 +66,16 @@ export default function AvailabilitySection({ initialStatus }: AvailabilitySecti
 
   const getChipTextColor = (status: 'available' | 'provisional' | 'unavailable') => {
     return userStatus === status ? '#fff' : '#333';
+  };
+
+  const formatStatus = (status: string) => {
+    if (!status || status === 'unknown') return 'Awaiting';
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
+  const positionsText = (positions: string[] | null) => {
+    if (!positions || positions.length === 0) return '';
+    return positions.join(', ');
   };
 
   return (
@@ -71,10 +119,30 @@ export default function AvailabilitySection({ initialStatus }: AvailabilitySecti
               <Text style={[styles.tableCell, styles.tableCellHeader]}>Status</Text>
             </View>
 
-            <View style={styles.tableRow}>
-              <Text style={styles.tableCell}>Band Members</Text>
-              <Text style={styles.tableCell}>—</Text>
-            </View>
+            {loadingBand ? (
+              <View style={styles.tableRow}>
+                <Text style={styles.tableCell}>Loading…</Text>
+                <Text style={styles.tableCell}> </Text>
+              </View>
+            ) : bandAvailability.length === 0 ? (
+              <View style={styles.tableRow}>
+                <Text style={styles.tableCell}>No members found</Text>
+                <Text style={styles.tableCell}>—</Text>
+              </View>
+            ) : (
+              bandAvailability.map((row) => (
+                <View style={styles.tableRow} key={row.member_id}>
+                  <View style={[styles.tableCell, styles.memberCell]}>
+                    <Text style={styles.memberName}>{row.display_name ?? 'Unnamed'}</Text>
+                    {positionsText(row.band_positions) ? (
+                      <Text style={styles.memberMeta}>{positionsText(row.band_positions)}</Text>
+                    ) : null}
+                  </View>
+
+                  <Text style={styles.tableCell}>{formatStatus(row.status)}</Text>
+                </View>
+              ))
+            )}
 
             <Text style={styles.note}>Data synced from band schedule</Text>
           </View>
@@ -131,6 +199,19 @@ const styles = StyleSheet.create({
   },
   tableCellHeader: {
     fontWeight: '600',
+    color: '#666',
+  },
+  memberCell: {
+    flexDirection: 'column',
+  },
+  memberName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  memberMeta: {
+    marginTop: 2,
+    fontSize: 12,
     color: '#666',
   },
   note: {

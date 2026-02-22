@@ -1,3 +1,4 @@
+import AvailabilitySection from '@/components/venue/AvailabilitySection';
 import DetailsSection from '@/components/venue/DetailsSection';
 import DocumentsSection from '@/components/venue/DocumentsSection';
 import FinanceSection from '@/components/venue/FinanceSection';
@@ -116,59 +117,6 @@ type EventRow = {
    SECTION KEYS
 --------------------------------------------------------- */
 type SectionKey = 'details' | 'availability' | 'schedule' | 'documents' | 'travel' | 'finance';
-
-/* ---------------------------------------------------------
-   AVAILABILITY SECTION (OPTION C + COLOUR CODING)
---------------------------------------------------------- */
-function AvailabilitySection({ initialStatus }: { initialStatus: string | null }) {
-  const [status, setStatus] = useState(initialStatus || '');
-
-  type IoniconName = keyof typeof Ionicons.glyphMap;
-
-  const options: { key: string; icon: IoniconName; color: string }[] = [
-    { key: 'Available', icon: 'checkmark-circle-outline', color: '#2ECC71' },
-    { key: 'Provisional', icon: 'help-circle-outline', color: '#F1C40F' },
-    { key: 'Unavailable', icon: 'close-circle-outline', color: '#E74C3C' },
-  ];
-
-  return (
-    <View style={{ paddingVertical: 4 }}>
-      <Text style={styles.heading}>Your Availability</Text>
-
-      <View style={styles.avRow}>
-        {options.map((opt) => {
-          const selected = status === opt.key;
-          return (
-            <TouchableOpacity
-              key={opt.key}
-              style={[
-                styles.avChip,
-                selected && {
-                  backgroundColor: opt.color,
-                  borderColor: opt.color,
-                },
-              ]}
-              onPress={() => setStatus(opt.key)}
-            >
-              <Ionicons name={opt.icon} size={28} color={selected ? '#fff' : '#008080'} />
-              <Text style={[styles.avLabel, selected && { color: '#fff' }]}>{opt.key}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      <View style={styles.divider} />
-
-      <Text style={styles.heading}>Band Availability</Text>
-      <Text style={styles.bandNote}>Data synced from band schedule.</Text>
-
-      <View style={styles.bandRow}>
-        <Text style={styles.bandName}>Band Members</Text>
-        <Text style={styles.bandStatus}>—</Text>
-      </View>
-    </View>
-  );
-}
 
 /* ---------------------------------------------------------
    MAIN SCREEN
@@ -390,7 +338,7 @@ export default function EventDetailsScreen() {
             open={openSections.availability}
             onPress={() => toggleSection('availability')}
           >
-            <AvailabilitySection initialStatus={event.event_status} />
+            <AvailabilitySection eventId={event.event_id} />
           </Section>
 
           {/* SCHEDULE */}
@@ -490,11 +438,7 @@ function Section({
 }) {
   return (
     <View style={styles.sectionWrapper} pointerEvents="box-none">
-      <Pressable
-        style={styles.sectionHeader}
-        onPress={onPress}
-        accessibilityRole="button"
-      >
+      <Pressable style={styles.sectionHeader} onPress={onPress} accessibilityRole="button">
         <View style={styles.sectionHeaderLeft} pointerEvents="none">
           <Ionicons name={icon} size={18} color="#fff" />
           <Text style={styles.sectionHeaderText}>{title}</Text>
@@ -504,17 +448,6 @@ function Section({
 
       {open && <View style={styles.sectionContent}>{children}</View>}
     </View>
-  );
-}
-
-/* ---------------------------------------------------------
-   TRAVEL BUTTON
---------------------------------------------------------- */
-function TravelButton({ label, onPress }: { label: string; onPress?: () => void }) {
-  return (
-    <TouchableOpacity style={styles.travelButton} onPress={onPress} activeOpacity={0.8}>
-      <Text style={styles.travelButtonText}>{label}</Text>
-    </TouchableOpacity>
   );
 }
 
@@ -643,58 +576,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 8,
     padding: 12,
-  },
-
-  /* AVAILABILITY */
-  heading: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333',
-  },
-  avRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  avChip: {
-    width: '30%',
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#008080',
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  avLabel: {
-    marginTop: 6,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#008080',
-    textAlign: 'center',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#ddd',
-    marginVertical: 12,
-  },
-  bandNote: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
-  },
-  bandRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-  },
-  bandName: {
-    fontSize: 14,
-    color: '#333',
-  },
-  bandStatus: {
-    fontSize: 14,
-    color: '#333',
   },
 
   /* TRAVEL */

@@ -12,12 +12,16 @@ type FinanceSectionProps = {
   incomeFee: number | null;
   feeType: string | null;
   paidStatus: string | null;
+
   vanHire: number | null;
   fuel: number | null;
   depCost: number | null;
   driverCost: number | null;
   fohEngCost: number | null;
   otherCosts: number | null;
+
+  feeNotes?: string | null;
+  costNotes?: string | null;
 };
 
 function formatCurrency(value: number | null | undefined) {
@@ -40,6 +44,8 @@ export default function FinanceSection({
   driverCost,
   fohEngCost,
   otherCosts,
+  feeNotes,
+  costNotes,
 }: FinanceSectionProps) {
   const router = useRouter();
 
@@ -74,6 +80,8 @@ export default function FinanceSection({
           ) : null}
         </View>
 
+        
+
         <InfoCard title="Income">
           <View style={styles.row}>
             <Text style={styles.label}>Fee</Text>
@@ -89,6 +97,13 @@ export default function FinanceSection({
             <Text style={styles.label}>Paid Status</Text>
             <Text style={styles.value}>{paidStatus || "—"}</Text>
           </View>
+
+          {feeNotes?.trim() ? (
+  <View style={styles.noteBlock}>
+    <Text style={styles.noteLabel}>Fee Notes</Text>
+    <Text style={styles.noteText}>{feeNotes}</Text>
+  </View>
+) : null}
         </InfoCard>
 
         <InfoCard title="Costs">
@@ -121,6 +136,13 @@ export default function FinanceSection({
             <Text style={styles.label}>Other Costs</Text>
             <Text style={styles.value}>{formatCurrency(otherCosts)}</Text>
           </View>
+
+          {costNotes?.trim() ? (
+  <View style={styles.noteBlock}>
+    <Text style={styles.noteLabel}>Cost Notes</Text>
+    <Text style={styles.noteText}>{costNotes}</Text>
+  </View>
+) : null}
         </InfoCard>
 
         <InfoCard title="Summary">
@@ -134,25 +156,23 @@ export default function FinanceSection({
             <Text style={styles.valueBold}>{formatCurrency(totalCosts)}</Text>
           </View>
 
-          
-
           <View style={[styles.row, styles.netRow, styles.rowLast]}>
             <Text style={styles.labelBold}>Net Income</Text>
             <Text style={styles.valueBold}>{formatCurrency(netIncome)}</Text>
           </View>
-        </InfoCard>
 
-        <View style={styles.row}>
+          <View style={[styles.row, styles.rowLast]}>
             <Text style={styles.labelBold}>Shares</Text>
             <Text style={styles.valueBold}>
               {shareCount && shareCount > 0 ? String(shareCount) : "—"}
             </Text>
           </View>
 
-          <View style={styles.row}>
+          <View style={[styles.row, styles.rowLast]}>
             <Text style={styles.labelBold}>Per Share</Text>
             <Text style={styles.valueBold}>{formatCurrency(perShare)}</Text>
           </View>
+        </InfoCard>
       </View>
     </ScrollView>
   );
@@ -212,4 +232,23 @@ const styles = StyleSheet.create({
 
   value: { fontSize: 14, color: "#333" },
   valueBold: { fontSize: 14, fontWeight: "700", color: "#008080" },
+
+  noteBlock: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+  },
+  noteLabel: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#111",
+    marginBottom: 6,
+    textTransform: "uppercase",
+  },
+  noteText: {
+    fontSize: 14,
+    color: "#333",
+    lineHeight: 20,
+  },
 });

@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -38,12 +39,14 @@ type AvailabilitySummaryRow = {
   provisional_count: number;
   unavailable_count: number;
   awaiting_count: number;
-  total_invited: number;
+  total_expected: number;
 };
 
 type Props = {
   eventId: string;
-  memberId: string; // current user (from auth later)
+  memberId: string;
+  hasCustomLineup?: boolean;
+  canEdit?: boolean;
 };
 
 type EventAvailabilityDbRow = {
@@ -62,7 +65,12 @@ type EventAvailabilityDbRow = {
   } | null;
 };
 
-export default function AvailabilitySection({ eventId, memberId }: Props) {
+export default function AvailabilitySection({
+  eventId,
+  memberId,
+  hasCustomLineup,
+  canEdit,
+}: Props) {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<AvailabilityRow[]>([]);
   const [saving, setSaving] = useState(false);
@@ -116,12 +124,11 @@ export default function AvailabilitySection({ eventId, memberId }: Props) {
       return;
     }
 
-    const list = ((data as unknown) as EventAvailabilityDbRow[]) ?? [];
+    const list = (data as unknown as EventAvailabilityDbRow[]) ?? [];
 
     const mapped: AvailabilityRow[] = list
       .map((r) => {
         const bm = r.band_members;
-
         const status = r.status ?? null;
 
         const label: AvailabilityLabel =
@@ -150,8 +157,6 @@ export default function AvailabilitySection({ eventId, memberId }: Props) {
 
     setRows(mapped);
 
-    // Keep your existing summary view (fine). If it’s based on "active members",
-    // that’s OK for headline counts.
     const { data: sumData, error: sumError } = await supabase
       .from("v_event_availability_summary")
       .select("*")
@@ -173,15 +178,9 @@ export default function AvailabilitySection({ eventId, memberId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
-  const musicians = useMemo(
-    () => rows.filter((r) => (r.member_type ?? "musician") === "musician"),
-    [rows]
-  );
+  const musicians = useMemo(() => rows.filter((r) => r.member_type === "musician"), [rows]);
 
-  const crew = useMemo(
-    () => rows.filter((r) => (r.member_type ?? "crew") === "crew"),
-    [rows]
-  );
+const crew = useMemo(() => rows.filter((r) => r.member_type === "crew"), [rows]);
 
   const currentRow = useMemo(
     () => rows.find((r) => r.member_id === memberId) ?? null,
@@ -283,6 +282,34 @@ export default function AvailabilitySection({ eventId, memberId }: Props) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <InfoCard title="Your Availability">
+        <View style={styles.badgeRow}>
+          <View style={styles.lineupBadge}>
+            <Text style={styles.lineupBadgeText}>
+              {hasCustomLineup ? "Custom Lineup" : "Core Band"}
+            </Text>
+          </View>
+
+          {canEdit ? (
+  <Pressable
+    onPress={() => {
+      const msg = "Lineup editing will be added here.";
+      if (Platform.OS === "web") {
+        // eslint-disable-next-line no-alert
+        alert(`Coming soon\n\n${msg}`);
+      } else {
+        Alert.alert("Coming soon", msg);
+      }
+    }}
+    hitSlop={10}
+    style={styles.editLineupPill}
+  >
+    <Text style={styles.editLineupPillText}>Edit Lineup</Text>
+  </Pressable>
+) : (
+  <View />
+)}
+        </View>
+
         <View style={styles.chipRow}>
           {chip("available", "Available")}
           {chip("provisional", "Provisional")}
@@ -293,15 +320,23 @@ export default function AvailabilitySection({ eventId, memberId }: Props) {
       </InfoCard>
 
       <InfoCard title="Event Summary">
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryItem}>Awaiting: {summary?.awaiting_count ?? 0}</Text>
-          <Text style={styles.summaryItem}>Available: {summary?.available_count ?? 0}</Text>
-          <Text style={styles.summaryItem}>Provisional: {summary?.provisional_count ?? 0}</Text>
-          <Text style={styles.summaryItem}>Unavailable: {summary?.unavailable_count ?? 0}</Text>
-          <Text style={styles.summaryItem}>Response required: {summary?.total_invited ?? 0}</Text>
-        </View>
-        <Text style={styles.smallNote}>Counts are for active members expected to respond.</Text>
-      </InfoCard>
+  <View style={styles.summaryRow}>
+    <Text style={styles.summaryItem}>
+      Total to respond: {summary?.total_expected ?? 0}
+    </Text>
+    <Text style={styles.summaryItem}>
+      Responses due: {summary?.awaiting_count ?? 0}
+    </Text>
+  </View>
+
+  <View style={styles.summaryRow}>
+    <Text style={styles.summaryItem}>Available: {summary?.available_count ?? 0}</Text>
+    <Text style={styles.summaryItem}>Provisional: {summary?.provisional_count ?? 0}</Text>
+    <Text style={styles.summaryItem}>Unavailable: {summary?.unavailable_count ?? 0}</Text>
+  </View>
+
+  <Text style={styles.smallNote}>Counts are for members expected to respond.</Text>
+</InfoCard>
 
       <InfoCard title="Musicians">
         <View style={styles.table}>
@@ -401,6 +436,39 @@ const styles = StyleSheet.create({
   loading: { paddingVertical: 16, alignItems: "center" },
 
   smallNote: { fontSize: 12, color: "#666", marginBottom: 10 },
+
+  badgeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
+  lineupBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    backgroundColor: "rgba(0,128,128,0.10)",
+  },
+  lineupBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#008080",
+  },
+
+  editLineupPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(0,128,128,0.35)",
+    backgroundColor: "rgba(0,128,128,0.08)",
+  },
+  editLineupPillText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#008080",
+  },
 
   chipRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
   chip: {

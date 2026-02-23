@@ -107,6 +107,10 @@ type EventRow = {
   other_costs: number | null;
   manual_playing_share_override: number | null;
 
+  // ✅ finance notes (needed for FinanceSection display)
+  fee_notes: string | null;
+  cost_notes: string | null;
+
   // per-event departure override (optional)
   departure_address: string | null;
   departure_postcode: string | null;
@@ -141,6 +145,7 @@ export default function EventDetailsScreen() {
 
   const [event, setEvent] = useState<EventRow | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasCustomLineup, setHasCustomLineup] = useState(false);
 
   // Mapped from auth.users.id -> band_members.member_id
   const [currentMemberId, setCurrentMemberId] = useState<string>("");
@@ -228,10 +233,66 @@ export default function EventDetailsScreen() {
     if (!id) return;
 
     setLoading(true);
+    const { count, error: lineupErr } = await supabase
+  .from("event_members")
+  .select("*", { count: "exact", head: true })
+  .eq("event_id", id);
 
+if (!lineupErr) setHasCustomLineup((count ?? 0) > 0);
+
+    // ✅ IMPORTANT:
+    // We must select fee_notes and cost_notes explicitly (not random lines after .single()).
+    // Keep venues loaded separately as you already do.
     const { data, error } = await supabase
       .from("events")
-      .select("*")
+      .select(
+        `
+        event_id,
+        event_date,
+        event_type,
+        event_notes,
+        event_status,
+
+        promoter_contact_name,
+        promoter_contact_phone,
+        promoter_contact_email,
+
+        travel_venue,
+        loadin,
+        soundcheck,
+        doors,
+        onstage,
+        offstage,
+        venue_curfew,
+        depart_venue,
+        schedule_notes,
+
+        setlist_url,
+        eventinfo_url,
+        promo_material_url,
+        doc_other_url,
+
+        income_fee,
+        fee_type,
+        paid_status,
+
+        van_hire,
+        fuel,
+        dep_cost,
+        driver_cost,
+        foh_eng_cost,
+        other_costs,
+        manual_playing_share_override,
+
+        fee_notes,
+        cost_notes,
+
+        departure_address,
+        departure_postcode,
+
+        venue_id
+      `
+      )
       .eq("event_id", id)
       .single();
 
@@ -416,7 +477,12 @@ export default function EventDetailsScreen() {
             open={openSections.availability}
             onPress={() => toggleSection("availability")}
           >
-            <AvailabilitySection eventId={event.event_id} memberId={currentMemberId} />
+            <AvailabilitySection
+  eventId={event.event_id}
+  memberId={currentMemberId}
+  hasCustomLineup={hasCustomLineup}
+  canEdit={canEdit}
+/>
           </Section>
 
           {/* SCHEDULE */}
@@ -493,6 +559,8 @@ export default function EventDetailsScreen() {
               driverCost={event.driver_cost}
               fohEngCost={event.foh_eng_cost}
               otherCosts={event.other_costs}
+              feeNotes={event.fee_notes}
+              costNotes={event.cost_notes}
             />
           </Section>
         </ScrollView>

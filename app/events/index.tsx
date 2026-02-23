@@ -1,21 +1,22 @@
+// app/events/index.tsx
+
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import ActionButton from "@/components/ui/ActionButton";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-
-// ...
 
 type VenueRow = {
   event_venue_name: string;
@@ -27,8 +28,18 @@ type EventRow = {
   event_date: string;
   event_status: string | null;
   event_type: string | null;
-  venues: VenueRow | null; // ⭐ SINGLE OBJECT, NOT ARRAY
+  venues: VenueRow | null; // single object
 };
+
+function getTodayLondonYYYYMMDD() {
+  // en-CA returns YYYY-MM-DD
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
 
 export default function EventsListScreen() {
   const router = useRouter();
@@ -38,17 +49,21 @@ export default function EventsListScreen() {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [eventsMode, setEventsMode] = useState<"upcoming" | "archived">("upcoming");
+
+  const todayLondon = useMemo(() => getTodayLondonYYYYMMDD(), []);
 
   useFocusEffect(
     useCallback(() => {
       loadEvents();
-    }, [])
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [eventsMode])
   );
 
   async function loadEvents() {
     setLoading(true);
 
-    const { data, error } = await supabase
+        let q = supabase
       .from("events")
       .select(`
         event_id,
@@ -59,21 +74,32 @@ export default function EventsListScreen() {
           event_venue_name,
           city
         )
-      `)
-      .order("event_date", { ascending: true });
+      `);
+
+    if (eventsMode === "upcoming") {
+      q = q
+        .gte("event_date", todayLondon)
+        .order("event_date", { ascending: true });
+    } else {
+      q = q
+        .lt("event_date", todayLondon)
+        .order("event_date", { ascending: false });
+    }
+
+    const { data, error } = await q;
 
     if (!error && data) {
       setEvents(data as unknown as EventRow[]);
+    } else {
+      setEvents([]);
     }
 
     setLoading(false);
   }
 
-  // -----------------------------
-  // DATE FORMATTER (WITH WEEKDAY)
-  // -----------------------------
   function formatDisplayDate(dateString: string) {
-    const date = new Date(dateString);
+    // Avoid timezone shifting for date-only strings
+    const date = new Date(`${dateString}T12:00:00`);
 
     const formatted = new Intl.DateTimeFormat("en-GB", {
       weekday: "short",
@@ -137,30 +163,67 @@ export default function EventsListScreen() {
           ),
 
           headerRight: () => (
-            <View
-              style={Platform.select({
-                ios: {
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  justifyContent: "center",
-                  alignItems: "center",
-                },
-                default: { paddingRight: 12 },
-              })}
-            >
-              <TouchableOpacity
-                onPress={() => router.push("/")}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="home-outline" size={26} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          ),
+  <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingRight: 12 }}>
+    <TouchableOpacity
+      onPress={() => router.push("/events/calendar")}
+      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+    >
+      <Ionicons name="calendar-outline" size={26} color="#fff" />
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      onPress={() => router.push("/")}
+      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+    >
+      <Ionicons name="home-outline" size={26} color="#fff" />
+    </TouchableOpacity>
+  </View>
+),
         }}
       />
 
       <View style={styles.container}>
+        {/* MODE TOGGLE */}
+        <View style={styles.modeRow}>
+          <View style={styles.modePill}>
+            <Pressable
+              onPress={() => setEventsMode("upcoming")}
+              style={[
+                styles.modeBtn,
+                eventsMode === "upcoming" ? styles.modeBtnActive : null,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.modeText,
+                  eventsMode === "upcoming" ? styles.modeTextActive : null,
+                ]}
+              >
+                Upcoming
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setEventsMode("archived")}
+              style={[
+                styles.modeBtn,
+                eventsMode === "archived" ? styles.modeBtnActive : null,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.modeText,
+                  eventsMode === "archived" ? styles.modeTextActive : null,
+                ]}
+              >
+                Archived
+              </Text>
+            </Pressable>
+          </View>
+
+          <View style={{ flex: 1 }} />
+        </View>
+
         {/* SEARCH BAR */}
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={20} color="#666" />
@@ -206,18 +269,20 @@ export default function EventsListScreen() {
               >
                 <View style={styles.eventRow}>
                   <View style={{ flex: 1 }}>
-                    {/* DATE */}
                     <Text style={styles.eventDate}>{formatDisplayDate(item.event_date)}</Text>
 
-                    {/* VENUE + CITY */}
                     <Text style={styles.eventVenue}>
                       {venueName}, {city}
                     </Text>
 
-                    {/* TYPE + STATUS */}
-                    <Text style={styles.eventMeta}>
-                      {type}, {status}
-                    </Text>
+                    {eventsMode === "archived" ? (
+  <Text style={styles.archivedBadge}>ARCHIVED</Text>
+) : null}
+
+{/* TYPE + STATUS */}
+<Text style={styles.eventMeta}>
+  {type}, {status}
+</Text>
                   </View>
 
                   <Ionicons name="chevron-forward-outline" size={24} color="#333" />
@@ -243,6 +308,46 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f5",
   },
 
+  // MODE TOGGLE
+  modeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 12,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  modePill: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: "#008080",
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: "#fff",
+  },
+  modeBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  modeBtnActive: {
+    backgroundColor: "#e5e7eb",
+  },
+  modeText: {
+    fontWeight: "400",
+    color: "#222",
+  },
+  modeTextActive: {
+    fontWeight: "700",
+  },
+  archivedBadge: {
+  alignSelf: "flex-start",
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#666",
+  marginTop: 2,
+  marginBottom: 2,
+  textTransform: "uppercase",
+},
+
   // SEARCH
   searchBar: {
     flexDirection: "row",
@@ -252,7 +357,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginHorizontal: 12,
-    marginTop: 12,
+    marginTop: 8,
     borderWidth: 1,
     borderColor: "#008080",
   },
@@ -261,25 +366,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     color: "#333",
-  },
-
-  // ADD EVENT BUTTON
-  addEventButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#4FB3B3",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginHorizontal: 12,
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  addEventButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-    marginLeft: 6,
   },
 
   // EVENT ROW

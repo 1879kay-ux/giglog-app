@@ -1,6 +1,7 @@
-import { FontAwesome } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import { Link, Stack, useRouter } from "expo-router";
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -9,42 +10,25 @@ export default function HomeScreen() {
     <>
       <Stack.Screen
         options={{
-          title: 'GigLog',
+          title: "GigLog",
+          headerRight: () => (
+            <Link href="./settings" asChild>
+              <TouchableOpacity style={styles.headerIconWrapper} hitSlop={10}>
+                <Ionicons name="settings-outline" size={24} color="#fff" />
+              </TouchableOpacity>
+            </Link>
+          ),
         }}
       />
+
       <View style={styles.container}>
         <Text style={styles.title}>Home</Text>
 
         <View style={styles.menuContainer}>
-
-          <MenuButton
-            label="Events"
-            icon="calendar"
-            onPress={() => router.push({ pathname: '/events' })}
-
-          />
-
-          <MenuButton
-            label="Venues"
-            icon="map-marker"
-            onPress={() => router.push({ pathname: '/venue' })}
-
-          />
-
-          <MenuButton
-            label="Band & Crew"
-            icon="users"
-           onPress={() => router.push({ pathname: '/band' })}
-
-          />
-
-          <MenuButton
-            label="Profile"
-            icon="user"
-            onPress={() => router.push({ pathname: '/profile' })}
-
-          />
-
+          <MenuButton label="Events" icon="calendar" onPress={() => router.push("/events")} />
+          <MenuButton label="Venues" icon="map-marker" onPress={() => router.push("/venue")} />
+          <MenuButton label="Band & Crew" icon="users" onPress={() => router.push("/band")} />
+          <MenuButton label="Profile" icon="user" onPress={() => router.push("/profile")} />
         </View>
       </View>
     </>
@@ -67,25 +51,33 @@ function MenuButton({ label, icon, onPress }: MenuButtonProps) {
 }
 
 const styles = StyleSheet.create({
+  headerIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: 20,
     paddingTop: 40,
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 30,
-    color: '#111',
+    color: "#111",
   },
   menuContainer: {
     gap: 16,
   },
   button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f2f2f2',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f2f2f2",
     paddingVertical: 18,
     paddingHorizontal: 16,
     borderRadius: 10,
@@ -96,7 +88,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
   },
 });

@@ -7,6 +7,11 @@ type CurrentMember = {
   authUserId: string | null;
   memberId: string | null;
   isAdmin: boolean;
+
+  // NEW: per-admin UI toggle (stored on band_members.admin_mode_enabled)
+  adminModeEnabled: boolean;
+  setAdminModeEnabled: (next: boolean) => Promise<void>;
+
   refresh: () => Promise<void>;
 };
 
@@ -15,6 +20,10 @@ const CurrentMemberContext = createContext<CurrentMember>({
   authUserId: null,
   memberId: null,
   isAdmin: false,
+
+  adminModeEnabled: true,
+  setAdminModeEnabled: async () => {},
+
   refresh: async () => {},
 });
 
@@ -24,17 +33,21 @@ export function CurrentMemberProvider({ children }: { children: React.ReactNode 
   const [memberId, setMemberId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // NEW
+  const [adminModeEnabled, setAdminModeEnabledState] = useState(true);
+
   async function fetchMemberFor(authId: string | null) {
     if (!authId) {
       setMemberId(null);
       setIsAdmin(false);
+      setAdminModeEnabledState(true);
       setLoading(false);
       return;
     }
 
     const { data: bm, error } = await supabase
       .from("band_members")
-      .select("member_id,is_admin")
+      .select("member_id,is_admin,admin_mode_enabled")
       .eq("auth_user_id", authId)
       .maybeSingle();
 
@@ -42,13 +55,39 @@ export function CurrentMemberProvider({ children }: { children: React.ReactNode 
       console.log("CurrentMember lookup error", error);
       setMemberId(null);
       setIsAdmin(false);
+      setAdminModeEnabledState(true);
       setLoading(false);
       return;
     }
 
     setMemberId((bm?.member_id as string) ?? null);
     setIsAdmin(!!bm?.is_admin);
+
+    // Default to true if column is null/undefined for any reason
+    setAdminModeEnabledState(bm?.admin_mode_enabled ?? true);
+
     setLoading(false);
+  }
+
+  // NEW: persist toggle to band_members
+  async function setAdminModeEnabled(next: boolean) {
+    // only admins should be able to change it
+    if (!isAdmin) return;
+    if (!memberId) return;
+
+    // optimistic update
+    setAdminModeEnabledState(next);
+
+    const { error } = await supabase
+      .from("band_members")
+      .update({ admin_mode_enabled: next })
+      .eq("member_id", memberId);
+
+    if (error) {
+      // revert if save fails
+      setAdminModeEnabledState(!next);
+      throw error;
+    }
   }
 
   async function refresh() {
@@ -89,6 +128,10 @@ export function CurrentMemberProvider({ children }: { children: React.ReactNode 
         authUserId,
         memberId,
         isAdmin,
+
+        adminModeEnabled,
+        setAdminModeEnabled,
+
         refresh,
       }}
     >

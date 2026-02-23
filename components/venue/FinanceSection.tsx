@@ -134,7 +134,15 @@ export default function FinanceSection({
             <Text style={styles.valueBold}>{formatCurrency(totalCosts)}</Text>
           </View>
 
-          <View style={styles.row}>
+          
+
+          <View style={[styles.row, styles.netRow, styles.rowLast]}>
+            <Text style={styles.labelBold}>Net Income</Text>
+            <Text style={styles.valueBold}>{formatCurrency(netIncome)}</Text>
+          </View>
+        </InfoCard>
+
+        <View style={styles.row}>
             <Text style={styles.labelBold}>Shares</Text>
             <Text style={styles.valueBold}>
               {shareCount && shareCount > 0 ? String(shareCount) : "—"}
@@ -145,12 +153,6 @@ export default function FinanceSection({
             <Text style={styles.labelBold}>Per Share</Text>
             <Text style={styles.valueBold}>{formatCurrency(perShare)}</Text>
           </View>
-
-          <View style={[styles.row, styles.netRow, styles.rowLast]}>
-            <Text style={styles.labelBold}>Net Income</Text>
-            <Text style={styles.valueBold}>{formatCurrency(netIncome)}</Text>
-          </View>
-        </InfoCard>
       </View>
     </ScrollView>
   );

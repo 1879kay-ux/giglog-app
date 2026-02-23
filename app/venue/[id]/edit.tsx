@@ -1,12 +1,14 @@
-import VenueForm from '@/components/venue/VenueForm';
-import { supabase } from '@/lib/supabase';
-import type { Venue } from '@/types/venue';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, View } from 'react-native';
+import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
+import VenueForm from "@/components/venue/VenueForm";
+import { supabase } from "@/lib/supabase";
+import type { Venue } from "@/types/venue";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, View } from "react-native";
 
 export default function EditVenueScreen() {
   const router = useRouter();
+  const { isAdmin, loading: memberLoading } = useCurrentMember();
 
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -15,24 +17,32 @@ export default function EditVenueScreen() {
   const [initialValues, setInitialValues] = useState<Partial<Venue> | null>(null);
 
   useEffect(() => {
+    if (memberLoading) return;
+
+    if (!isAdmin) {
+      Alert.alert("No access", "Only admins can edit venues.");
+      router.back();
+    }
+  }, [isAdmin, memberLoading, router]);
+
+  useEffect(() => {
+    if (memberLoading) return;
+    if (!isAdmin) return; // guard: don't load venue if not allowed
     if (!id) return;
+
     loadVenue();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, isAdmin, memberLoading]);
 
   async function loadVenue() {
     if (!id) return;
 
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from('venues')
-      .select('*')
-      .eq('venue_id', id)
-      .single();
+    const { data, error } = await supabase.from("venues").select("*").eq("venue_id", id).single();
 
     if (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert("Error", error.message);
       setLoading(false);
       return;
     }
@@ -45,7 +55,7 @@ export default function EditVenueScreen() {
     if (!id) return;
 
     const { error } = await supabase
-      .from('venues')
+      .from("venues")
       .update({
         event_venue_name: updated.event_venue_name,
         address: updated.address ?? null,
@@ -59,20 +69,32 @@ export default function EditVenueScreen() {
         capacity: updated.capacity ?? null,
         capacity_notes: updated.capacity_notes ?? null,
       })
-      .eq('venue_id', id);
+      .eq("venue_id", id);
 
     if (error) {
-      Alert.alert('Save failed', error.message);
+      Alert.alert("Save failed", error.message);
       return;
     }
 
-    Alert.alert('Saved', 'Venue updated');
+    Alert.alert("Saved", "Venue updated");
     router.back();
   }
 
+  if (memberLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#333" />
+      </View>
+    );
+  }
+
+  // If not admin, we trigger router.back() above. Avoid rendering anything.
+  if (!isAdmin) return null;
+
   if (loading || !initialValues) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Stack.Screen options={{ title: "Edit Venue" }} />
         <ActivityIndicator size="large" color="#333" />
       </View>
     );
@@ -80,7 +102,7 @@ export default function EditVenueScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Edit Venue' }} />
+      <Stack.Screen options={{ title: "Edit Venue" }} />
       <VenueForm initialValues={initialValues} onSubmit={handleSubmit} />
     </>
   );

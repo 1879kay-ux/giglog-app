@@ -1,3 +1,4 @@
+import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import ActionButton from '@/components/ui/ActionButton';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +29,8 @@ export default function VenuesScreen() {
     const [error, setError] = useState<string | null>(null);
 
     const [search, setSearch] = useState('');
+
+    const { isAdmin } = useCurrentMember();
 
     useFocusEffect(
   useCallback(() => {
@@ -167,12 +170,14 @@ export default function VenuesScreen() {
                     )}
                 </View>
 
-                {/* ADD VENUE BUTTON */}
-                <ActionButton
-  label="Add Venue"
-  icon="add-circle-outline"
-  onPress={() => router.push('/venue/add')}
-/>
+                {/* ADD VENUE BUTTON (admin only) */}
+{isAdmin ? (
+  <ActionButton
+    label="Add Venue"
+    icon="add-circle-outline"
+    onPress={() => router.push("/venue/add")}
+  />
+) : null}
 
                 <Text style={styles.countText}>{filteredVenues.length} venues</Text>
 

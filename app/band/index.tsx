@@ -1,3 +1,4 @@
+import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { supabase } from "@/lib/supabase";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
@@ -46,6 +47,7 @@ function isCrewMember(m: BandMemberRow) {
 
 export default function BandMembersScreen() {
   const router = useRouter();
+  const { isAdmin, loading: memberLoading } = useCurrentMember();
 
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<BandMemberRow[]>([]);
@@ -178,13 +180,15 @@ export default function BandMembersScreen() {
               </Text>
             </Pressable>
 
-            <Pressable style={styles.addButton} onPress={() => router.push("/band/add" as any)}>
-              <Text style={styles.addButtonText}>+ Add</Text>
-            </Pressable>
+            {isAdmin ? (
+              <Pressable style={styles.addButton} onPress={() => router.push("/band/add" as any)}>
+                <Text style={styles.addButtonText}>+ Add</Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
 
-        {loading ? (
+        {loading || memberLoading ? (
           <View style={styles.loading}>
             <ActivityIndicator size="large" />
           </View>

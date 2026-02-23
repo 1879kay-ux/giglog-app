@@ -1,6 +1,8 @@
+import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
-import { Alert, StyleSheet, View } from "react-native";
+import React, { useEffect } from "react";
+import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
 
 import VenueForm from "../../components/venue/VenueForm";
 import { Venue } from "../../types/venue";
@@ -9,12 +11,34 @@ export default function AddVenueScreen() {
   console.log("🟣 AddVenueScreen mounted");
 
   const router = useRouter();
+  const { isAdmin, loading } = useCurrentMember();
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (!isAdmin) {
+      Alert.alert("No access", "Only admins can add venues.");
+      router.back();
+    }
+  }, [isAdmin, loading, router]);
+
+  if (loading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#333" />
+      </View>
+    );
+  }
+
+  // If not admin, we trigger router.back() above.
+  // Return null to avoid flashing the form.
+  if (!isAdmin) return null;
 
   const handleSubmit = async (venue: Venue) => {
     console.log("🔥 handleSubmit fired with venue:", venue);
 
     try {
-      // Build payload WITHOUT venue_id so DB can generate it (matches your working modal)
+      // Build payload WITHOUT venue_id so DB can generate it
       const payload = {
         event_venue_name: venue.event_venue_name?.trim(),
         city: venue.city?.trim(),
@@ -29,11 +53,7 @@ export default function AddVenueScreen() {
         capacity_notes: venue.capacity_notes?.trim() || null,
       };
 
-      const { data, error } = await supabase
-        .from("venues")
-        .insert(payload)
-        .select()
-        .single();
+      const { data, error } = await supabase.from("venues").insert(payload).select().single();
 
       if (error) {
         console.log("❌ SUPABASE ERROR:", error);
@@ -61,4 +81,9 @@ export default function AddVenueScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  loading: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });

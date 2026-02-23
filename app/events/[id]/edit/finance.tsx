@@ -2,16 +2,16 @@ import { supabase } from "@/lib/supabase";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 type EventFinanceRow = {
@@ -150,7 +150,10 @@ export default function EditEventFinanceScreen() {
   async function onSave() {
     if (!id) return;
 
-    const parsed: Record<string, { ok: true; value: number | null } | { ok: false; error: string }> = {};
+    const parsed: Record<
+      string,
+      { ok: true; value: number | null } | { ok: false; error: string }
+    > = {};
     for (const f of numericFields) parsed[f.key] = parseNullableNumber(f.value);
 
     for (const f of numericFields) {
@@ -203,15 +206,17 @@ export default function EditEventFinanceScreen() {
     <>
       <Stack.Screen options={{ title: "Edit Finance" }} />
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Finance</Text>
 
             <Text style={styles.sectionLabel}>Income</Text>
 
-            <RowNumber label="Fee" value={incomeFee} onChange={setIncomeFee} />
-            
+            <RowNumber label="Fee" value={incomeFee} onChange={setIncomeFee} isMoney />
 
             <RowChips
               label="Fee Type"
@@ -230,14 +235,16 @@ export default function EditEventFinanceScreen() {
             <View style={styles.divider} />
 
             <Text style={styles.sectionLabel}>Costs</Text>
+            <Text style={styles.currencyHint}>All amounts are £</Text>
 
-            <RowNumber label="Van Hire" value={vanHire} onChange={setVanHire} />
-            <RowNumber label="Fuel" value={fuel} onChange={setFuel} />
-            <RowNumber label="Dep Fees" value={depCost} onChange={setDepCost} />
-            <RowNumber label="Driver Cost" value={driverCost} onChange={setDriverCost} />
-            <RowNumber label="FOH/Engineer" value={fohEngCost} onChange={setFohEngCost} />
-            <RowNumber label="Other Costs" value={otherCosts} onChange={setOtherCosts} />
-            <RowNumber label="Shares" value={shares} onChange={setShares} />
+            <RowNumber label="Van Hire" value={vanHire} onChange={setVanHire} isMoney />
+            <RowNumber label="Fuel" value={fuel} onChange={setFuel} isMoney />
+            <RowNumber label="Dep Fees" value={depCost} onChange={setDepCost} isMoney />
+            <RowNumber label="Driver Cost" value={driverCost} onChange={setDriverCost} isMoney />
+            <RowNumber label="FOH/Engineer" value={fohEngCost} onChange={setFohEngCost} isMoney />
+            <RowNumber label="Other Costs" value={otherCosts} onChange={setOtherCosts} isMoney />
+
+            <View style={styles.divider} />
 
             <Text style={styles.sectionLabel}>Net Income Split</Text>
             <RowNumber label="Shares" value={shares} onChange={setShares} />
@@ -252,27 +259,37 @@ export default function EditEventFinanceScreen() {
   );
 }
 
-function RowNumber(props: { label: string; value: string; onChange: (t: string) => void }) {
+function RowNumber(props: {
+  label: string;
+  value: string;
+  onChange: (t: string) => void;
+  isMoney?: boolean;
+}) {
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{props.label}</Text>
 
       {Platform.OS === "web" ? (
-        // @ts-ignore web-only input
-        <input
-          type="number"
-          step="0.01"
-          value={props.value}
-          onChange={(e: any) => props.onChange(e.target.value)}
-          style={{
-            width: 140,
-            padding: 8,
-            borderRadius: 8,
-            border: "1px solid #ddd",
-            fontSize: 14,
-            textAlign: "right",
-          }}
-        />
+        <View style={styles.moneyWrap}>
+          {props.isMoney ? <Text style={styles.moneyPrefix}>£</Text> : null}
+
+          {/* @ts-ignore web-only input */}
+          <input
+            type="number"
+            step={props.isMoney ? "1" : "1"}
+            inputMode="decimal"
+            value={props.value}
+            onChange={(e: any) => props.onChange(e.target.value)}
+            style={{
+              width: props.isMoney ? 120 : 140,
+              padding: 8,
+              borderRadius: 8,
+              border: "1px solid #ddd",
+              fontSize: 14,
+              textAlign: "right",
+            }}
+          />
+        </View>
       ) : (
         <TextInput
           style={styles.numberInput}
@@ -317,7 +334,12 @@ function RowChips(props: {
               activeOpacity={0.8}
               style={[styles.chip, selected ? styles.chipSelected : styles.chipUnselected]}
             >
-              <Text style={[styles.chipText, selected ? styles.chipTextSelected : styles.chipTextUnselected]}>
+              <Text
+                style={[
+                  styles.chipText,
+                  selected ? styles.chipTextSelected : styles.chipTextUnselected,
+                ]}
+              >
                 {opt}
               </Text>
             </TouchableOpacity>
@@ -365,6 +387,12 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
+  currencyHint: {
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 8,
+  },
+
   divider: {
     height: 1,
     backgroundColor: "#eee",
@@ -398,6 +426,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111",
     backgroundColor: "#fff",
+  },
+
+  moneyWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  moneyPrefix: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#111",
   },
 
   chipBlock: {

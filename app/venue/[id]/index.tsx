@@ -1,8 +1,9 @@
-import ActionButton from '@/components/ui/ActionButton';
-import { supabase } from '@/lib/supabase';
-import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
+import ActionButton from "@/components/ui/ActionButton";
+import { supabase } from "@/lib/supabase";
+import { Ionicons } from "@expo/vector-icons";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -10,7 +11,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
 
 type VenueRow = {
   venue_id: string;
@@ -33,13 +34,14 @@ function Field({ label, value }: { label: string; value: string | null }) {
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <Text style={styles.fieldValue}>{value && value.trim() ? value : '—'}</Text>
+      <Text style={styles.fieldValue}>{value && value.trim() ? value : "—"}</Text>
     </View>
   );
 }
 
 export default function VenueDetailScreen() {
   const router = useRouter();
+  const { isAdmin, loading: memberLoading } = useCurrentMember();
 
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -59,18 +61,19 @@ export default function VenueDetailScreen() {
     setLoading(true);
 
     const { data, error } = await supabase
-      .from('venues')
+      .from("venues")
       .select(
-        'venue_id,event_venue_name,city,address,postcode,venue_contact_name,venue_contact_phone,venue_contact_email,venue_notes,capacity,capacity_notes,is_active'
+        "venue_id,event_venue_name,city,address,postcode,venue_contact_name,venue_contact_phone,venue_contact_email,venue_notes,capacity,capacity_notes,is_active"
       )
-      .eq('venue_id', id)
+      .eq("venue_id", id)
       .single();
 
     if (!error) setVenue(data as VenueRow);
     setLoading(false);
   }
 
-  if (loading) {
+  // optional: while member is loading, keep same loading UI
+  if (loading || memberLoading) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color="#333" />
@@ -81,7 +84,7 @@ export default function VenueDetailScreen() {
   if (!venue) {
     return (
       <View style={styles.loading}>
-        <Text style={{ color: '#333' }}>Venue not found.</Text>
+        <Text style={{ color: "#333" }}>Venue not found.</Text>
       </View>
     );
   }
@@ -90,7 +93,7 @@ export default function VenueDetailScreen() {
     <>
       <Stack.Screen
         options={{
-          title: 'Venue Details',
+          title: "Venue Details",
           headerLeft: () => (
             <View style={styles.headerIconWrapper}>
               <TouchableOpacity onPress={() => router.back()}>
@@ -100,7 +103,7 @@ export default function VenueDetailScreen() {
           ),
           headerRight: () => (
             <View style={styles.headerIconWrapper}>
-              <TouchableOpacity onPress={() => router.push('/')}>
+              <TouchableOpacity onPress={() => router.push("/")}>
                 <Ionicons name="home-outline" size={26} color="#fff" />
               </TouchableOpacity>
             </View>
@@ -111,19 +114,21 @@ export default function VenueDetailScreen() {
       <View style={styles.container}>
         {/* VENUE INFO BLOCK */}
         <View style={styles.summary}>
-          <Text style={styles.title}>{venue.event_venue_name ?? 'Venue'}</Text>
+          <Text style={styles.title}>{venue.event_venue_name ?? "Venue"}</Text>
           <Text style={styles.subtitle}>
-            {(venue.city ?? '—')}
-            {venue.postcode ? `, ${venue.postcode}` : ''}
+            {venue.city ?? "—"}
+            {venue.postcode ? `, ${venue.postcode}` : ""}
           </Text>
         </View>
 
-        {/* EDIT VENUE BUTTON */}
-        <ActionButton
-          label="Edit Venue"
-          icon="create-outline"
-          onPress={() => router.push(`/venue/${venue.venue_id}/edit`)}
-        />
+        {/* EDIT VENUE BUTTON (admin only) */}
+        {isAdmin ? (
+          <ActionButton
+            label="Edit Venue"
+            icon="create-outline"
+            onPress={() => router.push(`/venue/${venue.venue_id}/edit`)}
+          />
+        ) : null}
 
         <ScrollView contentContainerStyle={styles.content}>
           <Field label="Address" value={venue.address} />
@@ -134,10 +139,7 @@ export default function VenueDetailScreen() {
           <Field label="Capacity" value={venue.capacity != null ? String(venue.capacity) : null} />
           <Field label="Capacity notes" value={venue.capacity_notes} />
           <Field label="Notes" value={venue.venue_notes} />
-          <Field
-            label="Active"
-            value={venue.is_active == null ? null : venue.is_active ? 'Yes' : 'No'}
-          />
+          <Field label="Active" value={venue.is_active == null ? null : venue.is_active ? "Yes" : "No"} />
         </ScrollView>
       </View>
     </>
@@ -147,42 +149,42 @@ export default function VenueDetailScreen() {
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
   },
 
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
 
   headerIconWrapper: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   summary: {
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: "#ddd",
   },
   title: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#111',
+    fontWeight: "800",
+    color: "#111",
     marginBottom: 2,
   },
   subtitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#444',
+    fontWeight: "600",
+    color: "#444",
   },
 
   content: {
@@ -191,21 +193,21 @@ const styles = StyleSheet.create({
   },
 
   field: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 10,
     padding: 12,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#e6e6e6',
+    borderColor: "#e6e6e6",
   },
   fieldLabel: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#666',
+    fontWeight: "700",
+    color: "#666",
     marginBottom: 4,
   },
   fieldValue: {
     fontSize: 15,
-    color: '#111',
+    color: "#111",
   },
 });

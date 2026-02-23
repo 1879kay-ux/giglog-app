@@ -1,9 +1,11 @@
 // app/events/add.tsx
 
+import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Keyboard,
   KeyboardAvoidingView,
@@ -51,6 +53,7 @@ function formatDisplayDate(isoDate: string) {
 
 export default function AddEventScreen() {
   const router = useRouter();
+  const { isAdmin, loading: memberLoading } = useCurrentMember();
 
   const [eventType, setEventType] = useState<string | null>(null);
   const [eventDate, setEventDate] = useState<string>(todayIsoDate());
@@ -160,6 +163,52 @@ export default function AddEventScreen() {
 
     router.back();
   }
+
+  if (memberLoading) {
+  return (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      <ActivityIndicator />
+    </View>
+  );
+}
+
+if (!isAdmin) {
+  return (
+    <>
+      <Stack.Screen
+        options={{
+          title: "Add Event",
+          headerTitleAlign: "center",
+          headerStyle: { backgroundColor: "#008080" },
+          headerTitleStyle: { color: "#fff", fontWeight: "700" },
+          headerTintColor: "#fff",
+        }}
+      />
+
+      <View style={{ flex: 1, padding: 16 }}>
+        <Text style={{ fontSize: 16, fontWeight: "800", color: "#C62828", marginBottom: 10 }}>
+          Admin access required
+        </Text>
+        <Text style={{ fontSize: 13, color: "#666", marginBottom: 14 }}>
+          You do not have permission to add events. Ask the band admin if you need access.
+        </Text>
+
+        <TouchableOpacity
+          style={{
+            backgroundColor: "#009999",
+            paddingVertical: 12,
+            paddingHorizontal: 14,
+            borderRadius: 10,
+            alignSelf: "flex-start",
+          }}
+          onPress={() => router.back()}
+        >
+          <Text style={{ color: "#fff", fontWeight: "900" }}>Go back</Text>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+}
 
   const content = (
     <ScrollView

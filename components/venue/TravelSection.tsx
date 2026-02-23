@@ -1,8 +1,9 @@
-import { supabase } from '@/lib/supabase';
-import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
+import { supabase } from "@/lib/supabase";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useMemo, useState } from "react";
+import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 type Props = {
   eventId: string;
@@ -26,7 +27,7 @@ function enc(s: string) {
 }
 
 function clean(v?: string | null) {
-  const t = (v ?? '').trim();
+  const t = (v ?? "").trim();
   return t.length ? t : null;
 }
 
@@ -39,25 +40,28 @@ export default function TravelSection({
   departurePostcode,
 }: Props) {
   const router = useRouter();
+  const { isAdmin } = useCurrentMember();
 
   const goEditEvent = () => router.push(`/events/${eventId}/edit/travel`);
-  const goDefaults = () => router.push('/settings/travel');
+  const goDefaults = () => router.push("/settings/travel");
 
   const [showWebPicker, setShowWebPicker] = useState(false);
 
-  const onPressPencil = () => {
-    if (Platform.OS === 'web') {
+  const onPressEdit = () => {
+    if (!isAdmin) return;
+
+    if (Platform.OS === "web") {
       setShowWebPicker(true);
       return;
     }
 
     Alert.alert(
-      'Departure location',
-      'What do you want to change?',
+      "Departure location",
+      "What do you want to change?",
       [
-        { text: 'Default for all events', onPress: goDefaults },
-        { text: 'This event only', onPress: goEditEvent },
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Default for all events", onPress: goDefaults },
+        { text: "This event only", onPress: goEditEvent },
+        { text: "Cancel", style: "cancel" },
       ],
       { cancelable: true }
     );
@@ -69,23 +73,22 @@ export default function TravelSection({
     default_departure_postcode: null,
   });
 
-  // Key fix: refetch defaults whenever this screen regains focus
+  // Refetch defaults whenever this screen regains focus
   useFocusEffect(
     useCallback(() => {
       let alive = true;
 
       (async () => {
         const { data, error } = await supabase
-          .from('app_settings')
-          .select('default_departure_address, default_departure_postcode')
-          .eq('id', 'global')
+          .from("app_settings")
+          .select("default_departure_address, default_departure_postcode")
+          .eq("id", "global")
           .maybeSingle();
 
         if (!alive) return;
 
         if (error) {
-          console.log('TravelSection app_settings read error:', error);
-          // Keep previous defaults if read fails
+          console.log("TravelSection app_settings read error:", error);
           return;
         }
 
@@ -104,9 +107,9 @@ export default function TravelSection({
 
   const venueDest = useMemo(() => {
     return (
-      [clean(venueAddress), clean(venueCity), clean(venuePostcode)].filter(Boolean).join(', ') ||
+      [clean(venueAddress), clean(venueCity), clean(venuePostcode)].filter(Boolean).join(", ") ||
       clean(venuePostcode) ||
-      ''
+      ""
     );
   }, [venueAddress, venueCity, venuePostcode]);
 
@@ -119,50 +122,50 @@ export default function TravelSection({
 
   const departureOrigin = useMemo(() => {
     return (
-      [effectiveDepartureAddress, effectiveDeparturePostcode].filter(Boolean).join(', ') ||
+      [effectiveDepartureAddress, effectiveDeparturePostcode].filter(Boolean).join(", ") ||
       effectiveDeparturePostcode ||
-      ''
+      ""
     );
   }, [effectiveDepartureAddress, effectiveDeparturePostcode]);
 
   async function openUrl(url: string) {
     try {
       const can = await Linking.canOpenURL(url);
-      if (!can) throw new Error('cannot open');
+      if (!can) throw new Error("cannot open");
       await Linking.openURL(url);
     } catch {
-      Alert.alert("Can't open maps", 'Check the address/postcode and try again.');
+      Alert.alert("Can't open maps", "Check the address/postcode and try again.");
     }
   }
 
-  function openToVenue(app: 'apple' | 'google' | 'waze') {
+  function openToVenue(app: "apple" | "google" | "waze") {
     if (!venueDest) {
-      Alert.alert('Venue location missing', 'Add an address or postcode to the venue.');
+      Alert.alert("Venue location missing", "Add an address or postcode to the venue.");
       return;
     }
 
     const d = enc(venueDest);
 
     const url =
-      app === 'apple'
+      app === "apple"
         ? `http://maps.apple.com/?daddr=${d}&dirflg=d`
-        : app === 'google'
-        ? `https://www.google.com/maps/dir/?api=1&destination=${d}&travelmode=driving`
-        : `https://waze.com/ul?q=${d}&navigate=yes`;
+        : app === "google"
+          ? `https://www.google.com/maps/dir/?api=1&destination=${d}&travelmode=driving`
+          : `https://waze.com/ul?q=${d}&navigate=yes`;
 
     openUrl(url);
   }
 
-  function openFromDeparture(app: 'apple' | 'google' | 'waze') {
+  function openFromDeparture(app: "apple" | "google" | "waze") {
     if (!departureOrigin) {
       Alert.alert(
-        'Departure location not set',
-        'Set a default departure location, or set one just for this event.'
+        "Departure location not set",
+        "Set a default departure location, or set one just for this event."
       );
       return;
     }
     if (!venueDest) {
-      Alert.alert('Venue location missing', 'Add an address or postcode to the venue.');
+      Alert.alert("Venue location missing", "Add an address or postcode to the venue.");
       return;
     }
 
@@ -170,11 +173,11 @@ export default function TravelSection({
     const d = enc(venueDest);
 
     const url =
-      app === 'apple'
+      app === "apple"
         ? `http://maps.apple.com/?saddr=${o}&daddr=${d}&dirflg=d`
-        : app === 'google'
-        ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`
-        : `https://waze.com/ul?q=${d}&navigate=yes`;
+        : app === "google"
+          ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`
+          : `https://waze.com/ul?q=${d}&navigate=yes`;
 
     openUrl(url);
   }
@@ -191,15 +194,18 @@ export default function TravelSection({
         <View style={styles.blockHeader}>
           <Text style={styles.travelLabel}>Departure Location → Venue</Text>
 
-          <Pressable onPress={onPressPencil} hitSlop={10} style={styles.headerBtn}>
-            <Ionicons name="create-outline" size={18} color="#008080" />
-          </Pressable>
+          {isAdmin ? (
+            <Pressable onPress={onPressEdit} hitSlop={10} style={styles.editPill}>
+              <Ionicons name="create-outline" size={16} color="#008080" />
+              <Text style={styles.editPillText}>Edit</Text>
+            </Pressable>
+          ) : null}
         </View>
 
         <View style={styles.travelButtonRow}>
-          <Chip label="Apple" onPress={() => openFromDeparture('apple')} />
-          <Chip label="Google" onPress={() => openFromDeparture('google')} />
-          <Chip label="Waze" onPress={() => openFromDeparture('waze')} />
+          <Chip label="Apple" onPress={() => openFromDeparture("apple")} />
+          <Chip label="Google" onPress={() => openFromDeparture("google")} />
+          <Chip label="Waze" onPress={() => openFromDeparture("waze")} />
         </View>
 
         <View style={styles.locationBox}>
@@ -207,14 +213,19 @@ export default function TravelSection({
             <Text style={styles.locationTitle}>Departure Location</Text>
 
             {showingGlobalDefault ? (
-              <Pressable onPress={goDefaults} style={styles.badge} hitSlop={8}>
+              <Pressable
+                onPress={isAdmin ? goDefaults : undefined}
+                style={styles.badge}
+                hitSlop={8}
+                disabled={!isAdmin}
+              >
                 <Text style={styles.badgeText}>Default</Text>
               </Pressable>
             ) : null}
           </View>
 
-          <Text style={styles.locationText}>{effectiveDepartureAddress ?? 'Not set'}</Text>
-          <Text style={styles.locationText}>{effectiveDeparturePostcode ?? ''}</Text>
+          <Text style={styles.locationText}>{effectiveDepartureAddress ?? "Not set"}</Text>
+          <Text style={styles.locationText}>{effectiveDeparturePostcode ?? ""}</Text>
         </View>
       </View>
 
@@ -223,23 +234,23 @@ export default function TravelSection({
         <Text style={styles.travelLabel}>Current Location → Venue</Text>
 
         <View style={styles.travelButtonRow}>
-          <Chip label="Apple" onPress={() => openToVenue('apple')} />
-          <Chip label="Google" onPress={() => openToVenue('google')} />
-          <Chip label="Waze" onPress={() => openToVenue('waze')} />
+          <Chip label="Apple" onPress={() => openToVenue("apple")} />
+          <Chip label="Google" onPress={() => openToVenue("google")} />
+          <Chip label="Waze" onPress={() => openToVenue("waze")} />
         </View>
       </View>
 
       {/* Venue */}
       <View style={styles.locationBox}>
         <Text style={styles.locationTitle}>Venue Location</Text>
-        <Text style={styles.locationText}>{venueAddress ?? ''}</Text>
+        <Text style={styles.locationText}>{venueAddress ?? ""}</Text>
         <Text style={styles.locationText}>
-          {venueCity ?? ''} {venuePostcode ?? ''}
+          {venueCity ?? ""} {venuePostcode ?? ""}
         </Text>
       </View>
 
-      {/* WEB PICKER MODAL */}
-      {Platform.OS === 'web' && showWebPicker ? (
+      {/* WEB PICKER MODAL (admin only) */}
+      {Platform.OS === "web" && showWebPicker && isAdmin ? (
         <View style={styles.webModalOverlay} pointerEvents="auto">
           <View style={styles.webModalCard}>
             <Text style={styles.webModalTitle}>Departure location</Text>
@@ -280,125 +291,131 @@ export default function TravelSection({
 
 function Chip({ label, onPress }: { label: string; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={styles.chip} android_ripple={{ color: '#d9f0f0' }}>
+    <Pressable onPress={onPress} style={styles.chip} android_ripple={{ color: "#d9f0f0" }}>
       <Text style={styles.chipText}>{label}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { paddingVertical: 4, position: 'relative' },
+  wrap: { paddingVertical: 4, position: "relative" },
 
   blockHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
 
-  headerBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: '#E9F6F6',
-    alignItems: 'center',
-    justifyContent: 'center',
+  editPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(0,128,128,0.10)",
+  },
+  editPillText: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: "#008080",
   },
 
   travelRow: { marginBottom: 14 },
 
   travelLabel: {
     fontSize: 14,
-    fontWeight: '800',
-    color: '#111',
+    fontWeight: "800",
+    color: "#111",
   },
 
   travelButtonRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
 
   chip: {
-    backgroundColor: '#008080',
+    backgroundColor: "#008080",
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
   },
 
-  chipText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  chipText: { color: "#fff", fontSize: 12, fontWeight: "800" },
 
   locationBox: {
     marginTop: 10,
     padding: 10,
-    backgroundColor: '#f7f7f7',
+    backgroundColor: "#f7f7f7",
     borderRadius: 10,
   },
 
   locationHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 4,
   },
 
-  locationTitle: { fontSize: 12, fontWeight: '900', color: '#333' },
+  locationTitle: { fontSize: 12, fontWeight: "900", color: "#333" },
 
   badge: {
-    backgroundColor: '#E9F6F6',
+    backgroundColor: "#E9F6F6",
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
 
-  badgeText: { color: '#008080', fontSize: 11, fontWeight: '900' },
+  badgeText: { color: "#008080", fontSize: 11, fontWeight: "900" },
 
-  locationText: { fontSize: 13, color: '#555' },
+  locationText: { fontSize: 13, color: "#555" },
 
   webModalOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 16,
     zIndex: 9999,
   },
 
   webModalCard: {
-    width: '100%',
+    width: "100%",
     maxWidth: 420,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
   },
 
   webModalTitle: {
     fontSize: 16,
-    fontWeight: '900',
-    color: '#111',
+    fontWeight: "900",
+    color: "#111",
     marginBottom: 6,
   },
 
-  webModalText: { fontSize: 13, color: '#444', marginBottom: 12 },
+  webModalText: { fontSize: 13, color: "#444", marginBottom: 12 },
 
   webModalBtn: {
-    backgroundColor: '#E9F6F6',
+    backgroundColor: "#E9F6F6",
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 10,
     marginTop: 8,
   },
 
-  webModalBtnCancel: { backgroundColor: '#f2f2f2' },
+  webModalBtnCancel: { backgroundColor: "#f2f2f2" },
 
   webModalBtnText: {
-    color: '#008080',
+    color: "#008080",
     fontSize: 13,
-    fontWeight: '800',
-    textAlign: 'center',
+    fontWeight: "800",
+    textAlign: "center",
   },
 });

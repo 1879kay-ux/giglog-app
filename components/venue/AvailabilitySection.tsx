@@ -8,7 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View
+  View,
 } from "react-native";
 
 type AvailabilityLabel = "awaiting" | "available" | "provisional" | "unavailable";
@@ -32,17 +32,36 @@ type AvailabilityRow = {
   availability_label: AvailabilityLabel;
 };
 
-type Props = {
-  eventId: string;
+type AvailabilitySummaryRow = {
+  event_id: string;
+  available_count: number;
+  provisional_count: number;
+  unavailable_count: number;
+  awaiting_count: number;
+  total_invited: number;
 };
 
-export default function AvailabilitySection({ eventId }: Props) {
+type Props = {
+  eventId: string;
+  memberId: string; // current user (from auth later)
+};
+
+export default function AvailabilitySection({ eventId, memberId }: Props) {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<AvailabilityRow[]>([]);
   const [saving, setSaving] = useState(false);
+  const [summary, setSummary] = useState<AvailabilitySummaryRow | null>(null);
 
-  // Temporary test harness until auth is wired
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  // Guard: makes failures obvious (and avoids "nothing happens" bugs later)
+  if (!memberId) {
+    return (
+      <InfoCard title="Your Availability">
+        <Text style={{ fontSize: 13, color: "#C62828", fontWeight: "700" }}>
+          No memberId supplied. Availability cannot be set.
+        </Text>
+      </InfoCard>
+    );
+  }
 
   async function load() {
     if (!eventId) return;
@@ -58,6 +77,7 @@ export default function AvailabilitySection({ eventId }: Props) {
       console.log("availability view error", error);
       Alert.alert("Error", error.message);
       setRows([]);
+      setSummary(null);
       setLoading(false);
       return;
     }
@@ -65,9 +85,17 @@ export default function AvailabilitySection({ eventId }: Props) {
     const list = (data as AvailabilityRow[]) ?? [];
     setRows(list);
 
-    if (!selectedMemberId) {
-      const firstMusician = list.find((r) => r.member_type === "musician");
-      setSelectedMemberId(firstMusician?.member_id ?? list[0]?.member_id ?? null);
+    const { data: sumData, error: sumError } = await supabase
+      .from("v_event_availability_summary")
+      .select("*")
+      .eq("event_id", eventId)
+      .maybeSingle();
+
+    if (sumError) {
+      console.log("availability summary error", sumError);
+      setSummary(null);
+    } else {
+      setSummary((sumData as AvailabilitySummaryRow) ?? null);
     }
 
     setLoading(false);
@@ -85,18 +113,12 @@ export default function AvailabilitySection({ eventId }: Props) {
 
   const crew = useMemo(() => rows.filter((r) => (r.member_type ?? "crew") === "crew"), [rows]);
 
-  const selectedRow = useMemo(
-    () => rows.find((r) => r.member_id === selectedMemberId) ?? null,
-    [rows, selectedMemberId]
+  const currentRow = useMemo(
+    () => rows.find((r) => r.member_id === memberId) ?? null,
+    [rows, memberId]
   );
 
-  const selectedLabel: AvailabilityLabel = selectedRow?.availability_label ?? "awaiting";
-
-  const counts = useMemo(() => {
-    const base = { awaiting: 0, available: 0, provisional: 0, unavailable: 0 };
-    for (const r of musicians) base[r.availability_label] += 1;
-    return base;
-  }, [musicians]);
+  const currentLabel: AvailabilityLabel = currentRow?.availability_label ?? "awaiting";
 
   const roleDisplay = (r: AvailabilityRow) => {
     if ((r.band_role ?? "") === "Other") return r.band_role_other ?? "Other";
@@ -111,8 +133,6 @@ export default function AvailabilitySection({ eventId }: Props) {
   };
 
   async function setAvailability(label: AvailabilityLabel) {
-    if (!selectedMemberId) return;
-
     setSaving(true);
     try {
       if (label === "awaiting") {
@@ -120,7 +140,7 @@ export default function AvailabilitySection({ eventId }: Props) {
           .from("event_availability")
           .delete()
           .eq("event_id", eventId)
-          .eq("member_id", selectedMemberId);
+          .eq("member_id", memberId);
 
         if (error) throw error;
       } else {
@@ -133,7 +153,10 @@ export default function AvailabilitySection({ eventId }: Props) {
 
         const { error } = await supabase
           .from("event_availability")
-          .upsert({ event_id: eventId, member_id: selectedMemberId, status }, { onConflict: "event_id,member_id" });
+          .upsert(
+            { event_id: eventId, member_id: memberId, status },
+            { onConflict: "event_id,member_id" }
+          );
 
         if (error) throw error;
       }
@@ -148,7 +171,7 @@ export default function AvailabilitySection({ eventId }: Props) {
   }
 
   const chip = (label: AvailabilityLabel, text: string) => {
-    const selected = selectedLabel === label;
+    const selected = currentLabel === label;
 
     const bg =
       label === "available"
@@ -163,7 +186,7 @@ export default function AvailabilitySection({ eventId }: Props) {
       <Pressable
         key={label}
         style={[styles.chip, selected ? { backgroundColor: bg, borderColor: bg } : null]}
-        disabled={saving || !selectedMemberId}
+        disabled={saving}
         onPress={() => setAvailability(label)}
       >
         <Text style={[styles.chipText, selected ? { color: "#fff" } : null]}>{text}</Text>
@@ -182,46 +205,26 @@ export default function AvailabilitySection({ eventId }: Props) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <InfoCard title="Your Availability">
-        <Text style={styles.smallNote}>
-          Temporary test mode: choose a person below to set their status. Auth will replace this.
-        </Text>
-
-        <Pressable
-          style={styles.selector}
-          onPress={() => {
-            if (rows.length === 0) return;
-            const idx = rows.findIndex((r) => r.member_id === selectedMemberId);
-            const next = rows[(idx + 1) % rows.length];
-            setSelectedMemberId(next.member_id);
-          }}
-        >
-          <Text style={styles.selectorLabel}>Acting as:</Text>
-          <Text style={styles.selectorValue}>
-            {selectedRow?.display_name ?? "Select member"}{" "}
-            {selectedRow?.member_type ? `(${selectedRow.member_type})` : ""}
-          </Text>
-          <Text style={styles.selectorHint}>Tap to change</Text>
-        </Pressable>
-
         <View style={styles.chipRow}>
           {chip("available", "Available")}
           {chip("provisional", "Provisional")}
           {chip("unavailable", "Unavailable")}
         </View>
 
-        <View style={styles.chipRow}>{chip("awaiting", "Clear to Awaiting")}</View>
+        
 
         {saving ? <Text style={styles.saving}>Saving…</Text> : null}
       </InfoCard>
 
       <InfoCard title="Event Summary">
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryItem}>Awaiting: {counts.awaiting}</Text>
-          <Text style={styles.summaryItem}>Available: {counts.available}</Text>
-          <Text style={styles.summaryItem}>Provisional: {counts.provisional}</Text>
-          <Text style={styles.summaryItem}>Unavailable: {counts.unavailable}</Text>
+          <Text style={styles.summaryItem}>Awaiting: {summary?.awaiting_count ?? 0}</Text>
+          <Text style={styles.summaryItem}>Available: {summary?.available_count ?? 0}</Text>
+          <Text style={styles.summaryItem}>Provisional: {summary?.provisional_count ?? 0}</Text>
+          <Text style={styles.summaryItem}>Unavailable: {summary?.unavailable_count ?? 0}</Text>
+          <Text style={styles.summaryItem}>Response required: {summary?.total_invited ?? 0}</Text>
         </View>
-        <Text style={styles.smallNote}>Summary currently counts musicians only.</Text>
+        <Text style={styles.smallNote}>Counts are for active members expected to respond.</Text>
       </InfoCard>
 
       <InfoCard title="Musicians">
@@ -233,7 +236,10 @@ export default function AvailabilitySection({ eventId }: Props) {
           </View>
 
           {musicians.map((r) => (
-            <View key={r.member_id} style={styles.tableRow}>
+            <View
+              key={r.member_id}
+              style={[styles.tableRow, r.member_id === memberId ? styles.currentUserRow : null]}
+            >
               <Text style={[styles.cell, { flex: 1.2 }]} numberOfLines={1}>
                 {r.display_name ?? "Unnamed"}
               </Text>
@@ -262,7 +268,10 @@ export default function AvailabilitySection({ eventId }: Props) {
           </View>
 
           {crew.map((r) => (
-            <View key={r.member_id} style={styles.tableRow}>
+            <View
+              key={r.member_id}
+              style={[styles.tableRow, r.member_id === memberId ? styles.currentUserRow : null]}
+            >
               <Text style={[styles.cell, { flex: 1.4 }]} numberOfLines={1}>
                 {r.display_name ?? "Unnamed"}
               </Text>
@@ -293,17 +302,17 @@ function labelText(v: AvailabilityLabel) {
 }
 
 function statusBg(v: AvailabilityLabel) {
-  if (v === "available") return "#E8F7EE"; // light green
-  if (v === "provisional") return "#FFF6DF"; // light amber
-  if (v === "unavailable") return "#FDEAEA"; // light red
-  return "#F3F3F3"; // light grey
+  if (v === "available") return "#E8F7EE";
+  if (v === "provisional") return "#FFF6DF";
+  if (v === "unavailable") return "#FDEAEA";
+  return "#F3F3F3";
 }
 
 function statusText(v: AvailabilityLabel) {
-  if (v === "available") return "#1E8E3E"; // green
-  if (v === "provisional") return "#B26A00"; // amber
-  if (v === "unavailable") return "#C62828"; // red
-  return "#666"; // grey
+  if (v === "available") return "#1E8E3E";
+  if (v === "provisional") return "#B26A00";
+  if (v === "unavailable") return "#C62828";
+  return "#666";
 }
 
 const styles = StyleSheet.create({
@@ -313,18 +322,6 @@ const styles = StyleSheet.create({
   loading: { paddingVertical: 16, alignItems: "center" },
 
   smallNote: { fontSize: 12, color: "#666", marginBottom: 10 },
-
-  selector: {
-    backgroundColor: "#f7f7f7",
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-    marginBottom: 12,
-  },
-  selectorLabel: { fontSize: 12, color: "#666", fontWeight: "700" },
-  selectorValue: { fontSize: 15, color: "#111", fontWeight: "800", marginTop: 2 },
-  selectorHint: { fontSize: 12, color: "#009999", marginTop: 6, fontWeight: "700" },
 
   chipRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
   chip: {
@@ -356,6 +353,12 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
     alignItems: "center",
   },
+
+  // highlight current user row
+  currentUserRow: {
+    backgroundColor: "#F0FAFA",
+  },
+
   cell: { padding: 12, fontSize: 13, color: "#333" },
   cellHeader: { fontWeight: "800", color: "#666" },
 
@@ -370,10 +373,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "900",
-  },
+  statusText: { fontSize: 12, fontWeight: "900" },
 
   empty: { padding: 12, color: "#666" },
 });

@@ -1,8 +1,9 @@
-import InfoCard from '@/components/InfoCard';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import InfoCard from "@/components/InfoCard";
+import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 type ScheduleSectionProps = {
   eventId: string;
@@ -27,7 +28,7 @@ function formatTime(value?: string | null) {
   // "HH:MM:SS" or "HH:MM"
   const m = String(value).trim().match(/^(\d{1,2}):(\d{2})/);
   if (!m) return String(value).trim();
-  const hh = m[1].padStart(2, '0');
+  const hh = m[1].padStart(2, "0");
   const mm = m[2];
   return `${hh}:${mm}`;
 }
@@ -46,24 +47,28 @@ export default function ScheduleSection({
   scheduleNotes,
 }: ScheduleSectionProps) {
   const router = useRouter();
+  const { isAdmin } = useCurrentMember();
 
-  const headerIconBtn = (onPress: () => void) => (
-    <Pressable onPress={onPress} hitSlop={10} style={styles.headerBtn}>
-      <Ionicons name="create-outline" size={18} color="#008080" />
+  const editSchedule = isAdmin ? (
+    <Pressable
+      onPress={() => router.push(`/events/${eventId}/edit/schedule`)}
+      hitSlop={10}
+      style={styles.editPill}
+    >
+      <Ionicons name="create-outline" size={16} color="#008080" />
+      <Text style={styles.editPillText}>Edit</Text>
     </Pressable>
-  );
-
-  const editSchedule = headerIconBtn(() => router.push(`/events/${eventId}/edit/schedule`));
+  ) : undefined;
 
   const timeFields = [
-    { label: 'Travel to Venue', value: travelVenue ?? callTime }, // supports old + new
-    { label: 'Load-in', value: loadinTime },
-    { label: 'Soundcheck', value: soundcheck },
-    { label: 'Doors', value: doors },
-    { label: 'Onstage', value: onstage },
-    { label: 'Offstage', value: offstage },
-    { label: 'Venue Curfew', value: venueCurfew },
-    { label: 'Depart Venue', value: departVenue },
+    { label: "Travel to Venue", value: travelVenue ?? callTime }, // supports old + new
+    { label: "Load-in", value: loadinTime },
+    { label: "Soundcheck", value: soundcheck },
+    { label: "Doors", value: doors },
+    { label: "Onstage", value: onstage },
+    { label: "Offstage", value: offstage },
+    { label: "Venue Curfew", value: venueCurfew },
+    { label: "Depart Venue", value: departVenue },
   ];
 
   return (
@@ -71,7 +76,7 @@ export default function ScheduleSection({
       <View style={styles.content}>
         <InfoCard title="Schedule" right={editSchedule}>
           {timeFields.map((field, index) => {
-            const display = formatTime(field.value) ?? '—';
+            const display = formatTime(field.value) ?? "—";
             const isLast = index === timeFields.length - 1;
 
             return (
@@ -85,7 +90,7 @@ export default function ScheduleSection({
           <View style={styles.notesWrap}>
             <Text style={styles.notesLabel}>Schedule Notes</Text>
             <Text style={styles.notesText}>
-              {scheduleNotes && scheduleNotes.trim() ? scheduleNotes : '—'}
+              {scheduleNotes && scheduleNotes.trim() ? scheduleNotes.trim() : "—"}
             </Text>
           </View>
         </InfoCard>
@@ -98,41 +103,49 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16 },
 
-  headerBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: '#E9F6F6',
+  editPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(0,128,128,0.10)",
+  },
+  editPillText: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: "#008080",
   },
 
   timeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   timeRowLast: {
     borderBottomWidth: 0,
   },
-  label: { fontSize: 14, fontWeight: '600', color: '#666' },
-  value: { fontSize: 14, color: '#333' },
+  label: { fontSize: 14, fontWeight: "600", color: "#666" },
+  value: { fontSize: 14, color: "#333" },
 
   notesWrap: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: "#eee",
   },
   notesLabel: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#666',
+    fontWeight: "700",
+    color: "#666",
     marginBottom: 6,
   },
   notesText: {
     fontSize: 14,
-    color: '#333',
+    color: "#333",
     lineHeight: 20,
   },
 });

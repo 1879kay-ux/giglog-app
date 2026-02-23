@@ -1,8 +1,9 @@
-import InfoCard from '@/components/InfoCard';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import InfoCard from "@/components/InfoCard";
+import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useMemo } from "react";
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 
 type DocumentsSectionProps = {
   eventId: string;
@@ -13,14 +14,14 @@ type DocumentsSectionProps = {
 };
 
 function normaliseUrl(raw?: string | null) {
-  const v = (raw ?? '').trim();
+  const v = (raw ?? "").trim();
   if (!v) return null;
 
   const withScheme = /^https?:\/\//i.test(v) ? v : `https://${v}`;
 
   try {
     const u = new URL(withScheme);
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
     return u.toString();
   } catch {
     return null;
@@ -30,14 +31,14 @@ function normaliseUrl(raw?: string | null) {
 function getDomain(url: string) {
   try {
     const u = new URL(url);
-    return u.host.replace(/^www\./i, '');
+    return u.host.replace(/^www\./i, "");
   } catch {
-    return '';
+    return "";
   }
 }
 
 type DocItem = {
-  key: 'setlist' | 'eventinfo' | 'promo' | 'other';
+  key: "setlist" | "eventinfo" | "promo" | "other";
   label: string;
   url: string;
 };
@@ -50,18 +51,20 @@ export default function DocumentsSection({
   docOtherUrl,
 }: DocumentsSectionProps) {
   const router = useRouter();
+  const { isAdmin } = useCurrentMember();
+
   const goEdit = () => router.push(`/events/${eventId}/edit/documents`);
 
   const docs = useMemo<DocItem[]>(() => {
-    const items: Array<{ key: DocItem['key']; label: string; url: string | null }> = [
-      { key: 'setlist', label: 'Setlist', url: normaliseUrl(setlistUrl) },
-      { key: 'eventinfo', label: 'Event Info', url: normaliseUrl(eventinfoUrl) },
-      { key: 'promo', label: 'Promo Material', url: normaliseUrl(promoMaterialUrl) },
-      { key: 'other', label: 'Other', url: normaliseUrl(docOtherUrl) },
+    const items: Array<{ key: DocItem["key"]; label: string; url: string | null }> = [
+      { key: "setlist", label: "Setlist", url: normaliseUrl(setlistUrl) },
+      { key: "eventinfo", label: "Event Info", url: normaliseUrl(eventinfoUrl) },
+      { key: "promo", label: "Promo Material", url: normaliseUrl(promoMaterialUrl) },
+      { key: "other", label: "Other", url: normaliseUrl(docOtherUrl) },
     ];
 
     return items
-      .filter((x): x is { key: DocItem['key']; label: string; url: string } => !!x.url)
+      .filter((x): x is { key: DocItem["key"]; label: string; url: string } => !!x.url)
       .map((x) => ({ key: x.key, label: x.label, url: x.url }));
   }, [setlistUrl, eventinfoUrl, promoMaterialUrl, docOtherUrl]);
 
@@ -69,16 +72,16 @@ export default function DocumentsSection({
     try {
       await Linking.openURL(url);
     } catch {
-      Alert.alert("Can't open link", 'Check the URL format and try again.');
+      Alert.alert("Can't open link", "Check the URL format and try again.");
     }
   };
 
-  const HeaderRight = (
+  const HeaderRight = isAdmin ? (
     <Pressable onPress={goEdit} hitSlop={10} style={styles.headerBtn}>
       <Ionicons name="create-outline" size={18} color="#008080" />
       <Text style={styles.headerBtnText}>Edit</Text>
     </Pressable>
-  );
+  ) : undefined;
 
   const isEmpty = docs.length === 0;
 
@@ -132,42 +135,42 @@ export default function DocumentsSection({
 
 const styles = StyleSheet.create({
   headerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,
-    backgroundColor: '#E9F6F6',
+    backgroundColor: "#E9F6F6",
   },
   headerBtnText: {
-    color: '#008080',
-    fontWeight: '800',
+    color: "#008080",
+    fontWeight: "800",
     fontSize: 13,
   },
 
   emptyWrap: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
     paddingVertical: 4,
   },
   emptyIcon: {
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: '#E9F6F6',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#E9F6F6",
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyTitle: {
     fontSize: 14,
-    fontWeight: '800',
-    color: '#111',
+    fontWeight: "800",
+    color: "#111",
   },
   emptySub: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginTop: 3,
     lineHeight: 16,
   },
@@ -176,19 +179,19 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   rowLast: {
     borderBottomWidth: 0,
   },
   rowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     flex: 1,
     paddingRight: 10,
@@ -197,18 +200,18 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 10,
-    backgroundColor: '#F2FAFA',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#F2FAFA",
+    alignItems: "center",
+    justifyContent: "center",
   },
   label: {
     fontSize: 14,
-    fontWeight: '800',
-    color: '#111',
+    fontWeight: "800",
+    color: "#111",
   },
   sub: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginTop: 2,
   },
 });

@@ -1,3 +1,4 @@
+import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import AvailabilitySection from '@/components/venue/AvailabilitySection';
 import DetailsSection from '@/components/venue/DetailsSection';
 import DocumentsSection from '@/components/venue/DocumentsSection';
@@ -7,7 +8,7 @@ import TravelSection from '@/components/venue/TravelSection';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -104,6 +105,7 @@ type EventRow = {
   driver_cost: number | null;
   foh_eng_cost: number | null;
   other_costs: number | null;
+  manual_playing_share_override: number | null;
 
   // per-event departure override (optional)
   departure_address: string | null;
@@ -124,12 +126,17 @@ type SectionKey = 'details' | 'availability' | 'schedule' | 'documents' | 'trave
 export default function EventDetailsScreen() {
   const router = useRouter();
 
+  const { isAdmin } = useCurrentMember();
+
   // Safer id handling
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [event, setEvent] = useState<EventRow | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Mapped from auth.users.id -> band_members.member_id
+  const [currentMemberId, setCurrentMemberId] = useState<string>('');
 
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
     details: false,
@@ -152,6 +159,63 @@ export default function EventDetailsScreen() {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id])
   );
+
+  async function resolveMemberId(authUserId: string) {
+    const { data: bm, error: bmError } = await supabase
+      .from('band_members')
+      .select('member_id')
+      .eq('auth_user_id', authUserId)
+      .maybeSingle();
+
+    if (bmError) {
+      console.log('band_members lookup error', bmError);
+      setCurrentMemberId('');
+      return;
+    }
+
+    setCurrentMemberId((bm?.member_id as string) ?? '');
+  }
+
+  // Auth gate: if not signed in, redirect to /auth (no sign-in buttons inside feature UI)
+  useEffect(() => {
+    let isMounted = true;
+
+    async function init() {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.log('auth getSession error', error);
+        return;
+      }
+
+      const session = data?.session;
+      if (!session?.user?.id) {
+        router.replace('/auth');
+        return;
+      }
+
+      if (!isMounted) return;
+      await resolveMemberId(session.user.id);
+    }
+
+    init();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      const authUserId = session?.user?.id;
+
+      if (!authUserId) {
+        setCurrentMemberId('');
+        router.replace('/auth');
+        return;
+      }
+
+      resolveMemberId(authUserId);
+    });
+
+    return () => {
+      isMounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [router]);
 
   async function loadEvent() {
     if (!id) return;
@@ -299,17 +363,20 @@ export default function EventDetailsScreen() {
           </Text>
         </View>
 
-        {/* EDIT EVENT BUTTON */}
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => {
-            if (!id) return;
-            router.push(`/events/${id}/edit`);
-          }}
-        >
-          <Ionicons name="create-outline" size={18} color="#fff" />
-          <Text style={styles.editButtonText}>Edit Event</Text>
-        </TouchableOpacity>
+        {/* ADMIN EDIT HUB (admin only) */}
+{isAdmin ? (
+  <TouchableOpacity
+    style={styles.adminPill}
+    onPress={() => {
+      if (!id) return;
+      router.push(`/events/${id}/edit`);
+    }}
+    activeOpacity={0.8}
+  >
+    <Ionicons name="create-outline" size={16} color="#008080" />
+    <Text style={styles.adminPillText}>Edit Hub</Text>
+  </TouchableOpacity>
+) : null}
 
         <ScrollView
           style={styles.scroll}
@@ -338,7 +405,7 @@ export default function EventDetailsScreen() {
             open={openSections.availability}
             onPress={() => toggleSection('availability')}
           >
-            <AvailabilitySection eventId={event.event_id} />
+            <AvailabilitySection eventId={event.event_id} memberId={currentMemberId} />
           </Section>
 
           {/* SCHEDULE */}
@@ -396,24 +463,27 @@ export default function EventDetailsScreen() {
           </Section>
 
           {/* FINANCE */}
-          <Section
-            title="Finance"
-            icon="cash-outline"
-            open={openSections.finance}
-            onPress={() => toggleSection('finance')}
-          >
-            <FinanceSection
-              incomeFee={event.income_fee}
-              feeType={event.fee_type}
-              paidStatus={event.paid_status}
-              vanHire={event.van_hire}
-              fuel={event.fuel}
-              depCost={event.dep_cost}
-              driverCost={event.driver_cost}
-              fohEngCost={event.foh_eng_cost}
-              otherCosts={event.other_costs}
-            />
-          </Section>
+<Section
+  title="Finance"
+  icon="cash-outline"
+  open={openSections.finance}
+  onPress={() => toggleSection("finance")}
+>
+  <FinanceSection
+  eventId={event.event_id}
+  isAdmin={isAdmin}
+  shares={event.manual_playing_share_override}
+  incomeFee={event.income_fee}
+  feeType={event.fee_type}
+  paidStatus={event.paid_status}
+  vanHire={event.van_hire}
+  fuel={event.fuel}
+  depCost={event.dep_cost}
+  driverCost={event.driver_cost}
+  fohEngCost={event.foh_eng_cost}
+  otherCosts={event.other_costs}
+/>
+</Section>
         </ScrollView>
       </View>
     </>
@@ -526,6 +596,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2AA3A3',
   },
+  adminPill: {
+  alignSelf: "flex-start",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 12,
+  backgroundColor: "rgba(0,128,128,0.10)",
+},
+adminPillText: {
+  fontSize: 13,
+  fontWeight: "900",
+  color: "#008080",
+},
 
   editButtonText: {
     color: '#fff',

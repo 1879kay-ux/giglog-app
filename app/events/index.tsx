@@ -1,3 +1,4 @@
+import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import ActionButton from '@/components/ui/ActionButton';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +35,7 @@ type EventRow = {
 
 export default function EventsListScreen() {
   const router = useRouter();
+  const { isAdmin } = useCurrentMember();
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -181,12 +183,14 @@ export default function EventsListScreen() {
           )}
         </View>
 
-        {/* ADD EVENT BUTTON */}
-<ActionButton
-  label="Add Event"
-  icon="add-circle-outline"
-  onPress={() => router.push('/events/add')}
-/>
+        {/* ADD EVENT BUTTON (admin only) */}
+{isAdmin ? (
+  <ActionButton
+    label="Add Event"
+    icon="add-circle-outline"
+    onPress={() => router.push("/events/add")}
+  />
+) : null}
 
 
         <FlatList

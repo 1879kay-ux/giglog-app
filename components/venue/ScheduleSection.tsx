@@ -47,9 +47,10 @@ export default function ScheduleSection({
   scheduleNotes,
 }: ScheduleSectionProps) {
   const router = useRouter();
-  const { isAdmin } = useCurrentMember();
+  const { isAdmin, adminModeEnabled } = useCurrentMember();
+  const canEdit = isAdmin && adminModeEnabled;
 
-  const editSchedule = isAdmin ? (
+  const editSchedule = canEdit ? (
     <Pressable
       onPress={() => router.push(`/events/${eventId}/edit/schedule`)}
       hitSlop={10}

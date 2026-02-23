@@ -51,7 +51,8 @@ export default function DocumentsSection({
   docOtherUrl,
 }: DocumentsSectionProps) {
   const router = useRouter();
-  const { isAdmin } = useCurrentMember();
+  const { isAdmin, adminModeEnabled } = useCurrentMember();
+  const canEdit = isAdmin && adminModeEnabled;
 
   const goEdit = () => router.push(`/events/${eventId}/edit/documents`);
 
@@ -76,7 +77,7 @@ export default function DocumentsSection({
     }
   };
 
-  const HeaderRight = isAdmin ? (
+  const HeaderRight = canEdit ? (
     <Pressable onPress={goEdit} hitSlop={10} style={styles.headerBtn}>
       <Ionicons name="create-outline" size={18} color="#008080" />
       <Text style={styles.headerBtnText}>Edit</Text>

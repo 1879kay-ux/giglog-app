@@ -1,14 +1,14 @@
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
-import AvailabilitySection from '@/components/venue/AvailabilitySection';
-import DetailsSection from '@/components/venue/DetailsSection';
-import DocumentsSection from '@/components/venue/DocumentsSection';
-import FinanceSection from '@/components/venue/FinanceSection';
-import ScheduleSection from '@/components/venue/ScheduleSection';
-import TravelSection from '@/components/venue/TravelSection';
-import { supabase } from '@/lib/supabase';
-import { Ionicons } from '@expo/vector-icons';
-import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import AvailabilitySection from "@/components/venue/AvailabilitySection";
+import DetailsSection from "@/components/venue/DetailsSection";
+import DocumentsSection from "@/components/venue/DocumentsSection";
+import FinanceSection from "@/components/venue/FinanceSection";
+import ScheduleSection from "@/components/venue/ScheduleSection";
+import TravelSection from "@/components/venue/TravelSection";
+import { supabase } from "@/lib/supabase";
+import { Ionicons } from "@expo/vector-icons";
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -23,27 +23,27 @@ import {
   TouchableOpacity,
   UIManager,
   View,
-} from 'react-native';
+} from "react-native";
 
 /* ---------------------------------------------------------
    ENABLE LAYOUT ANIMATION ON ANDROID
 --------------------------------------------------------- */
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const isSmallScreen = Dimensions.get('window').height < 700;
+const isSmallScreen = Dimensions.get("window").height < 700;
 
 /* ---------------------------------------------------------
    DATE FORMATTER
 --------------------------------------------------------- */
 function formatEventDate(dateString: string) {
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
+  return date.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
   });
 }
 
@@ -118,7 +118,13 @@ type EventRow = {
 /* ---------------------------------------------------------
    SECTION KEYS
 --------------------------------------------------------- */
-type SectionKey = 'details' | 'availability' | 'schedule' | 'documents' | 'travel' | 'finance';
+type SectionKey =
+  | "details"
+  | "availability"
+  | "schedule"
+  | "documents"
+  | "travel"
+  | "finance";
 
 /* ---------------------------------------------------------
    MAIN SCREEN
@@ -126,7 +132,8 @@ type SectionKey = 'details' | 'availability' | 'schedule' | 'documents' | 'trave
 export default function EventDetailsScreen() {
   const router = useRouter();
 
-  const { isAdmin } = useCurrentMember();
+  const { isAdmin, adminModeEnabled } = useCurrentMember();
+  const canEdit = isAdmin && adminModeEnabled;
 
   // Safer id handling
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -136,7 +143,7 @@ export default function EventDetailsScreen() {
   const [loading, setLoading] = useState(true);
 
   // Mapped from auth.users.id -> band_members.member_id
-  const [currentMemberId, setCurrentMemberId] = useState<string>('');
+  const [currentMemberId, setCurrentMemberId] = useState<string>("");
 
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
     details: false,
@@ -162,18 +169,18 @@ export default function EventDetailsScreen() {
 
   async function resolveMemberId(authUserId: string) {
     const { data: bm, error: bmError } = await supabase
-      .from('band_members')
-      .select('member_id')
-      .eq('auth_user_id', authUserId)
+      .from("band_members")
+      .select("member_id")
+      .eq("auth_user_id", authUserId)
       .maybeSingle();
 
     if (bmError) {
-      console.log('band_members lookup error', bmError);
-      setCurrentMemberId('');
+      console.log("band_members lookup error", bmError);
+      setCurrentMemberId("");
       return;
     }
 
-    setCurrentMemberId((bm?.member_id as string) ?? '');
+    setCurrentMemberId((bm?.member_id as string) ?? "");
   }
 
   // Auth gate: if not signed in, redirect to /auth (no sign-in buttons inside feature UI)
@@ -183,13 +190,13 @@ export default function EventDetailsScreen() {
     async function init() {
       const { data, error } = await supabase.auth.getSession();
       if (error) {
-        console.log('auth getSession error', error);
+        console.log("auth getSession error", error);
         return;
       }
 
       const session = data?.session;
       if (!session?.user?.id) {
-        router.replace('/auth');
+        router.replace("/auth");
         return;
       }
 
@@ -203,8 +210,8 @@ export default function EventDetailsScreen() {
       const authUserId = session?.user?.id;
 
       if (!authUserId) {
-        setCurrentMemberId('');
-        router.replace('/auth');
+        setCurrentMemberId("");
+        router.replace("/auth");
         return;
       }
 
@@ -222,20 +229,24 @@ export default function EventDetailsScreen() {
 
     setLoading(true);
 
-    const { data, error } = await supabase.from('events').select('*').eq('event_id', id).single();
+    const { data, error } = await supabase
+      .from("events")
+      .select("*")
+      .eq("event_id", id)
+      .single();
 
     if (error) {
       setLoading(false);
-      Alert.alert('Error', error.message);
+      Alert.alert("Error", error.message);
       return;
     }
 
     if (data) {
       if (data.venue_id) {
         const { data: venueData } = await supabase
-          .from('venues')
-          .select('*')
-          .eq('venue_id', data.venue_id)
+          .from("venues")
+          .select("*")
+          .eq("venue_id", data.venue_id)
           .single();
 
         setEvent({ ...(data as any), venues: venueData ? [venueData] : [] } as EventRow);
@@ -261,14 +272,14 @@ export default function EventDetailsScreen() {
   // TRAVEL HELPERS
   // ---------------------------------------------------------
   const venueDest =
-    [venue?.address, venue?.city, venue?.postcode].filter(Boolean).join(', ') ||
+    [venue?.address, venue?.city, venue?.postcode].filter(Boolean).join(", ") ||
     venue?.postcode ||
-    '';
+    "";
 
   const departureOrigin =
-    [event.departure_address, event.departure_postcode].filter(Boolean).join(', ') ||
+    [event.departure_address, event.departure_postcode].filter(Boolean).join(", ") ||
     event.departure_postcode ||
-    '';
+    "";
 
   function enc(s: string) {
     return encodeURIComponent(s.trim());
@@ -277,38 +288,38 @@ export default function EventDetailsScreen() {
   async function openUrl(url: string) {
     try {
       const can = await Linking.canOpenURL(url);
-      if (!can) throw new Error('cannot open');
+      if (!can) throw new Error("cannot open");
       await Linking.openURL(url);
     } catch {
-      Alert.alert("Can't open maps", 'Check the address/postcode and try again.');
+      Alert.alert("Can't open maps", "Check the address/postcode and try again.");
     }
   }
 
-  function openToVenue(app: 'apple' | 'google' | 'waze') {
+  function openToVenue(app: "apple" | "google" | "waze") {
     if (!venueDest) {
-      Alert.alert('Venue location missing', 'Add an address or postcode to the venue.');
+      Alert.alert("Venue location missing", "Add an address or postcode to the venue.");
       return;
     }
 
     const d = enc(venueDest);
 
     const url =
-      app === 'apple'
+      app === "apple"
         ? `http://maps.apple.com/?daddr=${d}&dirflg=d`
-        : app === 'google'
+        : app === "google"
           ? `https://www.google.com/maps/dir/?api=1&destination=${d}&travelmode=driving`
           : `https://waze.com/ul?q=${d}&navigate=yes`;
 
     openUrl(url);
   }
 
-  function openFromDeparture(app: 'apple' | 'google' | 'waze') {
+  function openFromDeparture(app: "apple" | "google" | "waze") {
     if (!departureOrigin) {
-      Alert.alert('Departure location not set', 'Add a departure address or postcode.');
+      Alert.alert("Departure location not set", "Add a departure address or postcode.");
       return;
     }
     if (!venueDest) {
-      Alert.alert('Venue location missing', 'Add an address or postcode to the venue.');
+      Alert.alert("Venue location missing", "Add an address or postcode to the venue.");
       return;
     }
 
@@ -316,9 +327,9 @@ export default function EventDetailsScreen() {
     const d = enc(venueDest);
 
     const url =
-      app === 'apple'
+      app === "apple"
         ? `http://maps.apple.com/?saddr=${o}&daddr=${d}&dirflg=d`
-        : app === 'google'
+        : app === "google"
           ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`
           : `https://waze.com/ul?q=${d}&navigate=yes`;
 
@@ -329,7 +340,7 @@ export default function EventDetailsScreen() {
     <>
       <Stack.Screen
         options={{
-          title: venue?.event_venue_name || 'Event Details',
+          title: venue?.event_venue_name || "Event Details",
           headerLeft: () => (
             <View style={styles.headerIconWrapper}>
               <TouchableOpacity onPress={() => router.back()}>
@@ -339,7 +350,7 @@ export default function EventDetailsScreen() {
           ),
           headerRight: () => (
             <View style={styles.headerIconWrapper}>
-              <TouchableOpacity onPress={() => router.push('/')}>
+              <TouchableOpacity onPress={() => router.push("/")}>
                 <Ionicons name="home-outline" size={26} color="#fff" />
               </TouchableOpacity>
             </View>
@@ -354,29 +365,29 @@ export default function EventDetailsScreen() {
 
           <Text style={styles.eventSummaryVenue}>
             {venue?.event_venue_name}
-            {venue?.city ? `, ${venue.city}` : ''}
+            {venue?.city ? `, ${venue.city}` : ""}
           </Text>
 
           <Text style={styles.eventSummaryMeta}>
-            {event.event_type || 'Event'}
-            {event.event_status ? `, ${event.event_status}` : ''}
+            {event.event_type || "Event"}
+            {event.event_status ? `, ${event.event_status}` : ""}
           </Text>
         </View>
 
-        {/* ADMIN EDIT HUB (admin only) */}
-{isAdmin ? (
-  <TouchableOpacity
-    style={styles.adminPill}
-    onPress={() => {
-      if (!id) return;
-      router.push(`/events/${id}/edit`);
-    }}
-    activeOpacity={0.8}
-  >
-    <Ionicons name="create-outline" size={16} color="#008080" />
-    <Text style={styles.adminPillText}>Edit Hub</Text>
-  </TouchableOpacity>
-) : null}
+        {/* ADMIN EDIT HUB (admin + admin mode) */}
+        {canEdit ? (
+          <TouchableOpacity
+            style={styles.adminPill}
+            onPress={() => {
+              if (!id) return;
+              router.push(`/events/${id}/edit`);
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="create-outline" size={16} color="#008080" />
+            <Text style={styles.adminPillText}>Edit Hub</Text>
+          </TouchableOpacity>
+        ) : null}
 
         <ScrollView
           style={styles.scroll}
@@ -388,7 +399,7 @@ export default function EventDetailsScreen() {
             title="Details"
             icon="information-circle-outline"
             open={openSections.details}
-            onPress={() => toggleSection('details')}
+            onPress={() => toggleSection("details")}
           >
             <DetailsSection
               eventId={event.event_id}
@@ -403,7 +414,7 @@ export default function EventDetailsScreen() {
             title="Availability"
             icon="checkmark-circle-outline"
             open={openSections.availability}
-            onPress={() => toggleSection('availability')}
+            onPress={() => toggleSection("availability")}
           >
             <AvailabilitySection eventId={event.event_id} memberId={currentMemberId} />
           </Section>
@@ -413,7 +424,7 @@ export default function EventDetailsScreen() {
             title="Schedule"
             icon="time-outline"
             open={openSections.schedule}
-            onPress={() => toggleSection('schedule')}
+            onPress={() => toggleSection("schedule")}
           >
             <ScheduleSection
               eventId={event.event_id}
@@ -434,7 +445,7 @@ export default function EventDetailsScreen() {
             title="Documents"
             icon="document-text-outline"
             open={openSections.documents}
-            onPress={() => toggleSection('documents')}
+            onPress={() => toggleSection("documents")}
           >
             <DocumentsSection
               eventId={event.event_id}
@@ -450,7 +461,7 @@ export default function EventDetailsScreen() {
             title="Travel"
             icon="navigate-outline"
             open={openSections.travel}
-            onPress={() => toggleSection('travel')}
+            onPress={() => toggleSection("travel")}
           >
             <TravelSection
               eventId={event.event_id}
@@ -463,27 +474,27 @@ export default function EventDetailsScreen() {
           </Section>
 
           {/* FINANCE */}
-<Section
-  title="Finance"
-  icon="cash-outline"
-  open={openSections.finance}
-  onPress={() => toggleSection("finance")}
->
-  <FinanceSection
-  eventId={event.event_id}
-  isAdmin={isAdmin}
-  shares={event.manual_playing_share_override}
-  incomeFee={event.income_fee}
-  feeType={event.fee_type}
-  paidStatus={event.paid_status}
-  vanHire={event.van_hire}
-  fuel={event.fuel}
-  depCost={event.dep_cost}
-  driverCost={event.driver_cost}
-  fohEngCost={event.foh_eng_cost}
-  otherCosts={event.other_costs}
-/>
-</Section>
+          <Section
+            title="Finance"
+            icon="cash-outline"
+            open={openSections.finance}
+            onPress={() => toggleSection("finance")}
+          >
+            <FinanceSection
+              eventId={event.event_id}
+              isAdmin={canEdit}
+              shares={event.manual_playing_share_override}
+              incomeFee={event.income_fee}
+              feeType={event.fee_type}
+              paidStatus={event.paid_status}
+              vanHire={event.van_hire}
+              fuel={event.fuel}
+              depCost={event.dep_cost}
+              driverCost={event.driver_cost}
+              fohEngCost={event.foh_eng_cost}
+              otherCosts={event.other_costs}
+            />
+          </Section>
         </ScrollView>
       </View>
     </>
@@ -513,7 +524,7 @@ function Section({
           <Ionicons name={icon} size={18} color="#fff" />
           <Text style={styles.sectionHeaderText}>{title}</Text>
         </View>
-        <Text style={styles.sectionHeaderChevron}>{open ? '▾' : '▸'}</Text>
+        <Text style={styles.sectionHeaderChevron}>{open ? "▾" : "▸"}</Text>
       </Pressable>
 
       {open && <View style={styles.sectionContent}>{children}</View>}
@@ -527,21 +538,21 @@ function Section({
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
 
   headerIconWrapper: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   /* EVENT SUMMARY */
@@ -549,40 +560,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: "#ddd",
     marginBottom: 12,
   },
   eventSummaryDate: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.4,
-    color: '#111',
-    textTransform: 'uppercase',
+    color: "#111",
+    textTransform: "uppercase",
     marginBottom: 4,
   },
   eventSummaryVenue: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#111',
+    fontWeight: "800",
+    color: "#111",
     marginBottom: 2,
   },
   eventSummaryMeta: {
     fontSize: 14,
-    color: '#444',
-    fontWeight: '600',
+    color: "#444",
+    fontWeight: "600",
   },
 
   /* EDIT BUTTON */
   editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
 
-    backgroundColor: '#4FB3B3',
+    backgroundColor: "#4FB3B3",
 
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     minWidth: 170,
 
     marginHorizontal: 16,
@@ -594,28 +605,29 @@ const styles = StyleSheet.create({
 
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2AA3A3',
+    borderColor: "#2AA3A3",
   },
+
   adminPill: {
-  alignSelf: "flex-start",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 8,
-  paddingHorizontal: 12,
-  paddingVertical: 8,
-  borderRadius: 12,
-  backgroundColor: "rgba(0,128,128,0.10)",
-},
-adminPillText: {
-  fontSize: 13,
-  fontWeight: "900",
-  color: "#008080",
-},
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(0,128,128,0.10)",
+  },
+  adminPillText: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: "#008080",
+  },
 
   editButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 
   scroll: {
@@ -632,33 +644,33 @@ adminPillText: {
     marginBottom: 12,
   },
   sectionHeader: {
-    backgroundColor: '#009999',
+    backgroundColor: "#009999",
     paddingVertical: isSmallScreen ? 6 : 8,
     paddingHorizontal: isSmallScreen ? 12 : 14,
     borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: isSmallScreen ? 8 : 10,
   },
   sectionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   sectionHeaderText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: isSmallScreen ? 14 : 15,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   sectionHeaderChevron: {
-    color: '#fff',
+    color: "#fff",
     fontSize: isSmallScreen ? 14 : 15,
   },
 
   sectionContent: {
     marginTop: 6,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 8,
     padding: 12,
   },
@@ -669,40 +681,40 @@ adminPillText: {
   },
   travelLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
     marginBottom: 6,
   },
   travelButtonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   travelButton: {
-    backgroundColor: '#008080',
+    backgroundColor: "#008080",
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 6,
     marginRight: 6,
   },
   travelButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   travelLocationBox: {
     marginTop: 8,
     padding: 10,
-    backgroundColor: '#f7f7f7',
+    backgroundColor: "#f7f7f7",
     borderRadius: 6,
   },
   travelLocationTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 4,
-    color: '#333',
+    color: "#333",
   },
   travelLocationText: {
     fontSize: 13,
-    color: '#555',
+    color: "#555",
   },
 });

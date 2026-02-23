@@ -103,7 +103,7 @@ export default function EditVenueScreen() {
   return (
     <>
       <Stack.Screen options={{ title: "Edit Venue" }} />
-      <VenueForm initialValues={initialValues} onSubmit={handleSubmit} />
+      <VenueForm key={id} initialValues={initialValues} onSubmit={handleSubmit} />
     </>
   );
 }

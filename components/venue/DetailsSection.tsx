@@ -33,9 +33,15 @@ type DetailsSectionProps = {
   venueId?: string | null; // optional, only if you want edit-venue shortcut
 };
 
-export default function DetailsSection({ eventId, event, venue, venueId }: DetailsSectionProps) {
+export default function DetailsSection({
+  eventId,
+  event,
+  venue,
+  venueId,
+}: DetailsSectionProps) {
   const router = useRouter();
-  const { isAdmin } = useCurrentMember();
+  const { isAdmin, adminModeEnabled } = useCurrentMember();
+  const canEdit = isAdmin && adminModeEnabled;
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "—";
@@ -59,10 +65,12 @@ export default function DetailsSection({ eventId, event, venue, venueId }: Detai
     </Pressable>
   );
 
-  const editEventDetails = isAdmin ? editPill(() => router.push(`/events/${eventId}/edit/details`)) : undefined;
+  const editEventDetails = canEdit
+    ? editPill(() => router.push(`/events/${eventId}/edit/details`))
+    : undefined;
 
   const editVenueDetails =
-    isAdmin && venueId
+    canEdit && venueId
       ? editPill(() =>
           router.push({
             pathname: "/venue/[id]/edit",

@@ -2,8 +2,9 @@ import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import ActionButton from "@/components/ui/ActionButton";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -41,7 +42,8 @@ function Field({ label, value }: { label: string; value: string | null }) {
 
 export default function VenueDetailScreen() {
   const router = useRouter();
-  const { isAdmin, loading: memberLoading } = useCurrentMember();
+  const { isAdmin, adminModeEnabled, loading: memberLoading } = useCurrentMember();
+  const canEdit = isAdmin && adminModeEnabled;
 
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -49,13 +51,7 @@ export default function VenueDetailScreen() {
   const [venue, setVenue] = useState<VenueRow | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!id) return;
-    loadVenue();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  async function loadVenue() {
+  const loadVenue = useCallback(async () => {
     if (!id) return;
 
     setLoading(true);
@@ -70,7 +66,20 @@ export default function VenueDetailScreen() {
 
     if (!error) setVenue(data as VenueRow);
     setLoading(false);
-  }
+  }, [id]);
+
+  // Initial load when id changes
+  useEffect(() => {
+    if (!id) return;
+    loadVenue();
+  }, [id, loadVenue]);
+
+  // Critical fix: re-load when screen regains focus (eg after Edit Venue -> back)
+  useFocusEffect(
+    useCallback(() => {
+      loadVenue();
+    }, [loadVenue])
+  );
 
   // optional: while member is loading, keep same loading UI
   if (loading || memberLoading) {
@@ -122,13 +131,13 @@ export default function VenueDetailScreen() {
         </View>
 
         {/* EDIT VENUE BUTTON (admin only) */}
-        {isAdmin ? (
-          <ActionButton
-            label="Edit Venue"
-            icon="create-outline"
-            onPress={() => router.push(`/venue/${venue.venue_id}/edit`)}
-          />
-        ) : null}
+        {canEdit ? (
+  <ActionButton
+    label="Edit Venue"
+    icon="create-outline"
+    onPress={() => router.push(`/venue/${venue.venue_id}/edit`)}
+  />
+) : null}
 
         <ScrollView contentContainerStyle={styles.content}>
           <Field label="Address" value={venue.address} />
@@ -136,10 +145,18 @@ export default function VenueDetailScreen() {
           <Field label="Contact" value={venue.venue_contact_name} />
           <Field label="Phone" value={venue.venue_contact_phone} />
           <Field label="Email" value={venue.venue_contact_email} />
-          <Field label="Capacity" value={venue.capacity != null ? String(venue.capacity) : null} />
+          <Field
+            label="Capacity"
+            value={venue.capacity != null ? String(venue.capacity) : null}
+          />
           <Field label="Capacity notes" value={venue.capacity_notes} />
           <Field label="Notes" value={venue.venue_notes} />
-          <Field label="Active" value={venue.is_active == null ? null : venue.is_active ? "Yes" : "No"} />
+          <Field
+            label="Active"
+            value={
+              venue.is_active == null ? null : venue.is_active ? "Yes" : "No"
+            }
+          />
         </ScrollView>
       </View>
     </>

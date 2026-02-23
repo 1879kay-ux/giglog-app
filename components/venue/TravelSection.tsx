@@ -40,7 +40,8 @@ export default function TravelSection({
   departurePostcode,
 }: Props) {
   const router = useRouter();
-  const { isAdmin } = useCurrentMember();
+  const { isAdmin, adminModeEnabled } = useCurrentMember();
+  const canEdit = isAdmin && adminModeEnabled;
 
   const goEditEvent = () => router.push(`/events/${eventId}/edit/travel`);
   const goDefaults = () => router.push("/settings/travel");
@@ -48,7 +49,7 @@ export default function TravelSection({
   const [showWebPicker, setShowWebPicker] = useState(false);
 
   const onPressEdit = () => {
-    if (!isAdmin) return;
+    if (!canEdit) return;
 
     if (Platform.OS === "web") {
       setShowWebPicker(true);
@@ -194,7 +195,7 @@ export default function TravelSection({
         <View style={styles.blockHeader}>
           <Text style={styles.travelLabel}>Departure Location → Venue</Text>
 
-          {isAdmin ? (
+          {canEdit ? (
             <Pressable onPress={onPressEdit} hitSlop={10} style={styles.editPill}>
               <Ionicons name="create-outline" size={16} color="#008080" />
               <Text style={styles.editPillText}>Edit</Text>
@@ -214,10 +215,10 @@ export default function TravelSection({
 
             {showingGlobalDefault ? (
               <Pressable
-                onPress={isAdmin ? goDefaults : undefined}
+                onPress={canEdit ? goDefaults : undefined}
                 style={styles.badge}
                 hitSlop={8}
-                disabled={!isAdmin}
+                disabled={!canEdit}
               >
                 <Text style={styles.badgeText}>Default</Text>
               </Pressable>
@@ -249,8 +250,8 @@ export default function TravelSection({
         </Text>
       </View>
 
-      {/* WEB PICKER MODAL (admin only) */}
-      {Platform.OS === "web" && showWebPicker && isAdmin ? (
+      {/* WEB PICKER MODAL (admin + admin mode) */}
+      {Platform.OS === "web" && showWebPicker && canEdit ? (
         <View style={styles.webModalOverlay} pointerEvents="auto">
           <View style={styles.webModalCard}>
             <Text style={styles.webModalTitle}>Departure location</Text>

@@ -47,7 +47,8 @@ function isCrewMember(m: BandMemberRow) {
 
 export default function BandMembersScreen() {
   const router = useRouter();
-  const { isAdmin, loading: memberLoading } = useCurrentMember();
+  const { isAdmin, adminModeEnabled, loading: memberLoading } = useCurrentMember();
+  const canEdit = isAdmin && adminModeEnabled;
 
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<BandMemberRow[]>([]);
@@ -127,7 +128,6 @@ export default function BandMembersScreen() {
 
           {item.email ? <Text style={styles.meta2}>{item.email}</Text> : null}
 
-          {/* Type + Dep + Admin pills */}
           <View style={styles.tagRow}>
             <View
               style={[
@@ -168,20 +168,30 @@ export default function BandMembersScreen() {
 
       <View style={styles.container}>
         <View style={styles.headerRow}>
-          <Text style={styles.subtitle}>{showInactive ? "All members" : "Active members"}</Text>
+          <Text style={styles.subtitle}>
+            {showInactive ? "All members" : "Active members"}
+          </Text>
 
           <View style={styles.headerActions}>
             <Pressable
               style={[styles.filterButton, showInactive && styles.filterButtonOn]}
               onPress={() => setShowInactive((v) => !v)}
             >
-              <Text style={[styles.filterButtonText, showInactive && styles.filterButtonTextOn]}>
+              <Text
+                style={[
+                  styles.filterButtonText,
+                  showInactive && styles.filterButtonTextOn,
+                ]}
+              >
                 {showInactive ? "Hide inactive" : "Show inactive"}
               </Text>
             </Pressable>
 
-            {isAdmin ? (
-              <Pressable style={styles.addButton} onPress={() => router.push("/band/add" as any)}>
+            {canEdit ? (
+              <Pressable
+                style={styles.addButton}
+                onPress={() => router.push("/band/add" as any)}
+              >
                 <Text style={styles.addButtonText}>+ Add</Text>
               </Pressable>
             ) : null}

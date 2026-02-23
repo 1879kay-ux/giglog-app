@@ -30,7 +30,8 @@ export default function VenuesScreen() {
 
     const [search, setSearch] = useState('');
 
-    const { isAdmin } = useCurrentMember();
+    const { isAdmin, adminModeEnabled } = useCurrentMember();
+const canEdit = isAdmin && adminModeEnabled;
 
     useFocusEffect(
   useCallback(() => {
@@ -170,8 +171,8 @@ export default function VenuesScreen() {
                     )}
                 </View>
 
-                {/* ADD VENUE BUTTON (admin only) */}
-{isAdmin ? (
+               {/* ADD VENUE BUTTON (admin + admin mode) */}
+{canEdit ? (
   <ActionButton
     label="Add Venue"
     icon="add-circle-outline"

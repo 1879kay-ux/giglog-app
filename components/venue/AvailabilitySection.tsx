@@ -11,12 +11,11 @@ import {
   View,
 } from "react-native";
 
-type AvailabilityLabel = "awaiting" | "available" | "provisional" | "unavailable";
+type AvailabilityLabel = "awaiting" | "available" | "provisional" | "unavailable" | "dep";
 type MemberType = "musician" | "crew";
 
 type AvailabilityRow = {
   event_id: string;
-  event_date: string;
 
   member_id: string;
   display_name: string | null;
@@ -28,8 +27,9 @@ type AvailabilityRow = {
   band_positions: string[] | null;
   band_positions_other: string[] | null;
 
-  availability_status: "available" | "provisional" | "unavailable" | null;
+  availability_status: "available" | "provisional" | "unavailable" | "dep" | null;
   availability_label: AvailabilityLabel;
+  notes?: string | null;
 };
 
 type AvailabilitySummaryRow = {
@@ -44,6 +44,22 @@ type AvailabilitySummaryRow = {
 type Props = {
   eventId: string;
   memberId: string; // current user (from auth later)
+};
+
+type EventAvailabilityDbRow = {
+  event_id: string;
+  member_id: string;
+  status: "available" | "provisional" | "unavailable" | "dep" | null;
+  notes?: string | null;
+  band_members: {
+    display_name: string | null;
+    email: string | null;
+    member_type: MemberType | null;
+    band_role: string | null;
+    band_role_other: string | null;
+    band_positions: string[] | null;
+    band_positions_other: string[] | null;
+  } | null;
 };
 
 export default function AvailabilitySection({ eventId, memberId }: Props) {
@@ -67,14 +83,32 @@ export default function AvailabilitySection({ eventId, memberId }: Props) {
     if (!eventId) return;
     setLoading(true);
 
+    // IMPORTANT:
+    // Load from event_availability + band_members so event-specific deps/crew appear
+    // even if band_members.is_active = false.
     const { data, error } = await supabase
-      .from("v_event_availability")
-      .select("*")
-      .eq("event_id", eventId)
-      .order("display_name", { ascending: true });
+      .from("event_availability")
+      .select(
+        `
+        event_id,
+        member_id,
+        status,
+        notes,
+        band_members (
+          display_name,
+          email,
+          member_type,
+          band_role,
+          band_role_other,
+          band_positions,
+          band_positions_other
+        )
+      `
+      )
+      .eq("event_id", eventId);
 
     if (error) {
-      console.log("availability view error", error);
+      console.log("availability load error", error);
       Alert.alert("Error", error.message);
       setRows([]);
       setSummary(null);
@@ -82,9 +116,42 @@ export default function AvailabilitySection({ eventId, memberId }: Props) {
       return;
     }
 
-    const list = (data as AvailabilityRow[]) ?? [];
-    setRows(list);
+    const list = ((data as unknown) as EventAvailabilityDbRow[]) ?? [];
 
+    const mapped: AvailabilityRow[] = list
+      .map((r) => {
+        const bm = r.band_members;
+
+        const status = r.status ?? null;
+
+        const label: AvailabilityLabel =
+          status === null ? "awaiting" : (status as AvailabilityLabel);
+
+        return {
+          event_id: r.event_id,
+          member_id: r.member_id,
+
+          display_name: bm?.display_name ?? null,
+          email: bm?.email ?? null,
+
+          member_type: bm?.member_type ?? null,
+          band_role: bm?.band_role ?? null,
+          band_role_other: bm?.band_role_other ?? null,
+          band_positions: bm?.band_positions ?? null,
+          band_positions_other: bm?.band_positions_other ?? null,
+
+          availability_status: status,
+          availability_label: label,
+          notes: r.notes ?? null,
+        };
+      })
+      // keep deterministic ordering
+      .sort((a, b) => (a.display_name ?? "").localeCompare(b.display_name ?? ""));
+
+    setRows(mapped);
+
+    // Keep your existing summary view (fine). If it’s based on "active members",
+    // that’s OK for headline counts.
     const { data: sumData, error: sumError } = await supabase
       .from("v_event_availability_summary")
       .select("*")
@@ -111,7 +178,10 @@ export default function AvailabilitySection({ eventId, memberId }: Props) {
     [rows]
   );
 
-  const crew = useMemo(() => rows.filter((r) => (r.member_type ?? "crew") === "crew"), [rows]);
+  const crew = useMemo(
+    () => rows.filter((r) => (r.member_type ?? "crew") === "crew"),
+    [rows]
+  );
 
   const currentRow = useMemo(
     () => rows.find((r) => r.member_id === memberId) ?? null,
@@ -136,20 +206,26 @@ export default function AvailabilitySection({ eventId, memberId }: Props) {
     setSaving(true);
     try {
       if (label === "awaiting") {
+        // DO NOT delete the row, or the member disappears from the event list.
+        // Set status back to null = awaiting.
         const { error } = await supabase
           .from("event_availability")
-          .delete()
-          .eq("event_id", eventId)
-          .eq("member_id", memberId);
+          .upsert(
+            { event_id: eventId, member_id: memberId, status: null },
+            { onConflict: "event_id,member_id" }
+          );
 
         if (error) throw error;
       } else {
+        // Don't allow self-setting to dep via the chips
         const status =
           label === "available"
             ? "available"
             : label === "provisional"
               ? "provisional"
-              : "unavailable";
+              : label === "unavailable"
+                ? "unavailable"
+                : null;
 
         const { error } = await supabase
           .from("event_availability")
@@ -180,7 +256,9 @@ export default function AvailabilitySection({ eventId, memberId }: Props) {
           ? "#F1C40F"
           : label === "unavailable"
             ? "#E74C3C"
-            : "#e0e0e0";
+            : label === "dep"
+              ? "#5B6CFF"
+              : "#e0e0e0";
 
     return (
       <Pressable
@@ -210,8 +288,6 @@ export default function AvailabilitySection({ eventId, memberId }: Props) {
           {chip("provisional", "Provisional")}
           {chip("unavailable", "Unavailable")}
         </View>
-
-        
 
         {saving ? <Text style={styles.saving}>Saving…</Text> : null}
       </InfoCard>
@@ -298,13 +374,15 @@ function labelText(v: AvailabilityLabel) {
   if (v === "awaiting") return "Awaiting";
   if (v === "available") return "Available";
   if (v === "provisional") return "Provisional";
-  return "Unavailable";
+  if (v === "unavailable") return "Unavailable";
+  return "Dep";
 }
 
 function statusBg(v: AvailabilityLabel) {
   if (v === "available") return "#E8F7EE";
   if (v === "provisional") return "#FFF6DF";
   if (v === "unavailable") return "#FDEAEA";
+  if (v === "dep") return "#EEF0FF";
   return "#F3F3F3";
 }
 
@@ -312,6 +390,7 @@ function statusText(v: AvailabilityLabel) {
   if (v === "available") return "#1E8E3E";
   if (v === "provisional") return "#B26A00";
   if (v === "unavailable") return "#C62828";
+  if (v === "dep") return "#2C3BE5";
   return "#666";
 }
 

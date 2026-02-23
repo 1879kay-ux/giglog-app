@@ -27,6 +27,9 @@ type EventFinanceRow = {
   driver_cost: number | null;
   foh_eng_cost: number | null;
   other_costs: number | null;
+
+  fee_notes: string | null;
+  cost_notes: string | null; // change to cost_nots if that is your real column
 };
 
 const FEE_TYPE_OPTIONS = [
@@ -50,7 +53,6 @@ function parseNullableNumber(raw: string) {
   const s = raw.trim();
   if (!s) return { ok: true as const, value: null as number | null };
 
-  // allow 12, 12.3, 12.34
   if (!/^\d+(\.\d+)?$/.test(s)) {
     return { ok: false as const, error: "Enter a valid number or leave blank." };
   }
@@ -61,6 +63,11 @@ function parseNullableNumber(raw: string) {
   }
 
   return { ok: true as const, value: n };
+}
+
+function cleanText(v: string) {
+  const t = v.trim();
+  return t.length ? t : null;
 }
 
 export default function EditEventFinanceScreen() {
@@ -74,7 +81,6 @@ export default function EditEventFinanceScreen() {
   const [incomeFee, setIncomeFee] = useState("");
   const [shares, setShares] = useState("");
 
-  // Chips store strings, blank means null on save
   const [feeType, setFeeType] = useState("");
   const [paidStatus, setPaidStatus] = useState("");
 
@@ -84,6 +90,10 @@ export default function EditEventFinanceScreen() {
   const [driverCost, setDriverCost] = useState("");
   const [fohEngCost, setFohEngCost] = useState("");
   const [otherCosts, setOtherCosts] = useState("");
+
+  // NEW
+  const [feeNotes, setFeeNotes] = useState("");
+  const [costNotes, setCostNotes] = useState("");
 
   const numericFields = useMemo(
     () => [
@@ -118,7 +128,7 @@ export default function EditEventFinanceScreen() {
     const { data, error } = await supabase
       .from("events")
       .select(
-        "income_fee,manual_playing_share_override,fee_type,paid_status,van_hire,fuel,dep_cost,driver_cost,foh_eng_cost,other_costs"
+        "income_fee,manual_playing_share_override,fee_type,paid_status,van_hire,fuel,dep_cost,driver_cost,foh_eng_cost,other_costs,fee_notes,cost_notes"
       )
       .eq("event_id", id)
       .single();
@@ -143,6 +153,10 @@ export default function EditEventFinanceScreen() {
     setDriverCost(numToStr(row.driver_cost));
     setFohEngCost(numToStr(row.foh_eng_cost));
     setOtherCosts(numToStr(row.other_costs));
+
+    // NEW
+    setFeeNotes(row.fee_notes ?? "");
+    setCostNotes(row.cost_notes ?? "");
 
     setLoading(false);
   }
@@ -177,6 +191,10 @@ export default function EditEventFinanceScreen() {
       driver_cost: (parsed["driver_cost"] as any).value,
       foh_eng_cost: (parsed["foh_eng_cost"] as any).value,
       other_costs: (parsed["other_costs"] as any).value,
+
+      // NEW
+      fee_notes: cleanText(feeNotes),
+      cost_notes: cleanText(costNotes), // change to cost_nots if needed
     };
 
     setSaving(true);
@@ -216,7 +234,7 @@ export default function EditEventFinanceScreen() {
 
             <Text style={styles.sectionLabel}>Income</Text>
 
-            <RowNumber label="Fee" value={incomeFee} onChange={setIncomeFee} isMoney />
+            <RowNumber label="Fee" value={incomeFee} onChange={setIncomeFee} />
 
             <RowChips
               label="Fee Type"
@@ -232,17 +250,22 @@ export default function EditEventFinanceScreen() {
               onChange={setPaidStatus}
             />
 
+            {/* NEW */}
+            <RowNotes label="Fee Notes" value={feeNotes} onChange={setFeeNotes} />
+
             <View style={styles.divider} />
 
             <Text style={styles.sectionLabel}>Costs</Text>
-            <Text style={styles.currencyHint}>All amounts are £</Text>
 
-            <RowNumber label="Van Hire" value={vanHire} onChange={setVanHire} isMoney />
-            <RowNumber label="Fuel" value={fuel} onChange={setFuel} isMoney />
-            <RowNumber label="Dep Fees" value={depCost} onChange={setDepCost} isMoney />
-            <RowNumber label="Driver Cost" value={driverCost} onChange={setDriverCost} isMoney />
-            <RowNumber label="FOH/Engineer" value={fohEngCost} onChange={setFohEngCost} isMoney />
-            <RowNumber label="Other Costs" value={otherCosts} onChange={setOtherCosts} isMoney />
+            <RowNumber label="Van Hire" value={vanHire} onChange={setVanHire} />
+            <RowNumber label="Fuel" value={fuel} onChange={setFuel} />
+            <RowNumber label="Dep Fees" value={depCost} onChange={setDepCost} />
+            <RowNumber label="Driver Cost" value={driverCost} onChange={setDriverCost} />
+            <RowNumber label="FOH/Engineer" value={fohEngCost} onChange={setFohEngCost} />
+            <RowNumber label="Other Costs" value={otherCosts} onChange={setOtherCosts} />
+
+            {/* NEW */}
+            <RowNotes label="Cost Notes" value={costNotes} onChange={setCostNotes} />
 
             <View style={styles.divider} />
 
@@ -259,37 +282,27 @@ export default function EditEventFinanceScreen() {
   );
 }
 
-function RowNumber(props: {
-  label: string;
-  value: string;
-  onChange: (t: string) => void;
-  isMoney?: boolean;
-}) {
+function RowNumber(props: { label: string; value: string; onChange: (t: string) => void }) {
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{props.label}</Text>
 
       {Platform.OS === "web" ? (
-        <View style={styles.moneyWrap}>
-          {props.isMoney ? <Text style={styles.moneyPrefix}>£</Text> : null}
-
-          {/* @ts-ignore web-only input */}
-          <input
-            type="number"
-            step={props.isMoney ? "1" : "1"}
-            inputMode="decimal"
-            value={props.value}
-            onChange={(e: any) => props.onChange(e.target.value)}
-            style={{
-              width: props.isMoney ? 120 : 140,
-              padding: 8,
-              borderRadius: 8,
-              border: "1px solid #ddd",
-              fontSize: 14,
-              textAlign: "right",
-            }}
-          />
-        </View>
+        // @ts-ignore web-only input
+        <input
+          type="number"
+          step="1"
+          value={props.value}
+          onChange={(e: any) => props.onChange(e.target.value)}
+          style={{
+            width: 140,
+            padding: 8,
+            borderRadius: 8,
+            border: "1px solid #ddd",
+            fontSize: 14,
+            textAlign: "right",
+          }}
+        />
       ) : (
         <TextInput
           style={styles.numberInput}
@@ -302,6 +315,22 @@ function RowNumber(props: {
           autoCorrect={false}
         />
       )}
+    </View>
+  );
+}
+
+function RowNotes(props: { label: string; value: string; onChange: (t: string) => void }) {
+  return (
+    <View style={styles.notesBlock}>
+      <Text style={styles.notesLabel}>{props.label}</Text>
+      <TextInput
+        style={styles.notesInput}
+        value={props.value}
+        onChangeText={props.onChange}
+        placeholder="Add notes…"
+        placeholderTextColor="#999"
+        multiline
+      />
     </View>
   );
 }
@@ -325,7 +354,7 @@ function RowChips(props: {
       </View>
 
       <View style={styles.chipWrap}>
-        {props.options.map(opt => {
+        {props.options.map((opt) => {
           const selected = props.value === opt;
           return (
             <TouchableOpacity
@@ -387,12 +416,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
-  currencyHint: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 8,
-  },
-
   divider: {
     height: 1,
     backgroundColor: "#eee",
@@ -426,17 +449,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111",
     backgroundColor: "#fff",
-  },
-
-  moneyWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  moneyPrefix: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#111",
   },
 
   chipBlock: {
@@ -492,6 +504,28 @@ const styles = StyleSheet.create({
 
   chipTextSelected: {
     color: "#008080",
+  },
+
+  notesBlock: {
+    marginTop: 10,
+  },
+  notesLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#666",
+    marginBottom: 6,
+  },
+  notesInput: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#111",
+    minHeight: 90,
+    textAlignVertical: "top",
   },
 
   saveButton: {

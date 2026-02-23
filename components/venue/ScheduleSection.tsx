@@ -9,7 +9,7 @@ type ScheduleSectionProps = {
   eventId: string;
 
   callTime?: string | null;
-  loadinTime?: string | null;
+  loadin?: string | null;
   soundcheck?: string | null;
   doors?: string | null;
   onstage?: string | null;
@@ -36,7 +36,7 @@ function formatTime(value?: string | null) {
 export default function ScheduleSection({
   eventId,
   callTime,
-  loadinTime,
+  loadin,
   soundcheck,
   doors,
   onstage,
@@ -62,7 +62,7 @@ export default function ScheduleSection({
 
   const timeFields = [
     { label: "Travel to Venue", value: travelVenue ?? callTime }, // supports old + new
-    { label: "Load-in", value: loadinTime },
+    { label: "Load-in", value: loadin },
     { label: "Soundcheck", value: soundcheck },
     { label: "Doors", value: doors },
     { label: "Onstage", value: onstage },

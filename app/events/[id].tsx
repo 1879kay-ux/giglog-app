@@ -81,7 +81,7 @@ type EventRow = {
   promoter_contact_email: string | null;
 
   travel_venue: string | null;
-  loadin_time: string | null;
+  loadin: string | null;
   soundcheck: string | null;
   doors: string | null;
   onstage: string | null;
@@ -418,7 +418,7 @@ export default function EventDetailsScreen() {
             <ScheduleSection
               eventId={event.event_id}
               travelVenue={event.travel_venue}
-              loadinTime={event.loadin_time}
+              loadin={event.loadin}
               soundcheck={event.soundcheck}
               doors={event.doors}
               onstage={event.onstage}

@@ -44,7 +44,7 @@ export default function TravelSection({
   const canEdit = isAdmin && adminModeEnabled;
 
   const goEditEvent = () => router.push(`/events/${eventId}/edit/travel`);
-  const goDefaults = () => router.push("/settings/travel");
+  const goDefaults = () => router.push("/settings/travel" as any);
 
   const [showWebPicker, setShowWebPicker] = useState(false);
 
@@ -253,19 +253,25 @@ export default function TravelSection({
       {/* WEB PICKER MODAL (admin + admin mode) */}
       {Platform.OS === "web" && showWebPicker && canEdit ? (
         <View style={styles.webModalOverlay} pointerEvents="auto">
-          <View style={styles.webModalCard}>
+          <View style={styles.webModalCard} pointerEvents="auto">
             <Text style={styles.webModalTitle}>Departure location</Text>
             <Text style={styles.webModalText}>What do you want to change?</Text>
 
             <Pressable
-              style={styles.webModalBtn}
-              onPress={() => {
-                setShowWebPicker(false);
-                goDefaults();
-              }}
-            >
-              <Text style={styles.webModalBtnText}>Default for all events</Text>
-            </Pressable>
+  style={styles.webModalBtn}
+  onPress={() => {
+    console.log("WEB PICKER: Default for all events pressed");
+    Alert.alert("Pressed", "Going to Settings → Travel defaults");
+    setShowWebPicker(false);
+
+    setTimeout(() => {
+      console.log("WEB PICKER: pushing /settings/travel");
+      router.push("/settings/travel" as any);
+    }, 250);
+  }}
+>
+  <Text style={styles.webModalBtnText}>Default for all events</Text>
+</Pressable>
 
             <Pressable
               style={styles.webModalBtn}
@@ -384,6 +390,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     zIndex: 9999,
+    pointerEvents: "auto",
   },
 
   webModalCard: {

@@ -3,15 +3,17 @@
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 type EventLite = {
@@ -22,7 +24,7 @@ type EventLite = {
   venues: { event_venue_name: string; city: string } | null;
 };
 
-type ViewMode = "two" | "year";
+type ViewMode = "year" | "month";
 
 function ymd(date: Date) {
   return new Intl.DateTimeFormat("en-CA", {
@@ -41,20 +43,12 @@ function endOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth() + 1, 0);
 }
 
-function addMonths(d: Date, months: number) {
-  return new Date(d.getFullYear(), d.getMonth() + months, 1);
-}
-
-function addMonthsToDate(d: Date, months: number) {
-  return new Date(d.getFullYear(), d.getMonth() + months, 1);
+function addYears(d: Date, years: number) {
+  return new Date(d.getFullYear() + years, d.getMonth(), 1);
 }
 
 function monthTitle(d: Date) {
-  return new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(d);
-}
-
-function monthShort(d: Date) {
-  return new Intl.DateTimeFormat("en-GB", { month: "short" }).format(d);
+  return new Intl.DateTimeFormat("en-GB", { month: "long" }).format(d);
 }
 
 function weekdayHeaders() {
@@ -66,9 +60,8 @@ function mondayFirstIndex(jsDay: number) {
 }
 
 function isWeekendFromYmd(dateKey: string) {
-  // date-only string; keep stable by anchoring midday local
   const d = new Date(`${dateKey}T12:00:00`);
-  const day = d.getDay(); // 0 Sun .. 6 Sat
+  const day = d.getDay();
   return day === 0 || day === 6;
 }
 
@@ -76,57 +69,60 @@ function colorForEvent(e: EventLite) {
   const type = (e.event_type ?? "").toLowerCase();
   const status = (e.event_status ?? "").toLowerCase();
 
-  // event types: Gig, Rehearsal, Recording, Promo, Meeting, Other
-  if (type.includes("rehears")) return "#2563eb"; // blue
-  if (type.includes("record")) return "#7c3aed"; // purple
-  if (type.includes("promo")) return "#db2777"; // pink
-  if (type.includes("meet")) return "#0f766e"; // teal
-  if (type.includes("other")) return "#64748b"; // slate
+  if (type.includes("rehears")) return "#2563eb";
+  if (type.includes("record")) return "#7c3aed";
+  if (type.includes("promo")) return "#db2777";
+  if (type.includes("meet")) return "#0f766e";
+  if (type.includes("other")) return "#64748b";
 
-  // default: Gig (use status colours)
-  if (status.includes("confirm")) return "#16a34a"; // green
-  if (status.includes("cancel")) return "#dc2626"; // red
+  if (status.includes("confirm")) return "#16a34a";
+  if (status.includes("cancel")) return "#dc2626";
   if (status.includes("tbc") || status.includes("tent") || status.includes("offer"))
-    return "#f59e0b"; // amber
+    return "#f59e0b";
 
   return "#16a34a";
+}
+
+function pillLabel(e: EventLite) {
+  const city = (e.venues?.city ?? "").trim();
+  const venue = (e.venues?.event_venue_name ?? "").trim();
+  const type = (e.event_type ?? "").trim();
+
+  // Prefer City, else Venue, else Type
+  const base = city || venue || type || "Event";
+
+  // Keep pills short so they fit in day cells
+  return base.length > 10 ? `${base.slice(0, 10)}…` : base;
 }
 
 export default function EventsCalendarScreen() {
   const router = useRouter();
 
-  const [viewMode, setViewMode] = useState<ViewMode>("two");
+  const todayKey = useMemo(() => ymd(new Date()), []);
+  const [viewMode, setViewMode] = useState<ViewMode>("year");
+  const [anchorYear, setAnchorYear] = useState<Date>(() => new Date(new Date().getFullYear(), 0, 1));
+
+  const year = useMemo(() => anchorYear.getFullYear(), [anchorYear]);
+
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<EventLite[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [dayModalOpen, setDayModalOpen] = useState(false);
 
-  const scrollRef = useRef<ScrollView>(null);
-
-  const todayKey = useMemo(() => ymd(new Date()), []);
-  const [anchorMonth, setAnchorMonth] = useState<Date>(() => startOfMonth(new Date()));
-
-  const monthA = useMemo(() => startOfMonth(anchorMonth), [anchorMonth]);
-  const monthB = useMemo(() => addMonths(monthA, 1), [monthA]);
-  const year = useMemo(() => anchorMonth.getFullYear(), [anchorMonth]);
+  const monthsInYear = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => new Date(year, i, 1));
+  }, [year]);
 
   useEffect(() => {
-    loadEventsForMode();
+    loadYearEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode, anchorMonth]);
+  }, [year]);
 
-  async function loadEventsForMode() {
+  async function loadYearEvents() {
     setLoading(true);
 
-    let start: string;
-    let end: string;
-
-    if (viewMode === "year") {
-      start = ymd(new Date(year, 0, 1));
-      end = ymd(new Date(year, 11, 31));
-    } else {
-      start = ymd(startOfMonth(monthA));
-      end = ymd(endOfMonth(monthB));
-    }
+    const start = ymd(new Date(year, 0, 1));
+    const end = ymd(new Date(year, 11, 31));
 
     const { data, error } = await supabase
       .from("events")
@@ -166,11 +162,20 @@ export default function EventsCalendarScreen() {
     return eventsByDate[selectedDate] ?? [];
   }, [selectedDate, eventsByDate]);
 
-  function renderMonth(
-    monthStart: Date,
-    compact?: boolean,
-    onDayPress?: (dateKey: string) => void
-  ) {
+  function onDayPress(dateKey: string) {
+    const dayEvents = eventsByDate[dateKey] ?? [];
+    if (dayEvents.length === 0) return;
+
+    if (dayEvents.length === 1) {
+      router.push(`/events/${dayEvents[0].event_id}`);
+      return;
+    }
+
+    setSelectedDate(dateKey);
+    setDayModalOpen(true);
+  }
+
+  function renderMonthGrid(monthStart: Date, compact: boolean) {
     const first = startOfMonth(monthStart);
     const last = endOfMonth(monthStart);
 
@@ -190,11 +195,25 @@ export default function EventsCalendarScreen() {
 
     return (
       <View style={compact ? styles.monthCardCompact : styles.monthCard}>
-        <Text style={compact ? styles.monthTitleCompact : styles.monthTitle}>
-          {(compact ? monthShort(monthStart) : monthTitle(monthStart)).toUpperCase()}
-        </Text>
+        <View style={styles.monthHeaderRow}>
+          <Text style={compact ? styles.monthTitleCompact : styles.monthTitle}>
+            {monthTitle(monthStart).toUpperCase()}
+          </Text>
 
-        {!compact ? (
+          {compact ? null : (
+            <Pressable
+              onPress={() => {
+                setViewMode("month");
+              }}
+              hitSlop={10}
+              style={styles.smallLinkPill}
+            >
+              <Text style={styles.smallLinkText}>Year scroll</Text>
+            </Pressable>
+          )}
+        </View>
+
+        {compact ? null : (
           <View style={styles.weekHeaderRow}>
             {weekdayHeaders().map((w) => (
               <Text key={w} style={styles.weekHeaderText}>
@@ -202,13 +221,12 @@ export default function EventsCalendarScreen() {
               </Text>
             ))}
           </View>
-        ) : null}
+        )}
 
         <View style={styles.grid}>
           {cells.map((c, idx) => {
             const dayEvents = c.dateKey ? eventsByDate[c.dateKey] : undefined;
             const hasEvents = !!dayEvents && dayEvents.length > 0;
-            const isSelected = c.dateKey && selectedDate === c.dateKey;
             const isToday = c.dateKey && c.dateKey === todayKey;
             const isWeekend = c.dateKey ? isWeekendFromYmd(c.dateKey) : false;
 
@@ -218,27 +236,17 @@ export default function EventsCalendarScreen() {
                 disabled={!c.dateKey}
                 onPress={() => {
                   if (!c.dateKey) return;
-
-                  if (onDayPress) {
-                    onDayPress(c.dateKey);
-                  } else {
-                    setSelectedDate(c.dateKey);
-
-                    setTimeout(() => {
-                      scrollRef.current?.scrollToEnd({ animated: true });
-                    }, 150);
-                  }
+                  onDayPress(c.dateKey);
                 }}
                 style={[
                   compact ? styles.cellCompact : styles.cell,
                   isWeekend ? styles.cellWeekend : null,
-                  isSelected ? styles.cellSelected : null,
                   isToday ? styles.cellToday : null,
                 ]}
               >
                 <Text style={compact ? styles.dayNumberCompact : styles.dayNumber}>{c.label}</Text>
 
-                {/* YEAR VIEW keeps compact dots-only. 2-MONTH view gets centered dot + label */}
+                {/* YEAR: dots only. MONTH: colored pills. */}
                 {compact ? (
                   hasEvents ? (
                     <View style={styles.dotsRowCompact}>
@@ -249,35 +257,31 @@ export default function EventsCalendarScreen() {
                         />
                       ))}
                       {dayEvents!.length > 2 ? (
-                        <Text style={styles.moreText}>+{dayEvents!.length - 2}</Text>
+                        <Text style={styles.moreTextCompact}>+{dayEvents!.length - 2}</Text>
                       ) : null}
                     </View>
                   ) : (
                     <View style={styles.dotsRowCompact} />
                   )
                 ) : hasEvents ? (
-                  <View style={styles.dayEventBlock}>
-                    <View style={styles.dayDotWrapper}>
+                  <View style={styles.pillsWrap}>
+                    {dayEvents!.slice(0, 2).map((e) => (
                       <View
-                        style={[
-                          styles.dot,
-                          { backgroundColor: colorForEvent(dayEvents![0]) },
-                        ]}
-                      />
-                    </View>
+                        key={e.event_id}
+                        style={[styles.pill, { backgroundColor: colorForEvent(e) }]}
+                      >
+                        <Text style={styles.pillText} numberOfLines={1}>
+                          {pillLabel(e)}
+                        </Text>
+                      </View>
+                    ))}
 
-                    {dayEvents!.length === 1 ? (
-                      <Text style={styles.dayHintText} numberOfLines={1}>
-                        {dayEvents![0].venues?.city ??
-                          dayEvents![0].venues?.event_venue_name ??
-                          ""}
-                      </Text>
-                    ) : (
-                      <Text style={styles.dayHintText}>+{dayEvents!.length}</Text>
-                    )}
+                    {dayEvents!.length > 2 ? (
+                      <Text style={styles.morePillsText}>+{dayEvents!.length - 2}</Text>
+                    ) : null}
                   </View>
                 ) : (
-                  <View style={styles.dayEventBlock} />
+                  <View style={styles.pillsWrap} />
                 )}
               </Pressable>
             );
@@ -287,9 +291,10 @@ export default function EventsCalendarScreen() {
     );
   }
 
-  const monthsInYear = useMemo(() => {
-    return Array.from({ length: 12 }, (_, i) => new Date(year, i, 1));
-  }, [year]);
+  const columnsForYearGrid = useMemo(() => {
+    const w = Dimensions.get("window").width;
+    return w >= 900 ? 3 : 2;
+  }, []);
 
   return (
     <>
@@ -317,33 +322,12 @@ export default function EventsCalendarScreen() {
           <ActivityIndicator size="large" color="#333" />
         </View>
       ) : (
-        <ScrollView
-          ref={scrollRef}
-          style={styles.page}
-          contentContainerStyle={{ paddingBottom: 24 }}
-        >
-          {/* VIEW MODE TOGGLE + NAV */}
-          <View style={styles.viewModeRow}>
+        <ScrollView style={styles.page} contentContainerStyle={{ paddingBottom: 24 }}>
+          {/* MODE + YEAR NAV */}
+          <View style={styles.topRow}>
             <View style={styles.viewModePill}>
               <Pressable
-                onPress={() => setViewMode("two")}
-                style={[styles.viewModeBtn, viewMode === "two" ? styles.viewModeBtnActive : null]}
-              >
-                <Text
-                  style={[
-                    styles.viewModeText,
-                    viewMode === "two" ? styles.viewModeTextActive : null,
-                  ]}
-                >
-                  2-Month
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  setSelectedDate(null);
-                  setViewMode("year");
-                }}
+                onPress={() => setViewMode("year")}
                 style={[styles.viewModeBtn, viewMode === "year" ? styles.viewModeBtnActive : null]}
               >
                 <Text
@@ -355,183 +339,121 @@ export default function EventsCalendarScreen() {
                   Year
                 </Text>
               </Pressable>
+
+              <Pressable
+                onPress={() => setViewMode("month")}
+                style={[styles.viewModeBtn, viewMode === "month" ? styles.viewModeBtnActive : null]}
+              >
+                <Text
+                  style={[
+                    styles.viewModeText,
+                    viewMode === "month" ? styles.viewModeTextActive : null,
+                  ]}
+                >
+                  Months
+                </Text>
+              </Pressable>
             </View>
 
             <View style={{ flex: 1 }} />
 
-            {viewMode === "two" ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Pressable
-                  onPress={() => {
-                    setSelectedDate(null);
-                    setAnchorMonth((d) => addMonthsToDate(d, -1));
-                  }}
-                  style={styles.navBtn}
-                  hitSlop={10}
-                >
-                  <Ionicons name="chevron-back-outline" size={20} color="#111" />
-                </Pressable>
+            <View style={styles.yearNav}>
+              <Pressable
+                onPress={() => setAnchorYear((d) => addYears(d, -1))}
+                style={styles.navBtn}
+                hitSlop={10}
+              >
+                <Ionicons name="chevron-back-outline" size={20} color="#111" />
+              </Pressable>
 
-                <Text style={styles.rangeHint}>{monthTitle(monthA).toUpperCase()}</Text>
+              <Text style={styles.yearText}>{String(year)}</Text>
 
-                <Pressable
-                  onPress={() => {
-                    setSelectedDate(null);
-                    setAnchorMonth((d) => addMonthsToDate(d, 1));
-                  }}
-                  style={styles.navBtn}
-                  hitSlop={10}
-                >
-                  <Ionicons name="chevron-forward-outline" size={20} color="#111" />
-                </Pressable>
-              </View>
-            ) : (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Pressable
-                  onPress={() => setAnchorMonth((d) => addMonthsToDate(d, -12))}
-                  style={styles.navBtn}
-                  hitSlop={10}
-                >
-                  <Ionicons name="chevron-back-outline" size={20} color="#111" />
-                </Pressable>
-
-                <Text style={styles.rangeHint}>{String(year)}</Text>
-
-                <Pressable
-                  onPress={() => setAnchorMonth((d) => addMonthsToDate(d, 12))}
-                  style={styles.navBtn}
-                  hitSlop={10}
-                >
-                  <Ionicons name="chevron-forward-outline" size={20} color="#111" />
-                </Pressable>
-              </View>
-            )}
-          </View>
-
-          {/* LEGEND */}
-          <View style={styles.legendCard}>
-            <View style={styles.legendRow}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: "#16a34a" }]} />
-                <Text style={styles.legendText}>Gig Confirmed</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: "#f59e0b" }]} />
-                <Text style={styles.legendText}>Gig TBC</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: "#dc2626" }]} />
-                <Text style={styles.legendText}>Cancelled</Text>
-              </View>
-            </View>
-
-            <View style={styles.legendRow}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: "#2563eb" }]} />
-                <Text style={styles.legendText}>Rehearsal</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: "#7c3aed" }]} />
-                <Text style={styles.legendText}>Recording</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: "#db2777" }]} />
-                <Text style={styles.legendText}>Promo</Text>
-              </View>
-            </View>
-
-            <View style={styles.legendRow}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: "#0f766e" }]} />
-                <Text style={styles.legendText}>Meeting</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: "#64748b" }]} />
-                <Text style={styles.legendText}>Other</Text>
-              </View>
+              <Pressable
+                onPress={() => setAnchorYear((d) => addYears(d, 1))}
+                style={styles.navBtn}
+                hitSlop={10}
+              >
+                <Ionicons name="chevron-forward-outline" size={20} color="#111" />
+              </Pressable>
             </View>
           </View>
 
-          {viewMode === "two" ? (
-            <>
-              {renderMonth(monthA)}
-              {renderMonth(monthB)}
-
-              <View style={styles.agendaCard}>
-                <View style={styles.agendaHeaderRow}>
-                  <Text style={styles.agendaTitle}>
-                    {selectedDate ? `DAY AGENDA: ${selectedDate}` : "TAP A DAY TO SEE EVENTS"}
-                  </Text>
-
-                  {selectedDate ? (
-                    <Pressable
-                      onPress={() => {
-                        setSelectedDate(null);
-                        scrollRef.current?.scrollTo({ y: 0, animated: true });
-                      }}
-                      hitSlop={10}
-                    >
-                      <Text style={styles.backToTopText}>Back to calendar</Text>
-                    </Pressable>
-                  ) : null}
+          {/* YEAR VIEW: 12 months, one screen */}
+          {viewMode === "year" ? (
+            <View style={styles.yearGrid}>
+              {monthsInYear.map((m) => (
+                <View
+                  key={m.toISOString()}
+                  style={[
+                    styles.yearCell,
+                    { width: `${100 / columnsForYearGrid}%` as any },
+                  ]}
+                >
+                  {renderMonthGrid(m, true)}
                 </View>
-
-                {selectedDate && selectedEvents.length === 0 ? (
-                  <Text style={styles.agendaEmpty}>No events on this date.</Text>
-                ) : null}
-
-                {selectedEvents.map((e) => {
-                  const venueName = e.venues?.event_venue_name ?? "Unknown venue";
-                  const city = e.venues?.city ?? "Unknown city";
-                  const status = e.event_status ?? "Unknown";
-                  const type = e.event_type ?? "Event";
-
-                  return (
-                    <Pressable
-                      key={e.event_id}
-                      onPress={() =>
-                        router.push({ pathname: "/events/[id]", params: { id: e.event_id } })
-                      }
-                      style={styles.agendaRow}
-                    >
-                      <View style={[styles.agendaStripe, { backgroundColor: colorForEvent(e) }]} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.agendaVenue}>
-                          {venueName}, {city}
-                        </Text>
-                        <Text style={styles.agendaMeta}>
-                          {type}, {status}
-                        </Text>
-                      </View>
-                      <Ionicons name="chevron-forward-outline" size={22} color="#333" />
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </>
+              ))}
+            </View>
           ) : (
-            <>
-              <View style={styles.yearGrid}>
-                {monthsInYear.map((m) => (
-                  <View key={m.toISOString()} style={styles.yearCell}>
-                    {renderMonth(m, true, (dateKey) => {
-                      const dayEvents = eventsByDate[dateKey] ?? [];
-                      if (dayEvents.length === 0) return;
-
-                      const [yyyy, mm] = dateKey.split("-");
-                      setAnchorMonth(new Date(Number(yyyy), Number(mm) - 1, 1));
-                      setSelectedDate(dateKey);
-                      setViewMode("two");
-                    })}
-                  </View>
-                ))}
-              </View>
-
-              <Text style={styles.yearHint}>Tap a day with dots to jump to that date.</Text>
-            </>
+            /* MONTH VIEW: scroll through the year */
+            <View style={{ paddingTop: 4 }}>
+              {monthsInYear.map((m) => (
+                <View key={m.toISOString()}>{renderMonthGrid(m, false)}</View>
+              ))}
+            </View>
           )}
         </ScrollView>
       )}
+
+      {/* MULTI-EVENT DAY MODAL */}
+      <Modal
+        visible={dayModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDayModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setDayModalOpen(false)} />
+
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              {selectedDate ? `Events: ${selectedDate}` : "Events"}
+            </Text>
+
+            {selectedEvents.map((e) => {
+              const venueName = e.venues?.event_venue_name ?? "Unknown venue";
+              const city = e.venues?.city ?? "";
+              const meta = `${e.event_type ?? "Event"}${e.event_status ? `, ${e.event_status}` : ""}`;
+
+              return (
+                <Pressable
+                  key={e.event_id}
+                  onPress={() => {
+                    setDayModalOpen(false);
+                    router.push(`/events/${e.event_id}`);
+                  }}
+                  style={styles.modalRow}
+                >
+                  <View style={[styles.modalStripe, { backgroundColor: colorForEvent(e) }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalVenue} numberOfLines={1}>
+                      {venueName}
+                      {city ? `, ${city}` : ""}
+                    </Text>
+                    <Text style={styles.modalMeta} numberOfLines={1}>
+                      {meta}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward-outline" size={20} color="#333" />
+                </Pressable>
+              );
+            })}
+
+            <Pressable onPress={() => setDayModalOpen(false)} style={styles.modalCloseBtn}>
+              <Text style={styles.modalCloseText}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -540,13 +462,15 @@ const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: "#f5f5f5" },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
 
-  viewModeRow: {
+  topRow: {
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 12,
     marginTop: 12,
-    marginBottom: 6,
+    marginBottom: 8,
+    gap: 10,
   },
+
   viewModePill: {
     flexDirection: "row",
     borderWidth: 1,
@@ -557,9 +481,11 @@ const styles = StyleSheet.create({
   },
   viewModeBtn: { paddingVertical: 8, paddingHorizontal: 12 },
   viewModeBtnActive: { backgroundColor: "#e5e7eb" },
-  viewModeText: { fontWeight: "500", color: "#222" },
-  viewModeTextActive: { fontWeight: "800" },
-  rangeHint: { color: "#333", fontWeight: "800" },
+  viewModeText: { fontWeight: "600", color: "#222" },
+  viewModeTextActive: { fontWeight: "900" },
+
+  yearNav: { flexDirection: "row", alignItems: "center", gap: 10 },
+  yearText: { color: "#111", fontWeight: "900", fontSize: 14 },
 
   navBtn: {
     width: 34,
@@ -572,34 +498,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  legendCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    marginHorizontal: 12,
-    marginTop: 6,
-    padding: 12,
-  },
-  legendRow: {
+  yearGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 8,
+    marginHorizontal: 6,
   },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+  yearCell: { padding: 6 },
+
+  monthCardCompact: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#eee",
   },
-  legendDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  legendText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#333",
-  },
+  monthTitleCompact: { fontSize: 12, fontWeight: "900", color: "#111", marginBottom: 6 },
 
   monthCard: {
     backgroundColor: "#fff",
@@ -607,120 +520,118 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     marginTop: 12,
     padding: 12,
+    borderWidth: 1,
+    borderColor: "#eee",
   },
-  monthTitle: { fontSize: 14, fontWeight: "800", color: "#111", marginBottom: 10 },
-
-  weekHeaderRow: { flexDirection: "row" },
-  weekHeaderText: { width: `${100 / 7}%` as any, textAlign: "center", color: "#666", fontSize: 12 },
-
-  grid: { flexDirection: "row", flexWrap: "wrap", marginTop: 8 },
-
-  cell: {
-    width: `${100 / 7}%` as any,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  cellWeekend: {
-    backgroundColor: "#f8fafc",
-  },
-  cellSelected: {
-    backgroundColor: "#e5e7eb",
-  },
-  cellToday: {
-    borderWidth: 2,
-    borderColor: "#008080",
-  },
-
-  dayNumber: { fontSize: 14, fontWeight: "800", color: "#111" },
-
-  // 2-month view: centered dot + label
-  dayEventBlock: {
-    marginTop: 6,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 28,
-  },
-  dayDotWrapper: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dot: { width: 12, height: 12, borderRadius: 6 },
-  dayHintText: {
-    marginTop: 4,
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#333",
-    textAlign: "center",
-    maxWidth: "90%",
-  },
-
-  // Year compact dots
-  dotsRowCompact: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4, height: 12 },
-  dotCompact: { width: 9, height: 9, borderRadius: 5 },
-  moreText: { fontSize: 10, color: "#666", marginLeft: 2, fontWeight: "900" },
-
-  agendaCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    marginHorizontal: 12,
-    marginTop: 12,
-    padding: 12,
-  },
-  agendaHeaderRow: {
+  monthHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  agendaTitle: { fontSize: 12, fontWeight: "900", color: "#111" },
-  backToTopText: {
-    color: "#008080",
-    fontWeight: "900",
+  monthTitle: { fontSize: 14, fontWeight: "900", color: "#111" },
+
+  smallLinkPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#E9F6F6",
+  },
+  smallLinkText: { color: "#008080", fontWeight: "900", fontSize: 12 },
+
+  weekHeaderRow: { flexDirection: "row", marginTop: 6 },
+  weekHeaderText: {
+    width: `${100 / 7}%` as any,
+    textAlign: "center",
+    color: "#666",
     fontSize: 12,
-  },
-  agendaEmpty: { color: "#666", fontWeight: "600" },
-
-  agendaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
-    gap: 10,
-  },
-  agendaStripe: { width: 6, height: 34, borderRadius: 4 },
-  agendaVenue: { fontSize: 16, fontWeight: "900", color: "#111" },
-  agendaMeta: { fontSize: 13, color: "#444", marginTop: 2, fontWeight: "600" },
-
-  yearGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginHorizontal: 8,
-    marginTop: 8,
-  },
-  yearCell: {
-    width: "50%",
-    padding: 6,
-  },
-  yearHint: {
-    marginTop: 6,
-    marginHorizontal: 12,
-    color: "#555",
     fontWeight: "700",
   },
 
-  monthCardCompact: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 10,
+  grid: { flexDirection: "row", flexWrap: "wrap", marginTop: 6 },
+
+  cell: {
+    width: `${100 / 7}%` as any,
+    paddingVertical: 10,
+    paddingHorizontal: 2,
+    borderRadius: 10,
+    alignItems: "center",
   },
-  monthTitleCompact: { fontSize: 12, fontWeight: "900", color: "#111", marginBottom: 6 },
   cellCompact: {
     width: `${100 / 7}%` as any,
     paddingVertical: 6,
     borderRadius: 10,
     alignItems: "center",
   },
-  dayNumberCompact: { fontSize: 11, fontWeight: "800", color: "#111" },
+
+  cellWeekend: { backgroundColor: "#f8fafc" },
+  cellToday: { borderWidth: 2, borderColor: "#008080" },
+
+  dayNumber: { fontSize: 13, fontWeight: "900", color: "#111" },
+  dayNumberCompact: { fontSize: 11, fontWeight: "900", color: "#111" },
+
+  // YEAR dots
+  dotsRowCompact: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 4, height: 12 },
+  dotCompact: { width: 8, height: 8, borderRadius: 4 },
+  moreTextCompact: { fontSize: 10, color: "#666", marginLeft: 1, fontWeight: "900" },
+
+  // MONTH pills
+  pillsWrap: {
+    marginTop: 6,
+    width: "100%",
+    gap: 4,
+    alignItems: "center",
+    minHeight: 30,
+  },
+  pill: {
+    width: "92%",
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  pillText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  morePillsText: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: "#666",
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    padding: 16,
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 14,
+  },
+  modalTitle: { fontSize: 14, fontWeight: "900", color: "#111", marginBottom: 10 },
+
+  modalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+  },
+  modalStripe: { width: 6, height: 28, borderRadius: 4 },
+  modalVenue: { fontSize: 14, fontWeight: "900", color: "#111" },
+  modalMeta: { fontSize: 12, fontWeight: "700", color: "#555", marginTop: 2 },
+
+  modalCloseBtn: {
+    marginTop: 12,
+    backgroundColor: "#E9F6F6",
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  modalCloseText: { color: "#008080", fontWeight: "900" },
 });

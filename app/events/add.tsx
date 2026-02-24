@@ -1,9 +1,9 @@
 // app/events/add.tsx
 
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
-import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,12 +17,11 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-} from 'react-native';
+  View
+} from "react-native";
 
-import { supabase } from '@/lib/supabase';
-import { Calendar } from 'react-native-calendars';
+import { supabase } from "@/lib/supabase";
+import { Calendar } from "react-native-calendars";
 
 type VenueRow = {
   venue_id: string;
@@ -33,22 +32,22 @@ type VenueRow = {
 function todayIsoDate() {
   const d = new Date();
   const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
 
 function formatDisplayDate(isoDate: string) {
-  if (!isoDate) return 'Select date';
+  if (!isoDate) return "Select date";
   const d = new Date(`${isoDate}T00:00:00`);
   return d
-    .toLocaleDateString('en-GB', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
+    .toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
     })
-    .replace(',', '');
+    .replace(",", "");
 }
 
 export default function AddEventScreen() {
@@ -59,19 +58,27 @@ export default function AddEventScreen() {
   const [eventDate, setEventDate] = useState<string>(todayIsoDate());
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [eventStatus, setEventStatus] = useState<string | null>(null);
+  const [debugMsg, setDebugMsg] = useState<string>("");
+  
 
-  const [venueSearch, setVenueSearch] = useState('');
+  const [venueSearch, setVenueSearch] = useState("");
   const [allVenues, setAllVenues] = useState<VenueRow[]>([]);
   const [venueResults, setVenueResults] = useState<VenueRow[]>([]);
   const [selectedVenue, setSelectedVenue] = useState<VenueRow | null>(null);
   const [noMatch, setNoMatch] = useState(false);
 
-  const eventTypes = ['Gig', 'Rehearsal', 'Recording', 'Promo', 'Meeting', 'Other'];
+  const [bandId, setBandId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const eventTypes = useMemo(
+    () => ["Gig", "Rehearsal", "Recording", "Promo", "Meeting", "Other"],
+    []
+  );
 
   const statusColors: Record<string, string> = {
-    Confirmed: '#2e7d32',
-    Provisional: '#f9a825',
-    Cancelled: '#c62828',
+    Confirmed: "#2e7d32",
+    Provisional: "#f9a825",
+    Cancelled: "#c62828",
   };
 
   // RETURN FROM ADD VENUE
@@ -84,22 +91,58 @@ export default function AddEventScreen() {
     if (newVenueName && newVenueCity) {
       const formatted = `${newVenueName} (${newVenueCity})`;
       setVenueSearch(formatted);
-      // optional: you could auto-select the new venue here if you pass back venue_id too
     }
   }, [newVenueName, newVenueCity]);
 
   useEffect(() => {
-    loadVenues();
+    (async () => {
+      await loadBandIdAndVenues();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function loadVenues() {
+  async function loadBandIdAndVenues() {
+    // 1) resolve current user
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    console.log("AUTH user id:", userData?.user?.id);
+    if (userErr) {
+      Alert.alert("Error", userErr.message);
+      return;
+    }
+    const user = userData.user;
+    if (!user) {
+      Alert.alert("Not signed in", "Please sign in.");
+      return;
+    }
+
+    // 2) resolve band_id from band_members
+    const { data: bm, error: bmErr } = await supabase
+      .from("band_members")
+      .select("band_id")
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+
+    if (bmErr) {
+      Alert.alert("Error", bmErr.message);
+      return;
+    }
+
+    const resolvedBandId = (bm as any)?.band_id ?? null;
+    if (!resolvedBandId) {
+      Alert.alert("Setup needed", "No band membership found for your user.");
+      return;
+    }
+
+    setBandId(resolvedBandId);
+
+    // 3) load venues
     const { data, error } = await supabase
-      .from('venues')
-      .select('venue_id,event_venue_name,city')
-      .order('event_venue_name', { ascending: true });
+      .from("venues")
+      .select("venue_id,event_venue_name,city")
+      .order("event_venue_name", { ascending: true });
 
     if (error) {
-      Alert.alert('Error', `Could not load venues.\n\n${error.message}`);
+      Alert.alert("Error", `Could not load venues.\n\n${error.message}`);
       return;
     }
 
@@ -114,7 +157,7 @@ export default function AddEventScreen() {
 
     const q = text.trim().toLowerCase();
 
-    if (q === '') {
+    if (q === "") {
       setVenueResults(allVenues);
       setNoMatch(false);
       setSelectedVenue(null);
@@ -128,87 +171,114 @@ export default function AddEventScreen() {
     setVenueResults(filtered);
     setNoMatch(filtered.length === 0);
 
-    // if user starts typing again, assume they’re changing selection
     setSelectedVenue(null);
   }
 
   function clearVenueSearch() {
-    setVenueSearch('');
+    setVenueSearch("");
     setVenueResults(allVenues);
     setSelectedVenue(null);
     setNoMatch(false);
   }
 
   async function saveEvent() {
+    setDebugMsg("saveEvent fired");
+    console.log("SAVE BUTTON PRESSED");
+    Alert.alert("DEBUG", "SaveEvent fired");
+    Alert.alert("Saving", "saveEvent fired");
+
+    if (saving) return;
+
     Keyboard.dismiss();
 
-    if (!selectedVenue) return Alert.alert('Missing Information', 'Choose a venue.');
-    if (!eventDate) return Alert.alert('Missing Information', 'Choose a date.');
-    if (!eventType) return Alert.alert('Missing Information', 'Select an event type.');
-    if (!eventStatus) return Alert.alert('Missing Information', 'Select a status.');
+    if (!selectedVenue) return Alert.alert("Missing Information", "Choose a venue.");
+    if (!eventDate) return Alert.alert("Missing Information", "Choose a date.");
+    if (!eventType) return Alert.alert("Missing Information", "Select an event type.");
+    if (!eventStatus) return Alert.alert("Missing Information", "Select a status.");
+    if (!bandId) return Alert.alert("Missing band", "Band ID not loaded. Try again.");
 
-    const payload = {
-      event_type: eventType,
-      event_date: eventDate, // YYYY-MM-DD
-      event_status: eventStatus,
-      venue_id: selectedVenue.venue_id,
-    };
+    setSaving(true);
+    try {
+      const payload: any = {
+        band_id: bandId,
+        event_type: eventType,
+        event_date: eventDate,
+        event_status: eventStatus,
+        venue_id: selectedVenue.venue_id,
+      };
 
-    const { error } = await supabase.from('events').insert(payload);
+      console.log("INSERT PAYLOAD:", payload);
 
-    if (error) {
-      Alert.alert('Error', `Could not save event.\n\n${error.message}`);
-      return;
+      const { data, error } = await supabase
+        .from("events")
+        .insert([payload])
+        .select()
+        .single();
+
+        Alert.alert(
+  "Insert result",
+  error ? `ERROR: ${error.message}` : `OK: ${data?.event_id ?? "inserted"}`
+);
+
+      console.log("INSERT DATA:", data);
+      console.log("INSERT ERROR:", error);
+
+      if (error) throw error;
+
+      router.back();
+    } catch (e: any) {
+      console.log("saveEvent error:", e);
+      Alert.alert("Could not save event", e?.message ?? String(e));
+    } finally {
+      setSaving(false);
     }
-
-    router.back();
   }
 
   if (memberLoading) {
-  return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-      <ActivityIndicator />
-    </View>
-  );
-}
-
-if (!isAdmin) {
-  return (
-    <>
-      <Stack.Screen
-        options={{
-          title: "Add Event",
-          headerTitleAlign: "center",
-          headerStyle: { backgroundColor: "#008080" },
-          headerTitleStyle: { color: "#fff", fontWeight: "700" },
-          headerTintColor: "#fff",
-        }}
-      />
-
-      <View style={{ flex: 1, padding: 16 }}>
-        <Text style={{ fontSize: 16, fontWeight: "800", color: "#C62828", marginBottom: 10 }}>
-          Admin access required
-        </Text>
-        <Text style={{ fontSize: 13, color: "#666", marginBottom: 14 }}>
-          You do not have permission to add events. Ask the band admin if you need access.
-        </Text>
-
-        <TouchableOpacity
-          style={{
-            backgroundColor: "#009999",
-            paddingVertical: 12,
-            paddingHorizontal: 14,
-            borderRadius: 10,
-            alignSelf: "flex-start",
-          }}
-          onPress={() => router.back()}
-        >
-          <Text style={{ color: "#fff", fontWeight: "900" }}>Go back</Text>
-        </TouchableOpacity>
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator />
       </View>
-    </>
-  );
-}
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            title: "Add Event",
+            headerTitleAlign: "center",
+            headerStyle: { backgroundColor: "#008080" },
+            headerTitleStyle: { color: "#fff", fontWeight: "700" },
+            headerTintColor: "#fff",
+          }}
+        />
+
+        <View style={{ flex: 1, padding: 16 }}>
+          <Text style={{ fontSize: 16, fontWeight: "800", color: "#C62828", marginBottom: 10 }}>
+            Admin access required
+          </Text>
+          <Text style={{ fontSize: 13, color: "#666", marginBottom: 14 }}>
+            You do not have permission to add events. Ask the band admin if you need access.
+          </Text>
+
+          <TouchableOpacity
+            style={{
+              backgroundColor: "#009999",
+              paddingVertical: 12,
+              paddingHorizontal: 14,
+              borderRadius: 10,
+              alignSelf: "flex-start",
+            }}
+            onPress={() => router.back()}
+          >
+            <Text style={{ color: "#fff", fontWeight: "900" }}>Go back</Text>
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+  }
 
   const content = (
     <ScrollView
@@ -240,11 +310,11 @@ if (!isAdmin) {
 
       {noMatch && (
         <View style={{ marginTop: 10 }}>
-          <Text style={{ color: '#c62828', fontWeight: '600' }}>
+          <Text style={{ color: "#c62828", fontWeight: "600" }}>
             No venues match "{venueSearch}"
           </Text>
 
-          <TouchableOpacity style={styles.addVenueButton} onPress={() => router.push('/(modals)/add')}>
+          <TouchableOpacity style={styles.addVenueButton} onPress={() => router.push("/(modals)/add")}>
             <Ionicons name="add-circle-outline" size={18} color="#fff" />
             <Text style={styles.addVenueButtonText}>Add New Venue</Text>
           </TouchableOpacity>
@@ -307,7 +377,7 @@ if (!isAdmin) {
               current={eventDate}
               enableSwipeMonths
               markedDates={{
-                [eventDate]: { selected: true, selectedColor: '#4FB3B3' },
+                [eventDate]: { selected: true, selectedColor: "#4FB3B3" },
               }}
               onDayPress={(day) => {
                 setEventDate(day.dateString);
@@ -343,7 +413,7 @@ if (!isAdmin) {
       </Text>
 
       <View style={styles.chipRow}>
-        {['Confirmed', 'Provisional', 'Cancelled'].map((status) => {
+        {["Confirmed", "Provisional", "Cancelled"].map((status) => {
           const selected = eventStatus === status;
           return (
             <TouchableOpacity
@@ -356,11 +426,19 @@ if (!isAdmin) {
           );
         })}
       </View>
-
+{debugMsg ? (
+  <Text style={{ marginTop: 16, color: "#c62828", fontWeight: "700" }}>
+    {debugMsg}
+  </Text>
+) : null}
       {/* SAVE */}
-      <TouchableOpacity style={styles.saveButton} onPress={saveEvent}>
+      <TouchableOpacity
+        style={[styles.saveButton, saving && { opacity: 0.6 }]}
+        onPress={saveEvent}
+        disabled={saving}
+      >
         <Ionicons name="save-outline" size={20} color="#fff" />
-        <Text style={styles.saveButtonText}>Save Event</Text>
+        <Text style={styles.saveButtonText}>{saving ? "Saving..." : "Save Event"}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -369,27 +447,20 @@ if (!isAdmin) {
     <>
       <Stack.Screen
         options={{
-          title: 'Add Event',
-          headerTitleAlign: 'center',
-          headerStyle: { backgroundColor: '#008080' },
-          headerTitleStyle: { color: '#fff', fontWeight: '700' },
-          headerTintColor: '#fff',
+          title: "Add Event",
+          headerTitleAlign: "center",
+          headerStyle: { backgroundColor: "#008080" },
+          headerTitleStyle: { color: "#fff", fontWeight: "700" },
+          headerTintColor: "#fff",
         }}
       />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
-        {/* On web, TouchableWithoutFeedback can block TextInput focus */}
-        {Platform.OS === 'web' ? (
-          content
-        ) : (
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            {content}
-          </TouchableWithoutFeedback>
-        )}
+        {content}
       </KeyboardAvoidingView>
     </>
   );
@@ -398,19 +469,19 @@ if (!isAdmin) {
 const styles = StyleSheet.create({
   label: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     marginTop: 20,
     marginBottom: 6,
   },
 
   required: {
-    color: 'red',
-    fontWeight: '900',
+    color: "red",
+    fontWeight: "900",
   },
 
   chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     marginBottom: 4,
   },
@@ -419,79 +490,79 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
-    backgroundColor: '#ddd',
+    backgroundColor: "#ddd",
   },
 
   chipSelected: {
-    backgroundColor: '#008080',
+    backgroundColor: "#008080",
   },
 
   chipText: {
-    color: '#333',
-    fontWeight: '600',
+    color: "#333",
+    fontWeight: "600",
   },
 
   chipTextSelected: {
-    color: '#fff',
+    color: "#fff",
   },
 
   dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
     marginTop: 4,
   },
 
   dateBoxWide: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     width: 220,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: '#008080',
+    borderColor: "#008080",
     borderRadius: 8,
   },
 
   dateText: {
     fontSize: 16,
-    color: '#111',
-    fontWeight: '600',
+    color: "#111",
+    fontWeight: "600",
   },
 
   calendarIconBtn: {
     width: 28,
     height: 28,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: '#cfe8e8',
-    backgroundColor: '#f3fbfb',
+    borderColor: "#cfe8e8",
+    backgroundColor: "#f3fbfb",
   },
 
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center',
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
     padding: 16,
   },
 
   calendarModal: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 14,
     padding: 10,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
 
   searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: '#008080',
+    borderColor: "#008080",
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -506,63 +577,63 @@ const styles = StyleSheet.create({
   venueList: {
     marginTop: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
     maxHeight: 220,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
 
   venueItem: {
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
 
   venueName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 
   venueCity: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginTop: 2,
   },
 
   addVenueButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#008080',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#008080",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
     marginTop: 10,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
 
   addVenueButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 6,
   },
 
   saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#008080',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#008080",
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 8,
     marginTop: 40,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
 
   saveButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     marginLeft: 8,
   },
 });

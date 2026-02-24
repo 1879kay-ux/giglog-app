@@ -60,7 +60,7 @@ export default function AddEventScreen() {
   const [eventStatus, setEventStatus] = useState<string | null>(null);
 
   // Debug + save errors shown on screen (works on web and native)
-  const [debugMsg, setDebugMsg] = useState<string>("");
+  
   const [saveError, setSaveError] = useState<string>("");
 
   const [venueSearch, setVenueSearch] = useState("");
@@ -189,7 +189,7 @@ export default function AddEventScreen() {
 
     // clear and show debug on screen
     setSaveError("");
-    setDebugMsg("saveEvent fired");
+    
 
     Keyboard.dismiss();
 
@@ -433,9 +433,8 @@ export default function AddEventScreen() {
       </View>
 
       {/* DEBUG / ERROR (on screen) */}
-      {debugMsg ? (
-        <Text style={{ marginTop: 16, color: "#c62828", fontWeight: "700" }}>{debugMsg}</Text>
-      ) : null}
+      
+      
 
       {saveError ? (
         <Text style={{ marginTop: 8, color: "#c62828", fontWeight: "700" }}>{saveError}</Text>

@@ -1,16 +1,16 @@
 import { supabase } from "@/lib/supabase";
+import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput, TouchableOpacity, View
 } from "react-native";
 
 const MEMBER_TYPES = ["musician", "crew"] as const;
@@ -274,7 +274,20 @@ export default function EditBandMemberScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Edit Member" }} />
+      <Stack.Screen
+  options={{
+    title: "Add Member",
+    headerTitleAlign: "center",
+    headerStyle: { backgroundColor: "#008080" },
+    headerTitleStyle: { color: "#fff", fontWeight: "700" },
+    headerTintColor: "#fff",
+    headerLeft: () => (
+      <TouchableOpacity onPress={() => router.back()} style={{ paddingHorizontal: 12 }}>
+        <Ionicons name="arrow-back" size={22} color="#fff" />
+      </TouchableOpacity>
+    ),
+  }}
+/>
 
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={styles.label}>Name</Text>

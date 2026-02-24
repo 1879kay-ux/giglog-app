@@ -17,7 +17,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 import { supabase } from "@/lib/supabase";
@@ -58,8 +58,10 @@ export default function AddEventScreen() {
   const [eventDate, setEventDate] = useState<string>(todayIsoDate());
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [eventStatus, setEventStatus] = useState<string | null>(null);
+
+  // Debug + save errors shown on screen (works on web and native)
   const [debugMsg, setDebugMsg] = useState<string>("");
-  
+  const [saveError, setSaveError] = useState<string>("");
 
   const [venueSearch, setVenueSearch] = useState("");
   const [allVenues, setAllVenues] = useState<VenueRow[]>([]);
@@ -105,6 +107,7 @@ export default function AddEventScreen() {
     // 1) resolve current user
     const { data: userData, error: userErr } = await supabase.auth.getUser();
     console.log("AUTH user id:", userData?.user?.id);
+
     if (userErr) {
       Alert.alert("Error", userErr.message);
       return;
@@ -182,20 +185,20 @@ export default function AddEventScreen() {
   }
 
   async function saveEvent() {
-    setDebugMsg("saveEvent fired");
-    console.log("SAVE BUTTON PRESSED");
-    Alert.alert("DEBUG", "SaveEvent fired");
-    Alert.alert("Saving", "saveEvent fired");
-
     if (saving) return;
+
+    // clear and show debug on screen
+    setSaveError("");
+    setDebugMsg("saveEvent fired");
 
     Keyboard.dismiss();
 
-    if (!selectedVenue) return Alert.alert("Missing Information", "Choose a venue.");
-    if (!eventDate) return Alert.alert("Missing Information", "Choose a date.");
-    if (!eventType) return Alert.alert("Missing Information", "Select an event type.");
-    if (!eventStatus) return Alert.alert("Missing Information", "Select a status.");
-    if (!bandId) return Alert.alert("Missing band", "Band ID not loaded. Try again.");
+    // Replace Alert validation with on-screen errors (Alert is unreliable on web)
+    if (!selectedVenue) return setSaveError("Choose a venue.");
+    if (!eventDate) return setSaveError("Choose a date.");
+    if (!eventType) return setSaveError("Select an event type.");
+    if (!eventStatus) return setSaveError("Select a status.");
+    if (!bandId) return setSaveError("Band ID not loaded. Try again.");
 
     setSaving(true);
     try {
@@ -207,28 +210,23 @@ export default function AddEventScreen() {
         venue_id: selectedVenue.venue_id,
       };
 
-      console.log("INSERT PAYLOAD:", payload);
-
       const { data, error } = await supabase
         .from("events")
         .insert([payload])
         .select()
         .single();
 
-        Alert.alert(
-  "Insert result",
-  error ? `ERROR: ${error.message}` : `OK: ${data?.event_id ?? "inserted"}`
-);
+      if (error) {
+        setSaveError(`${error.code ?? ""} ${error.message}`.trim());
+        return;
+      }
 
+      // success
       console.log("INSERT DATA:", data);
-      console.log("INSERT ERROR:", error);
-
-      if (error) throw error;
-
       router.back();
     } catch (e: any) {
       console.log("saveEvent error:", e);
-      Alert.alert("Could not save event", e?.message ?? String(e));
+      setSaveError(e?.message ?? String(e));
     } finally {
       setSaving(false);
     }
@@ -256,7 +254,14 @@ export default function AddEventScreen() {
         />
 
         <View style={{ flex: 1, padding: 16 }}>
-          <Text style={{ fontSize: 16, fontWeight: "800", color: "#C62828", marginBottom: 10 }}>
+          <Text
+            style={{
+              fontSize: 16,
+              fontWeight: "800",
+              color: "#C62828",
+              marginBottom: 10,
+            }}
+          >
             Admin access required
           </Text>
           <Text style={{ fontSize: 13, color: "#666", marginBottom: 14 }}>
@@ -426,11 +431,16 @@ export default function AddEventScreen() {
           );
         })}
       </View>
-{debugMsg ? (
-  <Text style={{ marginTop: 16, color: "#c62828", fontWeight: "700" }}>
-    {debugMsg}
-  </Text>
-) : null}
+
+      {/* DEBUG / ERROR (on screen) */}
+      {debugMsg ? (
+        <Text style={{ marginTop: 16, color: "#c62828", fontWeight: "700" }}>{debugMsg}</Text>
+      ) : null}
+
+      {saveError ? (
+        <Text style={{ marginTop: 8, color: "#c62828", fontWeight: "700" }}>{saveError}</Text>
+      ) : null}
+
       {/* SAVE */}
       <TouchableOpacity
         style={[styles.saveButton, saving && { opacity: 0.6 }]}

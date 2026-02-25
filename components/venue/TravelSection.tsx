@@ -1,5 +1,6 @@
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { supabase } from "@/lib/supabase";
+import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
@@ -197,7 +198,7 @@ export default function TravelSection({
 
           {canEdit ? (
             <Pressable onPress={onPressEdit} hitSlop={10} style={styles.editPill}>
-              <Ionicons name="create-outline" size={16} color="#008080" />
+              <Ionicons name="create-outline" size={16} color={colors.primary} />
               <Text style={styles.editPillText}>Edit</Text>
             </Pressable>
           ) : null}
@@ -321,12 +322,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: "rgba(0,128,128,0.10)",
+    backgroundColor: "colors.primary,0.10)",
   },
   editPillText: {
     fontSize: 13,
     fontWeight: "900",
-    color: "#008080",
+      color: colors.primary
   },
 
   travelRow: { marginBottom: 14 },
@@ -344,13 +345,21 @@ const styles = StyleSheet.create({
   },
 
   chip: {
-    backgroundColor: "#008080",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
+  backgroundColor: colors.primary,
+  paddingVertical: 10,
+  paddingHorizontal: 14,
+  borderRadius: 12,
+  minHeight: 44,            // proper tap target
+  justifyContent: "center",
+  borderWidth: 1,
+  borderColor: colors.primaryDark,
+},
 
-  chipText: { color: "#fff", fontSize: 12, fontWeight: "800" },
+chipText: {
+  color: "#fff",
+  fontWeight: "900",
+  fontSize: 14,
+},
 
   locationBox: {
     marginTop: 10,
@@ -375,7 +384,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
 
-  badgeText: { color: "#008080", fontSize: 11, fontWeight: "900" },
+  badgeText: {   color: colors.primary, fontSize: 11, fontWeight: "900" },
 
   locationText: { fontSize: 13, color: "#555" },
 
@@ -421,7 +430,7 @@ const styles = StyleSheet.create({
   webModalBtnCancel: { backgroundColor: "#f2f2f2" },
 
   webModalBtnText: {
-    color: "#008080",
+      color: colors.primary,
     fontSize: 13,
     fontWeight: "800",
     textAlign: "center",

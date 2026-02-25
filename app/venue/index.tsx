@@ -5,14 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface Venue {
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
         marginTop: 12,
         marginBottom: 4,
         borderWidth: 1,
-        borderColor: '#008080',
+        borderColor: 'colors.primary',
     },
     searchInput: {
         flex: 1,
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     },
 
     addButton: {
-        backgroundColor: '#4FB3B3',
+        backgroundColor: 'colors.primary',
         paddingVertical: 14,
         borderRadius: 8,
         marginHorizontal: 12,

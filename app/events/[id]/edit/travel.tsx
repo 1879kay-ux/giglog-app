@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { colors } from "@/theme/colors";
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -193,72 +194,72 @@ export default function EditEventTravelScreen() {
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.pageBg,
   },
   container: {
     padding: 16,
     paddingBottom: 28,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.pageBg,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBg,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e6e6e6',
+    borderColor: colors.border,
     marginBottom: 12,
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '900',
-    color: '#111',
+    fontWeight: "900",
+    color: colors.text,
     marginBottom: 6,
   },
   help: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textMuted,
     lineHeight: 16,
     marginBottom: 12,
   },
   label: {
     fontSize: 12,
-    fontWeight: '800',
-    color: '#666',
+    fontWeight: "800",
+    color: colors.textMuted,
     marginBottom: 6,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#111',
+    color: colors.text,
   },
   clearBtn: {
     marginTop: 14,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     paddingVertical: 8,
     paddingHorizontal: 10,
   },
   clearText: {
-    color: '#B00020',
-    fontWeight: '800',
+    color: colors.danger,
+    fontWeight: "800",
     fontSize: 13,
   },
   saveButton: {
-    backgroundColor: '#4FB3B3',
+    backgroundColor: colors.button,
     borderRadius: 12,
     paddingVertical: 14,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 6,
   },
   saveButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: "900",
   },
 });

@@ -1,5 +1,6 @@
 import { CurrentMemberProvider } from "@/components/auth/CurrentMemberContext";
 import { supabase } from "@/lib/supabase";
+import { colors } from "@/theme/colors";
 import { Stack, usePathname, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -56,7 +57,7 @@ export default function RootLayout() {
     <CurrentMemberProvider>
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: "#008080" },
+          headerStyle: { backgroundColor: colors.primary },
           headerTitleStyle: { color: "#fff", fontWeight: "700" },
           headerTintColor: "#fff",
           headerTitleAlign: "center",

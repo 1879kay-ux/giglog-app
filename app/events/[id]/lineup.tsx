@@ -1,5 +1,6 @@
 import InfoCard from "@/components/InfoCard";
 import { supabase } from "@/lib/supabase";
+import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -350,11 +351,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(0,128,128,0.35)",
-    backgroundColor: "rgba(0,128,128,0.10)",
+    borderColor: "colors.primary,0.35)",
+    backgroundColor: "colors.primary,0.10)",
   },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { fontSize: 12, fontWeight: "900", color: "#008080" },
+  buttonText: { fontSize: 12, fontWeight: "900",   color: colors.primary},
 
   removeButton: {
     borderColor: "rgba(198,40,40,0.40)",

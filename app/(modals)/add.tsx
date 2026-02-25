@@ -1,10 +1,10 @@
 // Add Venue Modal Screen
 // This screen lives in app/(modals)/add.tsx so Expo Router treats it as a modal.
-// Custom header is rendered inside the component; default header is hidden via _layout.tsx.
+// Default header is shown, so we DO NOT render a custom header inside the component.
 
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { Stack, useRouter } from "expo-router";
+import { useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -13,26 +13,27 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity
-} from 'react-native';
+  TouchableOpacity,
+} from "react-native";
 
 export const unstable_settings = {
-  initialRouteName: 'add',
+  initialRouteName: "add",
 };
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from "@/lib/supabase";
+import { colors } from "@/theme/colors";
 
 export default function AddVenueModal() {
   const router = useRouter();
 
-  const [name, setName] = useState('');
-  const [city, setCity] = useState('');
-  const [postcode, setPostcode] = useState('');
-  const [notes, setNotes] = useState('');
+  const [name, setName] = useState("");
+  const [city, setCity] = useState("");
+  const [postcode, setPostcode] = useState("");
+  const [notes, setNotes] = useState("");
 
   async function saveVenue() {
     if (!name.trim() || !city.trim()) {
-      Alert.alert('Missing Information', 'Name and City are required.');
+      Alert.alert("Missing Information", "Name and City are required.");
       return;
     }
 
@@ -44,19 +45,19 @@ export default function AddVenueModal() {
     };
 
     const { data, error } = await supabase
-      .from('venues')
+      .from("venues")
       .insert(payload)
       .select()
       .single();
 
     if (error) {
       console.log(error);
-      Alert.alert('Error', error.message);
+      Alert.alert("Error", error.message);
       return;
     }
 
     router.replace({
-      pathname: '/events/add',
+      pathname: "/events/add",
       params: {
         newVenueName: data.event_venue_name,
         newVenueCity: data.city,
@@ -66,15 +67,28 @@ export default function AddVenueModal() {
 
   return (
     <>
-      {/* HEADER */}
-      
+      <Stack.Screen
+        options={{
+          title: "Add Venue",
+          headerTitleAlign: "center",
+          headerStyle: { backgroundColor: colors.primary },
+          headerTintColor: "#fff",
+          headerTitleStyle: { color: "#fff", fontWeight: "700" },
+        }}
+      />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
-
+        <ScrollView
+          contentContainerStyle={{
+            padding: 16,
+            paddingBottom: 120,
+            backgroundColor: colors.pageBg,
+            flexGrow: 1,
+          }}
+        >
           {/* NAME */}
           <Text style={styles.label}>
             Venue Name <Text style={styles.required}>*</Text>
@@ -84,6 +98,7 @@ export default function AddVenueModal() {
             value={name}
             onChangeText={setName}
             placeholder="Venue name"
+            placeholderTextColor={colors.textMuted}
           />
 
           {/* CITY */}
@@ -95,6 +110,7 @@ export default function AddVenueModal() {
             value={city}
             onChangeText={setCity}
             placeholder="City"
+            placeholderTextColor={colors.textMuted}
           />
 
           {/* POSTCODE */}
@@ -104,6 +120,7 @@ export default function AddVenueModal() {
             value={postcode}
             onChangeText={setPostcode}
             placeholder="Postcode"
+            placeholderTextColor={colors.textMuted}
           />
 
           {/* NOTES */}
@@ -113,6 +130,7 @@ export default function AddVenueModal() {
             value={notes}
             onChangeText={setNotes}
             placeholder="Notes about the venue"
+            placeholderTextColor={colors.textMuted}
             multiline
           />
 
@@ -121,7 +139,6 @@ export default function AddVenueModal() {
             <Ionicons name="save-outline" size={20} color="#fff" />
             <Text style={styles.saveButtonText}>Save Venue</Text>
           </TouchableOpacity>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </>
@@ -129,53 +146,44 @@ export default function AddVenueModal() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingVertical: 16,
-    backgroundColor: '#008080',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-
   label: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     marginTop: 20,
     marginBottom: 6,
+    color: colors.text,
   },
 
   required: {
-    color: 'red',
-    fontWeight: '900',
+    color: colors.danger,
+    fontWeight: "900",
   },
 
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
-    borderColor: '#008080',
+    borderColor: colors.primary,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
+    color: colors.text,
   },
 
   saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#008080',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 8,
     marginTop: 40,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
 
   saveButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     marginLeft: 8,
   },
 });

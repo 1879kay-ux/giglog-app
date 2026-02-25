@@ -3,9 +3,10 @@
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import ActionButton from "@/components/ui/ActionButton";
 import { supabase } from "@/lib/supabase";
+import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import { Stack, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -17,6 +18,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+const PRIMARY_TEAL = "#0D9488";
+const DARK_TEAL = "#0F766E";
+const PAGE_BG = "#F8FAFC";
 
 type VenueRow = {
   event_venue_name: string;
@@ -31,6 +36,8 @@ type EventRow = {
   venues: VenueRow | null; // single object
 };
 
+type AvailabilityStatus = string | null;
+
 function getTodayLondonYYYYMMDD() {
   // en-CA returns YYYY-MM-DD
   return new Intl.DateTimeFormat("en-CA", {
@@ -43,7 +50,19 @@ function getTodayLondonYYYYMMDD() {
 
 export default function EventsListScreen() {
   const router = useRouter();
-  const { isAdmin, adminModeEnabled } = useCurrentMember();
+
+  const cm: any = useCurrentMember();
+  const isAdmin = !!cm?.isAdmin;
+  const adminModeEnabled = !!cm?.adminModeEnabled;
+
+  const currentMemberId =
+    cm?.currentMemberId ??
+    cm?.memberId ??
+    cm?.currentMember?.member_id ??
+    cm?.member?.member_id ??
+    cm?.member?.id ??
+    null;
+
   const canEdit = isAdmin && adminModeEnabled;
 
   const [events, setEvents] = useState<EventRow[]>([]);
@@ -51,56 +70,78 @@ export default function EventsListScreen() {
   const [search, setSearch] = useState("");
   const [eventsMode, setEventsMode] = useState<"upcoming" | "archived">("upcoming");
 
+  // Step 1 state: map of event_id -> needsResponse
+  const [needsResponseByEventId, setNeedsResponseByEventId] = useState<Record<string, boolean>>({});
+
   const todayLondon = useMemo(() => getTodayLondonYYYYMMDD(), []);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadEvents();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [eventsMode])
-  );
-
-  async function loadEvents() {
+  const loadEvents = useCallback(async () => {
     setLoading(true);
 
-        let q = supabase
-      .from("events")
-      .select(`
-        event_id,
-        event_date,
-        event_status,
-        event_type,
-        venues:venue_id (
-          event_venue_name,
-          city
-        )
-      `);
+    let q = supabase.from("events").select(`
+      event_id,
+      event_date,
+      event_status,
+      event_type,
+      venues:venue_id (
+        event_venue_name,
+        city
+      )
+    `);
 
     if (eventsMode === "upcoming") {
-      q = q
-        .gte("event_date", todayLondon)
-        .order("event_date", { ascending: true });
+      q = q.gte("event_date", todayLondon).order("event_date", { ascending: true });
     } else {
-      q = q
-        .lt("event_date", todayLondon)
-        .order("event_date", { ascending: false });
+      q = q.lt("event_date", todayLondon).order("event_date", { ascending: false });
     }
 
     const { data, error } = await q;
 
-    if (!error && data) {
-      setEvents(data as unknown as EventRow[]);
+    const nextEvents = !error && data ? (data as unknown as EventRow[]) : [];
+    setEvents(nextEvents);
+
+    // only compute response-needed flags for upcoming
+    if (eventsMode === "upcoming" && currentMemberId && nextEvents.length > 0) {
+      const eventIds = nextEvents.map((e) => e.event_id);
+
+      const { data: avData, error: avError } = await supabase
+        .from("event_availability")
+        .select("event_id, status")
+        .eq("member_id", currentMemberId)
+        .in("event_id", eventIds);
+
+      if (!avError && avData) {
+        const map: Record<string, boolean> = {};
+
+        for (const row of avData as { event_id: string; status: AvailabilityStatus }[]) {
+          const status = row.status;
+          const needs = status === null || String(status).toLowerCase() === "awaiting";
+          map[row.event_id] = needs;
+        }
+
+        // if no row returned for a given event, treat as needs response
+        for (const id of eventIds) {
+          if (map[id] === undefined) map[id] = true;
+        }
+
+        setNeedsResponseByEventId(map);
+      } else {
+        setNeedsResponseByEventId({});
+      }
     } else {
-      setEvents([]);
+      setNeedsResponseByEventId({});
     }
 
     setLoading(false);
-  }
+  }, [eventsMode, todayLondon, currentMemberId]);
+
+  // ✅ THIS is the key fix: re-fetch when eventsMode changes
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
 
   function formatDisplayDate(dateString: string) {
-    // Avoid timezone shifting for date-only strings
     const date = new Date(`${dateString}T12:00:00`);
-
     const formatted = new Intl.DateTimeFormat("en-GB", {
       weekday: "short",
       day: "2-digit",
@@ -122,6 +163,14 @@ export default function EventsListScreen() {
     return haystack.includes(search.toLowerCase());
   });
 
+  const responseRequiredCount = useMemo(() => {
+    if (eventsMode !== "upcoming") return 0;
+    return filteredEvents.reduce(
+      (acc, e) => acc + (needsResponseByEventId[e.event_id] ? 1 : 0),
+      0
+    );
+  }, [eventsMode, filteredEvents, needsResponseByEventId]);
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -136,7 +185,7 @@ export default function EventsListScreen() {
         options={{
           title: "Events",
           headerTitleAlign: "center",
-          headerStyle: { backgroundColor: "#008080" },
+          headerStyle: { backgroundColor: PRIMARY_TEAL },
           headerTitleStyle: { color: "#fff", fontWeight: "700", fontSize: 18 },
           headerTintColor: "#fff",
 
@@ -163,22 +212,22 @@ export default function EventsListScreen() {
           ),
 
           headerRight: () => (
-  <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingRight: 12 }}>
-    <TouchableOpacity
-      onPress={() => router.push("/events/calendar")}
-      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-    >
-      <Ionicons name="calendar-outline" size={26} color="#fff" />
-    </TouchableOpacity>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingRight: 12 }}>
+              <TouchableOpacity
+                onPress={() => router.push("/events/calendar")}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="calendar-outline" size={26} color="#fff" />
+              </TouchableOpacity>
 
-    <TouchableOpacity
-      onPress={() => router.push("/")}
-      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-    >
-      <Ionicons name="home-outline" size={26} color="#fff" />
-    </TouchableOpacity>
-  </View>
-),
+              <TouchableOpacity
+                onPress={() => router.push("/")}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="home-outline" size={26} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ),
         }}
       />
 
@@ -188,34 +237,18 @@ export default function EventsListScreen() {
           <View style={styles.modePill}>
             <Pressable
               onPress={() => setEventsMode("upcoming")}
-              style={[
-                styles.modeBtn,
-                eventsMode === "upcoming" ? styles.modeBtnActive : null,
-              ]}
+              style={[styles.modeBtn, eventsMode === "upcoming" ? styles.modeBtnActive : null]}
             >
-              <Text
-                style={[
-                  styles.modeText,
-                  eventsMode === "upcoming" ? styles.modeTextActive : null,
-                ]}
-              >
+              <Text style={[styles.modeText, eventsMode === "upcoming" ? styles.modeTextActive : null]}>
                 Upcoming
               </Text>
             </Pressable>
 
             <Pressable
               onPress={() => setEventsMode("archived")}
-              style={[
-                styles.modeBtn,
-                eventsMode === "archived" ? styles.modeBtnActive : null,
-              ]}
+              style={[styles.modeBtn, eventsMode === "archived" ? styles.modeBtnActive : null]}
             >
-              <Text
-                style={[
-                  styles.modeText,
-                  eventsMode === "archived" ? styles.modeTextActive : null,
-                ]}
-              >
+              <Text style={[styles.modeText, eventsMode === "archived" ? styles.modeTextActive : null]}>
                 Archived
               </Text>
             </Pressable>
@@ -224,7 +257,7 @@ export default function EventsListScreen() {
           <View style={{ flex: 1 }} />
         </View>
 
-        {/* SEARCH BAR */}
+        {/* SEARCH BAR (below toggle) */}
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={20} color="#666" />
 
@@ -243,14 +276,20 @@ export default function EventsListScreen() {
           )}
         </View>
 
-        {/* ADD EVENT BUTTON (admin + admin mode) */}
-        {canEdit ? (
-          <ActionButton
-            label="Add Event"
-            icon="add-circle-outline"
-            onPress={() => router.push("/events/add")}
-          />
-        ) : null}
+        {/* COUNT (LHS) + ADD EVENT (RHS) */}
+        <View style={styles.actionsRow}>
+          {eventsMode === "upcoming" && responseRequiredCount > 0 ? (
+            <View style={styles.countPill}>
+              <Text style={styles.countPillText}>{responseRequiredCount} TO CONFIRM</Text>
+            </View>
+          ) : (
+            <View />
+          )}
+
+          {canEdit ? (
+            <ActionButton label="Add Event" icon="add-circle-outline" onPress={() => router.push("/events/add")} />
+          ) : null}
+        </View>
 
         <FlatList
           data={filteredEvents}
@@ -261,6 +300,8 @@ export default function EventsListScreen() {
             const city = venue?.city ?? "Unknown city";
             const status = item.event_status ?? "Unknown";
             const type = item.event_type ?? "Event";
+
+            const needsResponse = eventsMode === "upcoming" && !!needsResponseByEventId[item.event_id];
 
             return (
               <TouchableOpacity
@@ -275,17 +316,16 @@ export default function EventsListScreen() {
                       {venueName}, {city}
                     </Text>
 
-                    {eventsMode === "archived" ? (
-  <Text style={styles.archivedBadge}>ARCHIVED</Text>
-) : null}
+                    {eventsMode === "archived" ? <Text style={styles.archivedBadge}>ARCHIVED</Text> : null}
 
-{/* TYPE + STATUS */}
-<Text style={styles.eventMeta}>
-  {type}, {status}
-</Text>
+                    <Text style={styles.eventMeta}>
+                      {type}, {status}
+                    </Text>
+
+                    {needsResponse ? <Text style={styles.responseBadge}>Confirm availability</Text> : null}
                   </View>
 
-                  <Ionicons name="chevron-forward-outline" size={24} color="#333" />
+                  <Ionicons name="chevron-forward-outline" size={22} color="#9CA3AF" />
                 </View>
               </TouchableOpacity>
             );
@@ -305,7 +345,7 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: colors.pageBg,
   },
 
   // MODE TOGGLE
@@ -319,62 +359,98 @@ const styles = StyleSheet.create({
   modePill: {
     flexDirection: "row",
     borderWidth: 1,
-    borderColor: "#008080",
+    borderColor: colors.primary,
     borderRadius: 10,
     overflow: "hidden",
-    backgroundColor: "#fff",
+    backgroundColor: colors.cardBg,
   },
   modeBtn: {
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
   modeBtnActive: {
-    backgroundColor: "#e5e7eb",
+    backgroundColor: colors.border,
   },
   modeText: {
     fontWeight: "400",
-    color: "#222",
+    color: colors.text,
   },
   modeTextActive: {
     fontWeight: "700",
   },
-  archivedBadge: {
-  alignSelf: "flex-start",
-  fontSize: 12,
-  fontWeight: "700",
-  color: "#666",
-  marginTop: 2,
-  marginBottom: 2,
-  textTransform: "uppercase",
-},
 
   // SEARCH
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: colors.cardBg,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginHorizontal: 12,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: "#008080",
+    borderColor: colors.primary,
   },
   searchInput: {
     flex: 1,
     marginLeft: 8,
     fontSize: 14,
-    color: "#333",
+    color: colors.text,
+  },
+
+  // COUNT + ADD EVENT ROW
+  actionsRow: {
+    marginHorizontal: 12,
+    marginTop: 10,
+    marginBottom: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+
+  countPill: {
+    borderWidth: 1,
+    borderColor: colors.dangerBorder,
+    backgroundColor: colors.dangerBg,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+  },
+  countPillText: {
+    color: colors.danger,
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+
+  archivedBadge: {
+    alignSelf: "flex-start",
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.textMuted,
+    marginTop: 2,
+    marginBottom: 2,
+    textTransform: "uppercase",
   },
 
   // EVENT ROW
   eventItem: {
     padding: 16,
-    backgroundColor: "#fff",
+    backgroundColor: colors.cardBg,
     borderRadius: 10,
     marginHorizontal: 12,
     marginVertical: 8,
+
+    borderLeftWidth: 3,
+    borderLeftColor: colors.accent,
+
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
   eventRow: {
     flexDirection: "row",
@@ -383,25 +459,41 @@ const styles = StyleSheet.create({
 
   // DATE
   eventDate: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
-    color: "#555",
+    color: colors.primaryDark,
+    letterSpacing: 0.4,
     textTransform: "uppercase",
-    marginBottom: 6,
   },
 
   // VENUE + CITY
   eventVenue: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#000",
-    marginBottom: 4,
+    color: colors.text,
+    marginBottom: 2,
+    lineHeight: 22,
   },
 
   // TYPE + STATUS
   eventMeta: {
     fontSize: 14,
-    color: "#444",
+    color: colors.textMuted,
     marginTop: 2,
+  },
+
+  // CONFIRM AVAILABILITY (quiet, below meta)
+  responseBadge: {
+    alignSelf: "flex-start",
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.danger,
+    backgroundColor: colors.dangerBg,
+    borderWidth: 1,
+    borderColor: colors.dangerBorder,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 999,
   },
 });

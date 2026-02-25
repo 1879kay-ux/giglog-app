@@ -1,5 +1,6 @@
 import InfoCard from "@/components/InfoCard";
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
+import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -59,11 +60,11 @@ export default function DetailsSection({
   };
 
   const editPill = (onPress: () => void) => (
-    <Pressable onPress={onPress} hitSlop={10} style={styles.editPill}>
-      <Ionicons name="create-outline" size={16} color="#008080" />
-      <Text style={styles.editPillText}>Edit</Text>
-    </Pressable>
-  );
+  <Pressable onPress={onPress} hitSlop={10} style={styles.editPill}>
+    <Ionicons name="create-outline" size={16} color={colors.primary} />
+    <Text style={styles.editPillText}>Edit</Text>
+  </Pressable>
+);
 
   const editEventDetails = canEdit
     ? editPill(() => router.push(`/events/${eventId}/edit/details`))
@@ -192,19 +193,19 @@ const styles = StyleSheet.create({
   },
 
   editPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: "rgba(0,128,128,0.10)",
-  },
-  editPillText: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: "#008080",
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 12,
+  backgroundColor: "rgba(13,148,136,0.10)",
+},
+editPillText: {
+  fontSize: 13,
+  fontWeight: "900",
+  color: colors.primary,
+},
 
   row: {
     flexDirection: "row",

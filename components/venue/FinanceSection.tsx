@@ -1,4 +1,5 @@
 import InfoCard from "@/components/InfoCard";
+import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -74,7 +75,7 @@ export default function FinanceSection({
               hitSlop={10}
               style={styles.editPill}
             >
-              <Ionicons name="create-outline" size={16} color="#008080" />
+              <Ionicons name="create-outline" size={16} color={colors.primary} />
               <Text style={styles.editPillText}>Edit</Text>
             </Pressable>
           ) : null}
@@ -201,12 +202,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: "rgba(0,128,128,0.10)",
+    backgroundColor: "colors.primary,0.10)",
   },
   editPillText: {
     fontSize: 13,
     fontWeight: "900",
-    color: "#008080",
+      color: colors.primary
   },
 
   row: {
@@ -222,7 +223,7 @@ const styles = StyleSheet.create({
 
   netRow: {
     borderTopWidth: 2,
-    borderTopColor: "#008080",
+    color: colors.primary,
     paddingTop: 12,
     marginTop: 4,
   },
@@ -231,7 +232,7 @@ const styles = StyleSheet.create({
   labelBold: { fontSize: 14, fontWeight: "700", color: "#333" },
 
   value: { fontSize: 14, color: "#333" },
-  valueBold: { fontSize: 14, fontWeight: "700", color: "#008080" },
+  valueBold: { fontSize: 14, fontWeight: "700",   color: colors.primary},
 
   noteBlock: {
     marginTop: 10,

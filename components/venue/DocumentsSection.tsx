@@ -1,5 +1,6 @@
 import InfoCard from "@/components/InfoCard";
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
+import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useMemo } from "react";
@@ -79,7 +80,7 @@ export default function DocumentsSection({
 
   const HeaderRight = canEdit ? (
     <Pressable onPress={goEdit} hitSlop={10} style={styles.headerBtn}>
-      <Ionicons name="create-outline" size={18} color="#008080" />
+      <Ionicons name="create-outline" size={18} color={colors.primary} />
       <Text style={styles.headerBtnText}>Edit</Text>
     </Pressable>
   ) : undefined;
@@ -91,7 +92,7 @@ export default function DocumentsSection({
       {isEmpty ? (
         <View style={styles.emptyWrap}>
           <View style={styles.emptyIcon}>
-            <Ionicons name="documents-outline" size={22} color="#008080" />
+            <Ionicons name="documents-outline" size={22} color={colors.primary} />
           </View>
 
           <View style={{ flex: 1 }}>
@@ -115,7 +116,7 @@ export default function DocumentsSection({
               >
                 <View style={styles.rowLeft}>
                   <View style={styles.linkIcon}>
-                    <Ionicons name="link-outline" size={16} color="#008080" />
+                    <Ionicons name="link-outline" size={16} color={colors.primary} />
                   </View>
 
                   <View style={{ flex: 1 }}>
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E9F6F6",
   },
   headerBtnText: {
-    color: "#008080",
+      color: colors.primary,
     fontWeight: "800",
     fontSize: 13,
   },

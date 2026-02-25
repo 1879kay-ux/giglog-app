@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -278,7 +279,7 @@ export default function EditBandMemberScreen() {
   options={{
     title: "Add Member",
     headerTitleAlign: "center",
-    headerStyle: { backgroundColor: "#008080" },
+    headerStyle: { backgroundColor: colors.primary},
     headerTitleStyle: { color: "#fff", fontWeight: "700" },
     headerTintColor: "#fff",
     headerLeft: () => (

@@ -1,5 +1,6 @@
 import InfoCard from "@/components/InfoCard";
 import { supabase } from "@/lib/supabase";
+import { colors } from "@/theme/colors";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -463,12 +464,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
-    backgroundColor: "rgba(0,128,128,0.10)",
+    backgroundColor: "colors.primary,0.10)",
   },
   lineupBadgeText: {
     fontSize: 11,
     fontWeight: "800",
-    color: "#008080",
+      color: colors.primary,
   },
 
   editLineupPill: {
@@ -476,13 +477,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(0,128,128,0.35)",
-    backgroundColor: "rgba(0,128,128,0.08)",
+    borderColor: "colors.primary,0.35)",
+    backgroundColor: "colors.primary,0.08)",
   },
   editLineupPillText: {
     fontSize: 11,
     fontWeight: "900",
-    color: "#008080",
+      color: colors.primary,
   },
 
   chipRow: { flexDirection: "row", gap: 8, marginBottom: 8 },

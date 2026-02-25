@@ -1,6 +1,7 @@
 // app/events/add.tsx
 
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
+import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -244,14 +245,13 @@ export default function AddEventScreen() {
     return (
       <>
         <Stack.Screen
-          options={{
-            title: "Add Event",
-            headerTitleAlign: "center",
-            headerStyle: { backgroundColor: "#008080" },
-            headerTitleStyle: { color: "#fff", fontWeight: "700" },
-            headerTintColor: "#fff",
-          }}
-        />
+  options={{
+    title: "Add Event",
+    headerStyle: { backgroundColor: colors.primary },
+    headerTintColor: "#fff",
+    headerTitleStyle: { fontWeight: "700" },
+  }}
+/>
 
         <View style={{ flex: 1, padding: 16 }}>
           <Text
@@ -365,7 +365,7 @@ export default function AddEventScreen() {
             style={styles.calendarIconBtn}
             accessibilityLabel="Pick date"
           >
-            <Ionicons name="calendar-outline" size={18} color="#008080" />
+            <Ionicons name="calendar-outline" size={18} color={colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -382,7 +382,7 @@ export default function AddEventScreen() {
               current={eventDate}
               enableSwipeMonths
               markedDates={{
-                [eventDate]: { selected: true, selectedColor: "#4FB3B3" },
+                [eventDate]: { selected: true, selectedColor: colors.primary},
               }}
               onDayPress={(day) => {
                 setEventDate(day.dateString);
@@ -454,15 +454,15 @@ export default function AddEventScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: "Add Event",
-          headerTitleAlign: "center",
-          headerStyle: { backgroundColor: "#008080" },
-          headerTitleStyle: { color: "#fff", fontWeight: "700" },
-          headerTintColor: "#fff",
-        }}
-      />
+     <Stack.Screen
+  options={{
+    title: "Add Event",
+    headerTitleAlign: "center",
+    headerStyle: { backgroundColor: colors.primary },
+    headerTitleStyle: { color: "#fff", fontWeight: "700" },
+    headerTintColor: "#fff",
+  }}
+/>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -481,10 +481,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginTop: 20,
     marginBottom: 6,
+    color: colors.text,
   },
 
   required: {
-    color: "red",
+    color: colors.danger,
     fontWeight: "900",
   },
 
@@ -499,20 +500,20 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
-    backgroundColor: "#ddd",
+    backgroundColor: colors.border,
   },
 
   chipSelected: {
-    backgroundColor: "#008080",
+    backgroundColor: colors.primary,
   },
 
   chipText: {
-    color: "#333",
+    color: colors.text,
     fontWeight: "600",
   },
 
   chipTextSelected: {
-    color: "#fff",
+    color: colors.cardBg,
   },
 
   dateRow: {
@@ -529,15 +530,15 @@ const styles = StyleSheet.create({
     width: 220,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: "#fff",
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
-    borderColor: "#008080",
+    borderColor: colors.primary,
     borderRadius: 8,
   },
 
   dateText: {
     fontSize: 16,
-    color: "#111",
+    color: colors.text,
     fontWeight: "600",
   },
 
@@ -548,8 +549,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#cfe8e8",
-    backgroundColor: "#f3fbfb",
+    borderColor: colors.border,
+    backgroundColor: colors.pageBg,
   },
 
   modalBackdrop: {
@@ -560,7 +561,7 @@ const styles = StyleSheet.create({
   },
 
   calendarModal: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.cardBg,
     borderRadius: 14,
     padding: 10,
     overflow: "hidden",
@@ -569,9 +570,9 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
-    borderColor: "#008080",
+    borderColor: colors.primary,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -581,39 +582,41 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
+    color: colors.text,
   },
 
   venueList: {
     marginTop: 10,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 8,
     maxHeight: 220,
-    backgroundColor: "#fff",
+    backgroundColor: colors.cardBg,
   },
 
   venueItem: {
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: colors.border,
   },
 
   venueName: {
     fontSize: 16,
     fontWeight: "600",
+    color: colors.text,
   },
 
   venueCity: {
     fontSize: 14,
-    color: "#666",
+    color: colors.textMuted,
     marginTop: 2,
   },
 
   addVenueButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#008080",
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
@@ -622,7 +625,7 @@ const styles = StyleSheet.create({
   },
 
   addVenueButtonText: {
-    color: "#fff",
+    color: colors.cardBg,
     fontSize: 14,
     fontWeight: "600",
     marginLeft: 6,
@@ -631,7 +634,7 @@ const styles = StyleSheet.create({
   saveButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#008080",
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 8,
@@ -640,7 +643,7 @@ const styles = StyleSheet.create({
   },
 
   saveButtonText: {
-    color: "#fff",
+    color: colors.cardBg,
     fontSize: 16,
     fontWeight: "700",
     marginLeft: 8,

@@ -1,20 +1,21 @@
 import { supabase } from '@/lib/supabase';
+import { colors } from "@/theme/colors";
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type EventScheduleRow = {
@@ -248,7 +249,7 @@ const [iosTempTime, setIosTempTime] = useState<Date>(new Date());
                     activeOpacity={0.7}
                   >
                     <Text style={styles.timeText}>{times[f.key] || '—'}</Text>
-                    <Ionicons name="time-outline" size={16} color="#008080" />
+                    <Ionicons name="time-outline" size={16} color={colors.primary} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -346,128 +347,127 @@ const [iosTempTime, setIosTempTime] = useState<Date>(new Date());
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.pageBg,
   },
 
   container: {
     padding: 16,
     paddingBottom: 28,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.pageBg,
   },
 
   modalBackdrop: {
-  flex: 1,
-  backgroundColor: 'rgba(0,0,0,0.35)',
-  justifyContent: 'center',
-  padding: 16,
-},
-iosPickerCard: {
-  backgroundColor: '#fff',
-  borderRadius: 14,
-  overflow: 'hidden',
-},
-iosPickerHeader: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  paddingHorizontal: 14,
-  paddingVertical: 12,
-  borderBottomWidth: 1,
-  borderBottomColor: '#eee',
-},
-iosPickerTitle: {
-  fontSize: 14,
-  fontWeight: '800',
-  color: '#111',
-},
-iosPickerBtn: {
-  fontSize: 14,
-  fontWeight: '800',
-  color: '#008080',
-},
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    padding: 16,
+  },
+  iosPickerCard: {
+    backgroundColor: colors.cardBg,
+    borderRadius: 14,
+    overflow: "hidden",
+  },
+  iosPickerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  iosPickerTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.text,
+  },
+  iosPickerBtn: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.primary,
+  },
 
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBg,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e6e6e6',
+    borderColor: colors.border,
     marginBottom: 12,
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#111',
+    fontWeight: "800",
+    color: colors.text,
     marginBottom: 10,
   },
 
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    alignItems: 'center',
+    borderBottomColor: colors.border,
+    alignItems: "center",
     gap: 12,
   },
   rowLabel: {
     fontSize: 13,
-    color: '#444',
-    fontWeight: '600',
+    color: colors.textMuted,
+    fontWeight: "600",
     flex: 1,
   },
 
   timeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
     flex: 1,
   },
   timeText: {
     fontSize: 13,
-    color: '#111',
-    fontWeight: '700',
+    color: colors.text,
+    fontWeight: "700",
   },
 
   notesWrap: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: colors.border,
   },
   notesLabel: {
     fontSize: 12,
-    fontWeight: '800',
-    color: '#666',
+    fontWeight: "800",
+    color: colors.textMuted,
     marginBottom: 6,
   },
   notesInput: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#111',
+    color: colors.text,
     minHeight: 110,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
 
   saveButton: {
-    backgroundColor: '#4FB3B3',
+    backgroundColor: colors.button,
     borderRadius: 12,
     paddingVertical: 14,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 6,
   },
   saveButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: "900",
   },
-  
 });

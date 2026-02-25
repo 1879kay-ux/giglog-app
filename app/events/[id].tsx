@@ -6,6 +6,7 @@ import FinanceSection from "@/components/venue/FinanceSection";
 import ScheduleSection from "@/components/venue/ScheduleSection";
 import TravelSection from "@/components/venue/TravelSection";
 import { supabase } from "@/lib/supabase";
+import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -436,19 +437,21 @@ if (!lineupErr) setHasCustomLineup((count ?? 0) > 0);
         </View>
 
         {/* ADMIN EDIT HUB (admin + admin mode) */}
-        {canEdit ? (
-          <TouchableOpacity
-            style={styles.adminPill}
-            onPress={() => {
-              if (!id) return;
-              router.push(`/events/${id}/edit`);
-            }}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="create-outline" size={16} color="#008080" />
-            <Text style={styles.adminPillText}>Edit Hub</Text>
-          </TouchableOpacity>
-        ) : null}
+{canEdit ? (
+  <View style={styles.adminPillRow}>
+    <TouchableOpacity
+      style={styles.adminPill}
+      onPress={() => {
+        if (!id) return;
+        router.push(`/events/${id}/edit`);
+      }}
+      activeOpacity={0.8}
+    >
+      <Ionicons name="create-outline" size={16} color={colors.primary} />
+      <Text style={styles.adminPillText}>Edit Hub</Text>
+    </TouchableOpacity>
+  </View>
+) : null}
 
         <ScrollView
           style={styles.scroll}
@@ -613,7 +616,7 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: colors.pageBg,
   },
 
   headerIconWrapper: {
@@ -629,28 +632,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 12,
-    backgroundColor: "#fff",
+    backgroundColor: colors.cardBg,
     borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
+    borderBottomColor: colors.border,
     marginBottom: 12,
   },
   eventSummaryDate: {
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.4,
-    color: "#111",
+    color: colors.text,
     textTransform: "uppercase",
     marginBottom: 4,
   },
   eventSummaryVenue: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#111",
+    color: colors.text,
     marginBottom: 2,
   },
   eventSummaryMeta: {
     fontSize: 14,
-    color: "#444",
+    color: colors.textMuted,
     fontWeight: "600",
   },
 
@@ -660,7 +663,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
 
-    backgroundColor: "#4FB3B3",
+    backgroundColor: colors.button,
 
     alignSelf: "flex-start",
     minWidth: 170,
@@ -674,24 +677,30 @@ const styles = StyleSheet.create({
 
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#2AA3A3",
+    borderColor: colors.primary,
   },
 
-  adminPill: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: "rgba(0,128,128,0.10)",
-  },
-  adminPillText: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: "#008080",
-  },
+ adminPillRow: {
+  paddingHorizontal: 16,   // matches your eventSummary padding
+  marginBottom: 12,        // optional spacing before the big buttons
+  alignItems: "flex-end",  // pushes pill to the right edge of the padded row
+},
+
+adminPill: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 12,
+  backgroundColor: "rgba(13,148,136,0.12)",
+},
+
+adminPillText: {
+  fontSize: 13,
+  fontWeight: "800",
+  color: colors.primary,
+},
 
   editButtonText: {
     color: "#fff",
@@ -713,7 +722,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionHeader: {
-    backgroundColor: "#009999",
+    backgroundColor: colors.primary,
     paddingVertical: isSmallScreen ? 6 : 8,
     paddingHorizontal: isSmallScreen ? 12 : 14,
     borderRadius: 8,
@@ -739,7 +748,7 @@ const styles = StyleSheet.create({
 
   sectionContent: {
     marginTop: 6,
-    backgroundColor: "#fff",
+    backgroundColor: colors.cardBg,
     borderRadius: 8,
     padding: 12,
   },
@@ -751,7 +760,7 @@ const styles = StyleSheet.create({
   travelLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#333",
+    color: colors.text,
     marginBottom: 6,
   },
   travelButtonRow: {
@@ -759,7 +768,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   travelButton: {
-    backgroundColor: "#008080",
+    backgroundColor: colors.primary,
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 6,
@@ -773,17 +782,17 @@ const styles = StyleSheet.create({
   travelLocationBox: {
     marginTop: 8,
     padding: 10,
-    backgroundColor: "#f7f7f7",
+    backgroundColor: colors.pageBg,
     borderRadius: 6,
   },
   travelLocationTitle: {
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 4,
-    color: "#333",
+    color: colors.text,
   },
   travelLocationText: {
     fontSize: 13,
-    color: "#555",
+    color: colors.textMuted,
   },
 });

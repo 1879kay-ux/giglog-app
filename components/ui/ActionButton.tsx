@@ -1,43 +1,73 @@
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
+import { colors } from "@/theme/colors";
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
 
 type Props = {
   label: string;
   icon?: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
-  style?: ViewStyle;
+  disabled?: boolean;
+  style?: ViewStyle | ViewStyle[];
 };
 
-export default function ActionButton({ label, icon, onPress, style }: Props) {
+export default function ActionButton({
+  label,
+  icon,
+  onPress,
+  disabled,
+  style,
+}: Props) {
   return (
-    <TouchableOpacity style={[styles.button, style]} onPress={onPress}>
-      {icon ? <Ionicons name={icon} size={18} color="#fff" /> : null}
-      <Text style={styles.text}>{label}</Text>
-    </TouchableOpacity>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.button,
+        pressed && !disabled && styles.pressed,
+        disabled && styles.disabled,
+        style,
+      ]}
+    >
+      <View style={styles.content}>
+        {icon ? (
+          <Ionicons name={icon} size={18} color="#fff" style={styles.icon} />
+        ) : null}
+        <Text style={styles.text}>{label}</Text>
+      </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#4FB3B3',
-    alignSelf: 'flex-start',
-    minWidth: 170,
-    marginHorizontal: 16,
-    marginTop: 6,
-    marginBottom: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
+    backgroundColor: colors.button,
+    borderColor: colors.primary,
     borderWidth: 1,
-    borderColor: '#2AA3A3',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+  },
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  icon: {
+    marginRight: 8,
   },
   text: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+  pressed: {
+    opacity: 0.9,
+  },
+  disabled: {
+    opacity: 0.5,
   },
 });

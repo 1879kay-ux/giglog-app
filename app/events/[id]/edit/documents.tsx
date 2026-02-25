@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { colors } from "@/theme/colors";
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -125,7 +126,7 @@ export default function EditEventDocumentsScreen() {
             <View style={styles.field}>
               <Text style={styles.label}>Setlist URL</Text>
               <View style={styles.inputWrap}>
-                <Ionicons name="link-outline" size={16} color="#008080" />
+                <Ionicons name="link-outline" size={16} color={colors.primary} />
                 <TextInput
                   value={setlistUrl}
                   onChangeText={setSetlistUrl}
@@ -142,7 +143,7 @@ export default function EditEventDocumentsScreen() {
             <View style={styles.field}>
               <Text style={styles.label}>Event Info URL</Text>
               <View style={styles.inputWrap}>
-                <Ionicons name="link-outline" size={16} color="#008080" />
+                <Ionicons name="link-outline" size={16} color={colors.primary} />
                 <TextInput
                   value={eventinfoUrl}
                   onChangeText={setEventinfoUrl}
@@ -159,7 +160,7 @@ export default function EditEventDocumentsScreen() {
             <View style={styles.field}>
               <Text style={styles.label}>Promo Material URL</Text>
               <View style={styles.inputWrap}>
-                <Ionicons name="link-outline" size={16} color="#008080" />
+                <Ionicons name="link-outline" size={16} color={colors.primary} />
                 <TextInput
                   value={promoMaterialUrl}
                   onChangeText={setPromoMaterialUrl}
@@ -176,7 +177,7 @@ export default function EditEventDocumentsScreen() {
             <View style={styles.field}>
               <Text style={styles.label}>Other URL</Text>
               <View style={styles.inputWrap}>
-                <Ionicons name="link-outline" size={16} color="#008080" />
+                <Ionicons name="link-outline" size={16} color={colors.primary} />
                 <TextInput
                   value={docOtherUrl}
                   onChangeText={setDocOtherUrl}
@@ -203,34 +204,34 @@ export default function EditEventDocumentsScreen() {
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.pageBg,
   },
 
   container: {
     padding: 16,
     paddingBottom: 28,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.pageBg,
   },
 
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBg,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e6e6e6',
+    borderColor: colors.border,
     marginBottom: 12,
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#111',
+    fontWeight: "800",
+    color: colors.text,
     marginBottom: 6,
   },
   cardSub: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textMuted,
     lineHeight: 16,
     marginBottom: 12,
   },
@@ -240,38 +241,38 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    fontWeight: '800',
-    color: '#666',
+    fontWeight: "800",
+    color: colors.textMuted,
     marginBottom: 6,
   },
   inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBg,
   },
   input: {
     flex: 1,
     fontSize: 14,
-    color: '#111',
+    color: colors.text,
     padding: 0,
   },
 
   saveButton: {
-    backgroundColor: '#4FB3B3',
+    backgroundColor: colors.button,
     borderRadius: 12,
     paddingVertical: 14,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 6,
   },
   saveButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: "900",
   },
 });

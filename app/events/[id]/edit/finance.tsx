@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { colors } from "@/theme/colors";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -384,41 +385,41 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f5f5f5",
+    backgroundColor: colors.pageBg,
   },
 
   container: {
     padding: 16,
     paddingBottom: 28,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: colors.pageBg,
   },
 
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.cardBg,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#e6e6e6",
+    borderColor: colors.border,
     marginBottom: 12,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#111",
+    color: colors.text,
     marginBottom: 10,
   },
 
   sectionLabel: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#666",
+    color: colors.textMuted,
     marginBottom: 6,
     marginTop: 6,
   },
 
   divider: {
     height: 1,
-    backgroundColor: "#eee",
+    backgroundColor: colors.border,
     marginVertical: 12,
   },
 
@@ -427,13 +428,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: colors.border,
     alignItems: "center",
     gap: 12,
   },
   rowLabel: {
     fontSize: 13,
-    color: "#444",
+    color: colors.textMuted,
     fontWeight: "600",
     flex: 1,
   },
@@ -442,19 +443,19 @@ const styles = StyleSheet.create({
     width: 140,
     textAlign: "right",
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: "#111",
-    backgroundColor: "#fff",
+    color: colors.text,
+    backgroundColor: colors.cardBg,
   },
 
   chipBlock: {
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: colors.border,
   },
 
   chipHeaderRow: {
@@ -467,7 +468,7 @@ const styles = StyleSheet.create({
   clearText: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#008080",
+    color: colors.primary,
   },
 
   chipWrap: {
@@ -484,13 +485,13 @@ const styles = StyleSheet.create({
   },
 
   chipUnselected: {
-    borderColor: "#ddd",
-    backgroundColor: "#fff",
+    borderColor: colors.border,
+    backgroundColor: colors.cardBg,
   },
 
   chipSelected: {
-    borderColor: "#008080",
-    backgroundColor: "rgba(0,128,128,0.12)",
+    borderColor: colors.primary,
+    backgroundColor: "rgba(13,148,136,0.12)",
   },
 
   chipText: {
@@ -499,11 +500,11 @@ const styles = StyleSheet.create({
   },
 
   chipTextUnselected: {
-    color: "#111",
+    color: colors.text,
   },
 
   chipTextSelected: {
-    color: "#008080",
+    color: colors.primary,
   },
 
   notesBlock: {
@@ -512,24 +513,24 @@ const styles = StyleSheet.create({
   notesLabel: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#666",
+    color: colors.textMuted,
     marginBottom: 6,
   },
   notesInput: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: "#111",
+    color: colors.text,
     minHeight: 90,
     textAlignVertical: "top",
   },
 
   saveButton: {
-    backgroundColor: "#4FB3B3",
+    backgroundColor: colors.button,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",

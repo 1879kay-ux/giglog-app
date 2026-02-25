@@ -1,3 +1,4 @@
+import { colors } from "@/theme/colors";
 import React, { useEffect, useState } from "react";
 import {
   Keyboard,
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   saveButton: {
-    backgroundColor: "#4FB3B3",
+    backgroundColor: colors.primary,
     padding: 16,
     borderRadius: 12,
     marginTop: 10,

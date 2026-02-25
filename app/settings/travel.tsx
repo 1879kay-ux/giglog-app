@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { colors } from "@/theme/colors";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -107,7 +108,15 @@ export default function TravelDefaultsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Default departure" }} />
+      <Stack.Screen
+        options={{
+          title: "Default departure",
+          headerTitleAlign: "center",
+          headerStyle: { backgroundColor: colors.primary },
+          headerTintColor: "#fff",
+          headerTitleStyle: { color: "#fff", fontWeight: "700" },
+        }}
+      />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -136,7 +145,7 @@ export default function TravelDefaultsScreen() {
                   value={address}
                   onChangeText={setAddress}
                   placeholder="e.g. Rehearsal Room, 12 High St"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textMuted}
                 />
 
                 <Text style={styles.label}>Departure postcode</Text>
@@ -145,7 +154,7 @@ export default function TravelDefaultsScreen() {
                   value={postcode}
                   onChangeText={setPostcode}
                   placeholder="e.g. NE1 1AA"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textMuted}
                   autoCapitalize="characters"
                 />
 
@@ -185,40 +194,45 @@ export default function TravelDefaultsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, paddingBottom: 28, backgroundColor: "#f5f5f5" },
+  container: { padding: 16, paddingBottom: 28, backgroundColor: colors.pageBg },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.cardBg,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#e6e6e6",
+    borderColor: colors.border,
   },
-  title: { fontSize: 16, fontWeight: "900", color: "#111" },
-  sub: { marginTop: 6, fontSize: 12, color: "#666", lineHeight: 16 },
+  title: { fontSize: 16, fontWeight: "900", color: colors.text },
+  sub: { marginTop: 6, fontSize: 12, color: colors.textMuted, lineHeight: 16 },
 
-  loadingRow: { marginTop: 14, flexDirection: "row", alignItems: "center", gap: 10 },
-  loadingText: { fontSize: 12, color: "#666", fontWeight: "700" },
+  loadingRow: {
+    marginTop: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  loadingText: { fontSize: 12, color: colors.textMuted, fontWeight: "700" },
 
-  label: { marginTop: 14, fontSize: 12, fontWeight: "900", color: "#444" },
+  label: { marginTop: 14, fontSize: 12, fontWeight: "900", color: colors.text },
   input: {
     marginTop: 6,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: "#111",
-    backgroundColor: "#fff",
+    color: colors.text,
+    backgroundColor: colors.cardBg,
   },
 
   statusMsg: { marginTop: 10, fontSize: 12, fontWeight: "800" },
-  statusOk: { color: "#008080" },
-  statusError: { color: "#B00020" },
+  statusOk: { color: colors.primary },
+  statusError: { color: colors.danger },
 
   saveBtn: {
     marginTop: 12,
-    backgroundColor: "#4FB3B3",
+    backgroundColor: colors.button,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",

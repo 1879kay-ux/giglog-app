@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { colors } from "@/theme/colors";
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -310,7 +311,7 @@ export default function EditEventDetailsScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={styles.rowValue}>{formatEventDate(safeDate)}</Text>
-                  <Ionicons name="calendar-outline" size={18} color="#008080" />
+                  <Ionicons name="calendar-outline" size={18} color={colors.primary} />
                 </TouchableOpacity>
               </View>
 
@@ -320,7 +321,7 @@ export default function EditEventDetailsScreen() {
                     current={safeDate}
                     enableSwipeMonths
                     markedDates={{
-                      [safeDate]: { selected: true, selectedColor: '#4FB3B3' },
+                      [safeDate]: { selected: true, selectedColor: 'colors.primary' },
                     }}
                     onDayPress={(day) => {
                       setEventDate(day.dateString);
@@ -413,178 +414,178 @@ export default function EditEventDetailsScreen() {
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.pageBg,
   },
 
   container: {
     padding: 16,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.pageBg,
   },
 
   summary: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBg,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e6e6e6',
+    borderColor: colors.border,
     marginBottom: 12,
   },
   summaryDate: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#111',
+    fontWeight: "700",
+    color: colors.text,
     marginBottom: 6,
     letterSpacing: 0.3,
   },
   summaryVenue: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#111',
+    fontWeight: "800",
+    color: colors.text,
     marginBottom: 6,
   },
   summaryMeta: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#555',
+    fontWeight: "600",
+    color: colors.textMuted,
   },
 
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBg,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e6e6e6',
+    borderColor: colors.border,
     marginBottom: 12,
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#111',
+    fontWeight: "800",
+    color: colors.text,
     marginBottom: 10,
   },
 
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.border,
     gap: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   rowLabel: {
     fontSize: 13,
-    color: '#444',
-    fontWeight: '600',
+    color: colors.textMuted,
+    fontWeight: "600",
     flex: 1,
   },
   rowValue: {
     fontSize: 13,
-    color: '#111',
-    textAlign: 'right',
+    color: colors.text,
+    textAlign: "right",
     flex: 1,
   },
 
   dateValueWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
 
   calendarWrap: {
     marginTop: 10,
     borderWidth: 1,
-    borderColor: '#e6e6e6',
+    borderColor: colors.border,
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
 
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '800',
-    color: '#111',
+    fontWeight: "800",
+    color: colors.text,
     marginBottom: 8,
     marginTop: 6,
   },
 
   chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   chip: {
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 18,
-    backgroundColor: '#eee',
+    backgroundColor: colors.border,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
   },
   chipText: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#111',
+    fontWeight: "700",
+    color: colors.text,
   },
 
   helper: {
     marginTop: 10,
     fontSize: 12,
-    color: '#666',
+    color: colors.textMuted,
   },
 
   secondaryButton: {
     marginTop: 10,
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    backgroundColor: '#4FB3B3',
+    backgroundColor: colors.button,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 10,
   },
   secondaryButtonText: {
-    color: '#fff',
-    fontWeight: '800',
+    color: "#fff",
+    fontWeight: "800",
     fontSize: 14,
   },
 
   inputLabel: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#444',
+    fontWeight: "700",
+    color: colors.textMuted,
     marginTop: 8,
     marginBottom: 6,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#111',
+    color: colors.text,
   },
   multiline: {
     height: 110,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
 
   saveButton: {
-    backgroundColor: '#4FB3B3',
+    backgroundColor: colors.button,
     borderRadius: 12,
     paddingVertical: 14,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 6,
   },
   saveButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: "900",
   },
 });

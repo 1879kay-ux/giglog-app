@@ -1,6 +1,7 @@
 // app/events/calendar.tsx
 
 import { supabase } from "@/lib/supabase";
+import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -302,7 +303,7 @@ export default function EventsCalendarScreen() {
         options={{
           title: "Calendar",
           headerTitleAlign: "center",
-          headerStyle: { backgroundColor: "#008080" },
+          headerStyle: { backgroundColor: colors.primary},
           headerTitleStyle: { color: "#fff", fontWeight: "700", fontSize: 18 },
           headerTintColor: "#fff",
           headerLeft: () => (
@@ -474,7 +475,7 @@ const styles = StyleSheet.create({
   viewModePill: {
     flexDirection: "row",
     borderWidth: 1,
-    borderColor: "#008080",
+    borderColor: colors.primary,
     borderRadius: 10,
     overflow: "hidden",
     backgroundColor: "#fff",
@@ -537,7 +538,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "#E9F6F6",
   },
-  smallLinkText: { color: "#008080", fontWeight: "900", fontSize: 12 },
+  smallLinkText: {   color: colors.primary, fontWeight: "900", fontSize: 12 },
 
   weekHeaderRow: { flexDirection: "row", marginTop: 6 },
   weekHeaderText: {
@@ -565,7 +566,7 @@ const styles = StyleSheet.create({
   },
 
   cellWeekend: { backgroundColor: "#f8fafc" },
-  cellToday: { borderWidth: 2, borderColor: "#008080" },
+  cellToday: { borderWidth: 2, borderColor: colors.primary},
 
   dayNumber: { fontSize: 13, fontWeight: "900", color: "#111" },
   dayNumberCompact: { fontSize: 11, fontWeight: "900", color: "#111" },
@@ -633,5 +634,5 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
-  modalCloseText: { color: "#008080", fontWeight: "900" },
+  modalCloseText: {   color: colors.primary, fontWeight: "900" },
 });

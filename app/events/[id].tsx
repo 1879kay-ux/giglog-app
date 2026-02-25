@@ -478,6 +478,7 @@ if (!lineupErr) setHasCustomLineup((count ?? 0) > 0);
             onPress={() => toggleSection("availability")}
           >
             <AvailabilitySection
+  key={openSections.availability ? `open-${event.event_id}` : `closed-${event.event_id}`}
   eventId={event.event_id}
   memberId={currentMemberId}
   hasCustomLineup={hasCustomLineup}

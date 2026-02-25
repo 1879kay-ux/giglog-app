@@ -102,6 +102,31 @@ export default function AddBandMemberScreen() {
     setCustomInstruments((prev) => prev.filter((x) => x !== p));
   };
 
+  // ✅ NEW: get band_id for the signed-in user
+  async function getCurrentBandId(): Promise<string | null> {
+    const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+    if (sessionErr) {
+      console.log("getSession error", sessionErr);
+      return null;
+    }
+
+    const authUserId = sessionData?.session?.user?.id;
+    if (!authUserId) return null;
+
+    const { data: bm, error: bmErr } = await supabase
+      .from("band_members")
+      .select("band_id")
+      .eq("auth_user_id", authUserId)
+      .maybeSingle();
+
+    if (bmErr) {
+      console.log("band_members band_id lookup error", bmErr);
+      return null;
+    }
+
+    return (bm?.band_id as string) ?? null;
+  }
+
   const onSave = async () => {
     const name = displayName.trim();
     if (!name) {
@@ -121,8 +146,7 @@ export default function AddBandMemberScreen() {
     }
 
     // Safety rule: crew roles always force crew member_type
-    const finalMemberType: MemberType =
-      CREW_ROLE_SET.has(role) ? "crew" : memberType;
+    const finalMemberType: MemberType = CREW_ROLE_SET.has(role) ? "crew" : memberType;
 
     // If we forced crew, make sure we don’t save instruments by accident
     const finalPositions = finalMemberType === "musician" ? instruments : [];
@@ -130,7 +154,16 @@ export default function AddBandMemberScreen() {
 
     setSaving(true);
 
+    const bandId = await getCurrentBandId();
+    if (!bandId) {
+      setSaving(false);
+      Alert.alert("Error", "No band_id found for current user. Cannot create member.");
+      return;
+    }
+
     const payload: any = {
+      band_id: bandId, // ✅ FIX: always set band_id
+
       display_name: name,
       email: emailClean,
 

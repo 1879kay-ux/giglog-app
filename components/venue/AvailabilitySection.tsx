@@ -1,10 +1,11 @@
 import InfoCard from "@/components/InfoCard";
 import { supabase } from "@/lib/supabase";
-import React, { useEffect, useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,13 +13,19 @@ import {
   View,
 } from "react-native";
 
-type AvailabilityLabel = "awaiting" | "available" | "provisional" | "unavailable" | "dep";
+type AvailabilityLabel =
+  | "awaiting"
+  | "available"
+  | "provisional"
+  | "unavailable"
+  | "dep";
+
 type MemberType = "musician" | "crew";
 
 type AvailabilityRow = {
   event_id: string;
-
   member_id: string;
+
   display_name: string | null;
   email: string | null;
 
@@ -71,12 +78,13 @@ export default function AvailabilitySection({
   hasCustomLineup,
   canEdit,
 }: Props) {
+  const router = useRouter();
+
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<AvailabilityRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [summary, setSummary] = useState<AvailabilitySummaryRow | null>(null);
 
-  // Guard: makes failures obvious (and avoids "nothing happens" bugs later)
   if (!memberId) {
     return (
       <InfoCard title="Your Availability">
@@ -87,13 +95,41 @@ export default function AvailabilitySection({
     );
   }
 
-  async function load() {
+  const computeSummary = useCallback(
+    (event_id: string, list: AvailabilityRow[]): AvailabilitySummaryRow => {
+      let available = 0;
+      let provisional = 0;
+      let unavailable = 0;
+      let awaiting = 0;
+
+      for (const r of list) {
+        const s = r.availability_label;
+        if (s === "available") available += 1;
+        else if (s === "provisional") provisional += 1;
+        else if (s === "unavailable") unavailable += 1;
+        else awaiting += 1; // awaiting OR dep treated as response-due? keep dep separate
+      }
+
+      // If you want dep excluded from "responses due", adjust here.
+      // Right now: dep counts as a non-awaiting state via label, but your UI doesn't expose dep chip.
+      const awaiting_count = list.filter((r) => r.availability_label === "awaiting").length;
+
+      return {
+        event_id,
+        total_expected: list.length,
+        awaiting_count,
+        available_count: available,
+        provisional_count: provisional,
+        unavailable_count: unavailable,
+      };
+    },
+    []
+  );
+
+  const load = useCallback(async () => {
     if (!eventId) return;
     setLoading(true);
 
-    // IMPORTANT:
-    // Load from event_availability + band_members so event-specific deps/crew appear
-    // even if band_members.is_active = false.
     const { data, error } = await supabase
       .from("event_availability")
       .select(
@@ -152,35 +188,29 @@ export default function AvailabilitySection({
           notes: r.notes ?? null,
         };
       })
-      // keep deterministic ordering
       .sort((a, b) => (a.display_name ?? "").localeCompare(b.display_name ?? ""));
 
     setRows(mapped);
-
-    const { data: sumData, error: sumError } = await supabase
-      .from("v_event_availability_summary")
-      .select("*")
-      .eq("event_id", eventId)
-      .maybeSingle();
-
-    if (sumError) {
-      console.log("availability summary error", sumError);
-      setSummary(null);
-    } else {
-      setSummary((sumData as AvailabilitySummaryRow) ?? null);
-    }
-
+    setSummary(computeSummary(eventId, mapped));
     setLoading(false);
-  }
+  }, [computeSummary, eventId]);
 
+  // Web-safe reload
   useEffect(() => {
+  load();
+}, [load, hasCustomLineup]);
+
+useFocusEffect(
+  useCallback(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventId]);
+  }, [load])
+);
 
-  const musicians = useMemo(() => rows.filter((r) => r.member_type === "musician"), [rows]);
-
-const crew = useMemo(() => rows.filter((r) => r.member_type === "crew"), [rows]);
+  const musicians = useMemo(
+    () => rows.filter((r) => r.member_type === "musician"),
+    [rows]
+  );
+  const crew = useMemo(() => rows.filter((r) => r.member_type === "crew"), [rows]);
 
   const currentRow = useMemo(
     () => rows.find((r) => r.member_id === memberId) ?? null,
@@ -205,26 +235,24 @@ const crew = useMemo(() => rows.filter((r) => r.member_type === "crew"), [rows])
     setSaving(true);
     try {
       if (label === "awaiting") {
-        // DO NOT delete the row, or the member disappears from the event list.
-        // Set status back to null = awaiting.
         const { error } = await supabase
           .from("event_availability")
           .upsert(
             { event_id: eventId, member_id: memberId, status: null },
             { onConflict: "event_id,member_id" }
           );
-
         if (error) throw error;
       } else {
-        // Don't allow self-setting to dep via the chips
         const status =
           label === "available"
             ? "available"
             : label === "provisional"
-              ? "provisional"
-              : label === "unavailable"
-                ? "unavailable"
-                : null;
+            ? "provisional"
+            : label === "unavailable"
+            ? "unavailable"
+            : label === "dep"
+            ? "dep"
+            : null;
 
         const { error } = await supabase
           .from("event_availability")
@@ -232,7 +260,6 @@ const crew = useMemo(() => rows.filter((r) => r.member_type === "crew"), [rows])
             { event_id: eventId, member_id: memberId, status },
             { onConflict: "event_id,member_id" }
           );
-
         if (error) throw error;
       }
 
@@ -252,12 +279,12 @@ const crew = useMemo(() => rows.filter((r) => r.member_type === "crew"), [rows])
       label === "available"
         ? "#2ECC71"
         : label === "provisional"
-          ? "#F1C40F"
-          : label === "unavailable"
-            ? "#E74C3C"
-            : label === "dep"
-              ? "#5B6CFF"
-              : "#e0e0e0";
+        ? "#F1C40F"
+        : label === "unavailable"
+        ? "#E74C3C"
+        : label === "dep"
+        ? "#5B6CFF"
+        : "#e0e0e0";
 
     return (
       <Pressable
@@ -290,24 +317,16 @@ const crew = useMemo(() => rows.filter((r) => r.member_type === "crew"), [rows])
           </View>
 
           {canEdit ? (
-  <Pressable
-    onPress={() => {
-      const msg = "Lineup editing will be added here.";
-      if (Platform.OS === "web") {
-        // eslint-disable-next-line no-alert
-        alert(`Coming soon\n\n${msg}`);
-      } else {
-        Alert.alert("Coming soon", msg);
-      }
-    }}
-    hitSlop={10}
-    style={styles.editLineupPill}
-  >
-    <Text style={styles.editLineupPillText}>Edit Lineup</Text>
-  </Pressable>
-) : (
-  <View />
-)}
+            <Pressable
+              onPress={() => router.push(`/events/${eventId}/lineup`)}
+              hitSlop={10}
+              style={styles.editLineupPill}
+            >
+              <Text style={styles.editLineupPillText}>Edit Lineup</Text>
+            </Pressable>
+          ) : (
+            <View />
+          )}
         </View>
 
         <View style={styles.chipRow}>
@@ -320,23 +339,19 @@ const crew = useMemo(() => rows.filter((r) => r.member_type === "crew"), [rows])
       </InfoCard>
 
       <InfoCard title="Event Summary">
-  <View style={styles.summaryRow}>
-    <Text style={styles.summaryItem}>
-      Total to respond: {summary?.total_expected ?? 0}
-    </Text>
-    <Text style={styles.summaryItem}>
-      Responses due: {summary?.awaiting_count ?? 0}
-    </Text>
-  </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryItem}>Total to respond: {summary?.total_expected ?? 0}</Text>
+          <Text style={styles.summaryItem}>Responses due: {summary?.awaiting_count ?? 0}</Text>
+        </View>
 
-  <View style={styles.summaryRow}>
-    <Text style={styles.summaryItem}>Available: {summary?.available_count ?? 0}</Text>
-    <Text style={styles.summaryItem}>Provisional: {summary?.provisional_count ?? 0}</Text>
-    <Text style={styles.summaryItem}>Unavailable: {summary?.unavailable_count ?? 0}</Text>
-  </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryItem}>Available: {summary?.available_count ?? 0}</Text>
+          <Text style={styles.summaryItem}>Provisional: {summary?.provisional_count ?? 0}</Text>
+          <Text style={styles.summaryItem}>Unavailable: {summary?.unavailable_count ?? 0}</Text>
+        </View>
 
-  <Text style={styles.smallNote}>Counts are for members expected to respond.</Text>
-</InfoCard>
+        <Text style={styles.smallNote}>Counts are for members expected to respond.</Text>
+      </InfoCard>
 
       <InfoCard title="Musicians">
         <View style={styles.table}>
@@ -501,7 +516,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // highlight current user row
   currentUserRow: {
     backgroundColor: "#F0FAFA",
   },

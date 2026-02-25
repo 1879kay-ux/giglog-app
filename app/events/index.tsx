@@ -6,12 +6,15 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import AvailabilityGridModal from "./AvailabilityGridModal";
+
 import {
   ActivityIndicator,
   FlatList,
   Platform,
   Pressable,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -20,8 +23,6 @@ import {
 } from "react-native";
 
 const PRIMARY_TEAL = "#0D9488";
-const DARK_TEAL = "#0F766E";
-const PAGE_BG = "#F8FAFC";
 
 type VenueRow = {
   event_venue_name: string;
@@ -69,6 +70,10 @@ export default function EventsListScreen() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [eventsMode, setEventsMode] = useState<"upcoming" | "archived">("upcoming");
+  const [gridOpen, setGridOpen] = useState(false);
+
+  // Dynamic band name (from bands table)
+  const [bandName, setBandName] = useState<string>("");
 
   // Step 1 state: map of event_id -> needsResponse
   const [needsResponseByEventId, setNeedsResponseByEventId] = useState<Record<string, boolean>>({});
@@ -135,10 +140,27 @@ export default function EventsListScreen() {
     setLoading(false);
   }, [eventsMode, todayLondon, currentMemberId]);
 
-  // ✅ THIS is the key fix: re-fetch when eventsMode changes
+  // ✅ re-fetch when eventsMode changes
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
+
+  // ✅ load band name once (no hardcoding)
+  useEffect(() => {
+    const loadBandName = async () => {
+      const { data, error } = await supabase
+        .from("bands")
+        .select("band_name")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && data?.band_name) setBandName(data.band_name);
+    };
+
+    loadBandName();
+  }, []);
 
   function formatDisplayDate(dateString: string) {
     const date = new Date(`${dateString}T12:00:00`);
@@ -163,12 +185,15 @@ export default function EventsListScreen() {
     return haystack.includes(search.toLowerCase());
   });
 
+  // IMPORTANT: avoid stale header closures by keeping latest list in a ref
+  const filteredEventsRef = useRef<EventRow[]>([]);
+  useEffect(() => {
+    filteredEventsRef.current = filteredEvents ?? [];
+  }, [filteredEvents]);
+
   const responseRequiredCount = useMemo(() => {
     if (eventsMode !== "upcoming") return 0;
-    return filteredEvents.reduce(
-      (acc, e) => acc + (needsResponseByEventId[e.event_id] ? 1 : 0),
-      0
-    );
+    return filteredEvents.reduce((acc, e) => acc + (needsResponseByEventId[e.event_id] ? 1 : 0), 0);
   }, [eventsMode, filteredEvents, needsResponseByEventId]);
 
   if (loading) {
@@ -211,23 +236,44 @@ export default function EventsListScreen() {
             </View>
           ),
 
-          headerRight: () => (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingRight: 12 }}>
-              <TouchableOpacity
-                onPress={() => router.push("/events/calendar")}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="calendar-outline" size={26} color="#fff" />
-              </TouchableOpacity>
+          headerRight: () => {
+            return (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingRight: 12 }}>
+                <TouchableOpacity
+                  onPress={() =>
+                    shareUpcomingNext6Months({
+                      bandName,
+                      events: filteredEventsRef.current,
+                    })
+                  }
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="share-outline" size={26} color="#fff" />
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => router.push("/")}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="home-outline" size={26} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          ),
+                <TouchableOpacity
+                  onPress={() => router.push("/events/calendar")}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="calendar-outline" size={26} color="#fff" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+  onPress={() => setGridOpen(true)}
+  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+>
+  <Ionicons name="grid-outline" size={24} color="#fff" />
+</TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => router.push("/")}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="home-outline" size={26} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            );
+          },
         }}
       />
 
@@ -257,7 +303,7 @@ export default function EventsListScreen() {
           <View style={{ flex: 1 }} />
         </View>
 
-        {/* SEARCH BAR (below toggle) */}
+        {/* SEARCH BAR */}
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={20} color="#666" />
 
@@ -276,11 +322,11 @@ export default function EventsListScreen() {
           )}
         </View>
 
-        {/* COUNT (LHS) + ADD EVENT (RHS) */}
+        {/* COUNT + ADD EVENT */}
         <View style={styles.actionsRow}>
           {eventsMode === "upcoming" && responseRequiredCount > 0 ? (
             <View style={styles.countPill}>
-              <Text style={styles.countPillText}>{responseRequiredCount} TO CONFIRM</Text>
+              <Text style={styles.countPillText}>{responseRequiredCount} Confirm Availability</Text>
             </View>
           ) : (
             <View />
@@ -332,8 +378,130 @@ export default function EventsListScreen() {
           }}
         />
       </View>
+      <AvailabilityGridModal
+  visible={gridOpen}
+  onClose={() => setGridOpen(false)}
+  events={filteredEventsRef.current}
+/>
     </>
   );
+}
+
+// ---------- Share helpers (Phase 1, safe fields only) ----------
+
+function startOfTodayLocal() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function addMonths(date: Date, months: number) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + months);
+  return d;
+}
+
+function parseEventDateLocal(dateVal: any): Date | null {
+  if (!dateVal) return null;
+
+  if (dateVal instanceof Date) {
+    return Number.isNaN(dateVal.getTime()) ? null : dateVal;
+  }
+
+  const s = String(dateVal).trim();
+  if (!s) return null;
+
+  // Treat YYYY-MM-DD as local date
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [yyyyStr, mmStr, ddStr] = s.split("-");
+    const yyyy = parseInt(yyyyStr, 10);
+    const mm = parseInt(mmStr, 10);
+    const dd = parseInt(ddStr, 10);
+    const d = new Date(yyyy, mm - 1, dd, 0, 0, 0, 0);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatFullDateGB(dateLike: Date) {
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(dateLike);
+}
+
+function safeTrim(v: any) {
+  return String(v ?? "").trim();
+}
+
+function buildUpcomingShareMessage(opts: { bandName?: string | null; events: EventRow[] }) {
+  const today = startOfTodayLocal();
+
+  const until = addMonths(today, 6);
+  until.setHours(23, 59, 59, 999);
+
+  const allowedStatuses = new Set(["confirmed", "provisional", "cancelled"]);
+
+  const upcoming = (opts.events || [])
+    .map((e) => {
+      const dt = parseEventDateLocal(e?.event_date);
+      const statusRaw = safeTrim(e?.event_status);
+      const statusNorm = statusRaw.toLowerCase();
+      const typeNorm = safeTrim(e?.event_type).toLowerCase();
+      return { e, dt, statusNorm, typeNorm };
+    })
+    .filter(({ dt, statusNorm, typeNorm }) => {
+      // Only share gigs
+      if (typeNorm !== "gig") return false;
+
+      // Must be within next 6 months
+      if (!dt) return false;
+      dt.setHours(0, 0, 0, 0);
+
+      return dt >= today && dt <= until && allowedStatuses.has(statusNorm);
+    })
+    .sort((a, b) => a.dt!.getTime() - b.dt!.getTime())
+    .map(({ e }) => e);
+
+  const lines: string[] = [];
+
+  const band = safeTrim(opts.bandName) || "Band";
+  lines.push(`${band} – Upcoming Gigs`);
+  lines.push(`Next 6 months (as of ${formatFullDateGB(today)})`);
+  lines.push("");
+
+  if (upcoming.length === 0) {
+    lines.push("No gigs in the next 6 months.");
+    return lines.join("\n").trim();
+  }
+
+  for (const e of upcoming) {
+    const dt = parseEventDateLocal(e?.event_date);
+    const dateText = dt ? formatFullDateGB(dt) : "";
+
+    const venueName = safeTrim(e?.venues?.event_venue_name) || "Unknown venue";
+    const city = safeTrim(e?.venues?.city) || "Unknown city";
+    const status = safeTrim(e?.event_status) || "Unknown";
+
+    // Subtle marker: only for exceptions
+    const statusNorm = safeTrim(e?.event_status).toLowerCase();
+    const mark = statusNorm === "provisional" ? "P" : statusNorm === "cancelled" ? "X" : "";
+
+    lines.push([mark, dateText, venueName, city, status].filter(Boolean).join(" · "));
+  }
+  lines.push("");
+lines.push("Shared via GigLog");
+
+  return lines.join("\n").trim();
+}
+
+async function shareUpcomingNext6Months(params: { bandName?: string | null; events: EventRow[] }) {
+  const message = buildUpcomingShareMessage(params);
+  await Share.share({ message });
 }
 
 const styles = StyleSheet.create({

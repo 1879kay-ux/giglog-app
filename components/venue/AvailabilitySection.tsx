@@ -3,7 +3,6 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-
 import {
   ActivityIndicator,
   Alert,
@@ -73,6 +72,9 @@ type EventAvailabilityDbRow = {
   } | null;
 };
 
+// fixed width for the status column (keeps pills + header aligned)
+const STATUS_W = 96;
+
 export default function AvailabilitySection({
   eventId,
   memberId,
@@ -101,18 +103,14 @@ export default function AvailabilitySection({
       let available = 0;
       let provisional = 0;
       let unavailable = 0;
-      let awaiting = 0;
 
       for (const r of list) {
         const s = r.availability_label;
         if (s === "available") available += 1;
         else if (s === "provisional") provisional += 1;
         else if (s === "unavailable") unavailable += 1;
-        else awaiting += 1; // awaiting OR dep treated as response-due? keep dep separate
       }
 
-      // If you want dep excluded from "responses due", adjust here.
-      // Right now: dep counts as a non-awaiting state via label, but your UI doesn't expose dep chip.
       const awaiting_count = list.filter((r) => r.availability_label === "awaiting").length;
 
       return {
@@ -196,16 +194,15 @@ export default function AvailabilitySection({
     setLoading(false);
   }, [computeSummary, eventId]);
 
-  // Web-safe reload
   useEffect(() => {
-  load();
-}, [load, hasCustomLineup]);
-
-useFocusEffect(
-  useCallback(() => {
     load();
-  }, [load])
-);
+  }, [load, hasCustomLineup]);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const musicians = useMemo(
     () => rows.filter((r) => r.member_type === "musician"),
@@ -354,12 +351,22 @@ useFocusEffect(
         <Text style={styles.smallNote}>Counts are for members expected to respond.</Text>
       </InfoCard>
 
+      {/* MUSICIANS */}
       <InfoCard title="Musicians">
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.cell, styles.cellHeader, { flex: 1.2 }]}>Member</Text>
-            <Text style={[styles.cell, styles.cellHeader, { flex: 1.6 }]}>Instruments</Text>
-            <Text style={[styles.cell, styles.cellHeader, { flex: 1 }]}>Status</Text>
+            <Text style={[styles.cell, styles.cellHeader, { flex: 1.1 }]} numberOfLines={1}>
+              Member
+            </Text>
+            <Text style={[styles.cell, styles.cellHeader, { flex: 2.1 }]} numberOfLines={1}>
+              Instruments
+            </Text>
+
+            <View style={[styles.statusHeaderCell, { width: STATUS_W }]}>
+              <Text style={styles.cellHeader} numberOfLines={1}>
+                Availability
+              </Text>
+            </View>
           </View>
 
           {musicians.map((r) => (
@@ -367,17 +374,24 @@ useFocusEffect(
               key={r.member_id}
               style={[styles.tableRow, r.member_id === memberId ? styles.currentUserRow : null]}
             >
-              <Text style={[styles.cell, { flex: 1.2 }]} numberOfLines={1}>
+              <Text style={[styles.cell, { flex: 1.1 }]} numberOfLines={1}>
                 {r.display_name ?? "Unnamed"}
               </Text>
-              <Text style={[styles.cell, { flex: 1.6 }]} numberOfLines={1}>
+
+              <Text style={[styles.cell, { flex: 2.1 }]} numberOfLines={1}>
                 {instrumentsDisplay(r) || "—"}
               </Text>
 
-              <View style={[styles.statusPill, { backgroundColor: statusBg(r.availability_label) }]}>
-                <Text style={[styles.statusText, { color: statusText(r.availability_label) }]}>
-                  {labelText(r.availability_label)}
-                </Text>
+              <View style={[styles.statusCell, { width: STATUS_W }]}>
+                <View style={[styles.statusPill, { backgroundColor: statusBg(r.availability_label) }]}>
+                  <Text
+                    style={[styles.statusText, { color: statusText(r.availability_label) }]}
+                    numberOfLines={1}
+                    ellipsizeMode="clip"
+                  >
+                    {labelText(r.availability_label)}
+                  </Text>
+                </View>
               </View>
             </View>
           ))}
@@ -386,12 +400,22 @@ useFocusEffect(
         </View>
       </InfoCard>
 
+      {/* CREW */}
       <InfoCard title="Crew">
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.cell, styles.cellHeader, { flex: 1.4 }]}>Member</Text>
-            <Text style={[styles.cell, styles.cellHeader, { flex: 1.6 }]}>Role</Text>
-            <Text style={[styles.cell, styles.cellHeader, { flex: 1 }]}>Status</Text>
+            <Text style={[styles.cell, styles.cellHeader, { flex: 1.1 }]} numberOfLines={1}>
+              Member
+            </Text>
+            <Text style={[styles.cell, styles.cellHeader, { flex: 2.1 }]} numberOfLines={1}>
+              Role
+            </Text>
+
+            <View style={[styles.statusHeaderCell, { width: STATUS_W }]}>
+              <Text style={styles.cellHeader} numberOfLines={1}>
+                Availability
+              </Text>
+            </View>
           </View>
 
           {crew.map((r) => (
@@ -399,17 +423,24 @@ useFocusEffect(
               key={r.member_id}
               style={[styles.tableRow, r.member_id === memberId ? styles.currentUserRow : null]}
             >
-              <Text style={[styles.cell, { flex: 1.4 }]} numberOfLines={1}>
+              <Text style={[styles.cell, { flex: 1.1 }]} numberOfLines={1}>
                 {r.display_name ?? "Unnamed"}
               </Text>
-              <Text style={[styles.cell, { flex: 1.6 }]} numberOfLines={1}>
+
+              <Text style={[styles.cell, { flex: 2.1 }]} numberOfLines={1}>
                 {roleDisplay(r) || "—"}
               </Text>
 
-              <View style={[styles.statusPill, { backgroundColor: statusBg(r.availability_label) }]}>
-                <Text style={[styles.statusText, { color: statusText(r.availability_label) }]}>
-                  {labelText(r.availability_label)}
-                </Text>
+              <View style={[styles.statusCell, { width: STATUS_W }]}>
+                <View style={[styles.statusPill, { backgroundColor: statusBg(r.availability_label) }]}>
+                  <Text
+                    style={[styles.statusText, { color: statusText(r.availability_label) }]}
+                    numberOfLines={1}
+                    ellipsizeMode="clip"
+                  >
+                    {labelText(r.availability_label)}
+                  </Text>
+                </View>
               </View>
             </View>
           ))}
@@ -464,12 +495,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
-    backgroundColor: "colors.primary,0.10)",
+    backgroundColor: "rgba(13,148,136,0.10)",
   },
   lineupBadgeText: {
     fontSize: 11,
     fontWeight: "800",
-      color: colors.primary,
+    color: colors.primary,
   },
 
   editLineupPill: {
@@ -477,13 +508,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "colors.primary,0.35)",
-    backgroundColor: "colors.primary,0.08)",
+    borderColor: "rgba(13,148,136,0.35)",
+    backgroundColor: "rgba(13,148,136,0.08)",
   },
   editLineupPillText: {
     fontSize: 11,
     fontWeight: "900",
-      color: colors.primary,
+    color: colors.primary,
   },
 
   chipRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
@@ -509,6 +540,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
     borderBottomWidth: 1,
     borderBottomColor: "#ddd",
+    alignItems: "center",
   },
   tableRow: {
     flexDirection: "row",
@@ -521,17 +553,26 @@ const styles = StyleSheet.create({
     backgroundColor: "#F0FAFA",
   },
 
-  cell: { padding: 12, fontSize: 13, color: "#333" },
+  cell: { paddingVertical: 10, paddingHorizontal: 8, fontSize: 13, color: "#333" },
   cellHeader: { fontWeight: "800", color: "#666" },
 
+  statusHeaderCell: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingRight: 12,
+  },
+
+  statusCell: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingRight: 12,
+  },
+
   statusPill: {
-    flex: 1,
-    alignSelf: "center",
+    width: STATUS_W,
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     borderRadius: 999,
-    marginVertical: 6,
-    marginRight: 12,
     alignItems: "center",
     justifyContent: "center",
   },

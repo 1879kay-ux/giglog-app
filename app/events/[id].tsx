@@ -591,13 +591,18 @@ function Section({
 }) {
   return (
     <View style={styles.sectionWrapper} pointerEvents="box-none">
-      <Pressable style={styles.sectionHeader} onPress={onPress} accessibilityRole="button">
-        <View style={styles.sectionHeaderLeft} pointerEvents="none">
-          <Ionicons name={icon} size={18} color="#fff" />
-          <Text style={styles.sectionHeaderText}>{title}</Text>
-        </View>
-        <Text style={styles.sectionHeaderChevron}>{open ? "▾" : "▸"}</Text>
-      </Pressable>
+      <Pressable
+  style={[styles.sectionHeader, { minHeight: 60, paddingVertical: 20 }]}
+  onPress={onPress}
+  accessibilityRole="button"
+  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+>
+  <View style={styles.sectionHeaderLeft} pointerEvents="none">
+    <Ionicons name={icon} size={20} color="#fff" />
+    <Text style={styles.sectionHeaderText}>{title}</Text>
+  </View>
+  <Text style={styles.sectionHeaderChevron}>{open ? "▾" : "▸"}</Text>
+</Pressable>
 
       {open && <View style={styles.sectionContent}>{children}</View>}
     </View>
@@ -719,32 +724,36 @@ adminPillText: {
 
   /* SECTION HEADERS */
   sectionWrapper: {
-    marginBottom: 12,
-  },
-  sectionHeader: {
-    backgroundColor: colors.primary,
-    paddingVertical: isSmallScreen ? 6 : 8,
-    paddingHorizontal: isSmallScreen ? 12 : 14,
-    borderRadius: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: isSmallScreen ? 8 : 10,
-  },
-  sectionHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  sectionHeaderText: {
-    color: "#fff",
-    fontSize: isSmallScreen ? 14 : 15,
-    fontWeight: "600",
-  },
-  sectionHeaderChevron: {
-    color: "#fff",
-    fontSize: isSmallScreen ? 14 : 15,
-  },
+  marginBottom: 16,   // more breathing room between sections
+},
+
+sectionHeader: {
+  backgroundColor: colors.primary,
+  paddingVertical: 18,     // larger tap area
+  paddingHorizontal: 18,
+  minHeight: 64,           // ensures proper touch target
+  borderRadius: 14,        // softer modern look
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+},
+
+sectionHeaderLeft: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 10,
+},
+
+sectionHeaderText: {
+  color: "#fff",
+  fontSize: 16,
+  fontWeight: "700",
+},
+
+sectionHeaderChevron: {
+  color: "#fff",
+  fontSize: 16,
+},
 
   sectionContent: {
     marginTop: 6,

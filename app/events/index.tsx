@@ -5,7 +5,7 @@ import ActionButton from "@/components/ui/ActionButton";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AvailabilityGridModal from "./AvailabilityGridModal";
 
@@ -39,6 +39,41 @@ type EventRow = {
 
 type AvailabilityStatus = string | null;
 
+type Readiness = "green" | "amber" | "red";
+
+function normStatus(s: any): "available" | "provisional" | "unavailable" | "awaiting" {
+  const v = String(s ?? "awaiting").toLowerCase();
+  if (v === "available") return "available";
+  if (v === "provisional") return "provisional";
+  if (v === "unavailable") return "unavailable";
+  return "awaiting";
+}
+
+function computeReadiness(
+  expectedMemberIds: string[],
+  availabilityRows: { member_id: string; status: AvailabilityStatus }[]
+): Readiness {
+  if (expectedMemberIds.length === 0) return "amber";
+
+  const map = new Map(availabilityRows.map((r) => [r.member_id, r.status]));
+
+  let hasUnavailable = false;
+  let hasAwaitingOrProvisional = false;
+
+  for (const memberId of expectedMemberIds) {
+    const status = normStatus(map.get(memberId));
+
+    if (status === "unavailable") hasUnavailable = true;
+    else if (status === "awaiting" || status === "provisional") hasAwaitingOrProvisional = true;
+    // available => fine
+  }
+
+  // Your revised rule: only unavailable is red
+  if (hasUnavailable) return "red";
+  if (hasAwaitingOrProvisional) return "amber";
+  return "green";
+}
+
 function getTodayLondonYYYYMMDD() {
   // en-CA returns YYYY-MM-DD
   return new Intl.DateTimeFormat("en-CA", {
@@ -71,6 +106,7 @@ export default function EventsListScreen() {
   const [search, setSearch] = useState("");
   const [eventsMode, setEventsMode] = useState<"upcoming" | "archived">("upcoming");
   const [gridOpen, setGridOpen] = useState(false);
+  const [readinessByEventId, setReadinessByEventId] = useState<Record<string, Readiness>>({});
 
   // Dynamic band name (from bands table)
   const [bandName, setBandName] = useState<string>("");
@@ -104,6 +140,71 @@ export default function EventsListScreen() {
 
     const nextEvents = !error && data ? (data as unknown as EventRow[]) : [];
     setEvents(nextEvents);
+
+    // --- Readiness dots (expected lineup only) ---
+    try {
+      const eventIds = nextEvents.map((e) => e.event_id);
+      if (eventIds.length === 0) {
+        setReadinessByEventId({});
+      } else {
+        // 1) Core lineup ids
+        const { data: coreData } = await supabase
+          .from("band_members")
+          .select("member_id")
+          .eq("is_active", true)
+          .eq("is_dep", false)
+          .eq("band_role", "Band")
+          .eq("member_type", "musician");
+
+        const coreMemberIds = (coreData ?? []).map((r: any) => r.member_id).filter(Boolean);
+
+        // 2) Custom lineup ids (if any) per event
+        const { data: emData } = await supabase
+          .from("event_members")
+          .select("event_id, member_id")
+          .in("event_id", eventIds);
+
+        const customByEventId: Record<string, string[]> = {};
+        for (const r of (emData ?? []) as any[]) {
+          if (!r?.event_id || !r?.member_id) continue;
+          (customByEventId[r.event_id] ??= []).push(r.member_id);
+        }
+
+        const hasCustomByEventId: Record<string, boolean> = {};
+        for (const id of eventIds) hasCustomByEventId[id] = (customByEventId[id]?.length ?? 0) > 0;
+
+        // 3) Fetch availability rows for all relevant members (core + all custom)
+        const memberIdSet = new Set<string>(coreMemberIds);
+        for (const id of eventIds) {
+          for (const mid of customByEventId[id] ?? []) memberIdSet.add(mid);
+        }
+        const memberIds = Array.from(memberIdSet);
+
+        const { data: avAllData } = await supabase
+          .from("event_availability")
+          .select("event_id, member_id, status")
+          .in("event_id", eventIds)
+          .in("member_id", memberIds);
+
+        const avByEventId: Record<string, { member_id: string; status: AvailabilityStatus }[]> = {};
+        for (const r of (avAllData ?? []) as any[]) {
+          if (!r?.event_id || !r?.member_id) continue;
+          (avByEventId[r.event_id] ??= []).push({ member_id: r.member_id, status: r.status });
+        }
+
+        // 4) Compute readiness per event
+        const nextReadiness: Record<string, Readiness> = {};
+        for (const id of eventIds) {
+          const expected = hasCustomByEventId[id] ? (customByEventId[id] ?? []) : coreMemberIds;
+          const rows = avByEventId[id] ?? [];
+          nextReadiness[id] = computeReadiness(expected, rows);
+        }
+
+        setReadinessByEventId(nextReadiness);
+      }
+    } catch {
+      setReadinessByEventId({});
+    }
 
     // only compute response-needed flags for upcoming
     if (eventsMode === "upcoming" && currentMemberId && nextEvents.length > 0) {
@@ -140,10 +241,15 @@ export default function EventsListScreen() {
     setLoading(false);
   }, [eventsMode, todayLondon, currentMemberId]);
 
-  // ✅ re-fetch when eventsMode changes
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadEvents();
+    }, [loadEvents])
+  );
 
   // ✅ load band name once (no hardcoding)
   useEffect(() => {
@@ -259,11 +365,11 @@ export default function EventsListScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-  onPress={() => setGridOpen(true)}
-  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
->
-  <Ionicons name="grid-outline" size={24} color="#fff" />
-</TouchableOpacity>
+                  onPress={() => setGridOpen(true)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="grid-outline" size={24} color="#fff" />
+                </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => router.push("/")}
@@ -341,13 +447,17 @@ export default function EventsListScreen() {
           data={filteredEvents}
           keyExtractor={(item) => item.event_id}
           renderItem={({ item }) => {
-            const venue = item.venues;
-            const venueName = venue?.event_venue_name ?? "Unknown venue";
-            const city = venue?.city ?? "Unknown city";
-            const status = item.event_status ?? "Unknown";
+            const venueName = item.venues?.event_venue_name ?? "—";
+            const city = item.venues?.city ?? "—";
+            const statusRaw = item.event_status ?? "Unknown";
+            const statusNorm = String(item.event_status ?? "").toLowerCase();
             const type = item.event_type ?? "Event";
 
             const needsResponse = eventsMode === "upcoming" && !!needsResponseByEventId[item.event_id];
+
+            // ✅ Cancelled shows no readiness dot (prevents the dot "coming back")
+            const readiness: Readiness | null =
+              statusNorm === "cancelled" ? null : readinessByEventId[item.event_id] ?? "amber";
 
             return (
               <TouchableOpacity
@@ -355,6 +465,7 @@ export default function EventsListScreen() {
                 onPress={() => router.push({ pathname: "/events/[id]", params: { id: item.event_id } })}
               >
                 <View style={styles.eventRow}>
+                  {/* LEFT */}
                   <View style={{ flex: 1 }}>
                     <Text style={styles.eventDate}>{formatDisplayDate(item.event_date)}</Text>
 
@@ -365,24 +476,51 @@ export default function EventsListScreen() {
                     {eventsMode === "archived" ? <Text style={styles.archivedBadge}>ARCHIVED</Text> : null}
 
                     <Text style={styles.eventMeta}>
-                      {type}, {status}
+                      {type},{" "}
+                      <Text
+                        style={[
+                          styles.eventMetaStatus,
+                          statusRaw === "Provisional"
+                            ? styles.statusProvisional
+                            : statusRaw === "Cancelled"
+                              ? styles.statusCancelled
+                              : null,
+                        ]}
+                      >
+                        {statusRaw}
+                      </Text>
                     </Text>
-
-                    {needsResponse ? <Text style={styles.responseBadge}>Confirm availability</Text> : null}
                   </View>
 
-                  <Ionicons name="chevron-forward-outline" size={22} color="#9CA3AF" />
+                  {/* RIGHT: pill is hard right-aligned here */}
+                  <View style={styles.rightCol}>
+                    {needsResponse ? <Text style={styles.responseBadgeSmall}>Confirm availability</Text> : null}
+
+                    <View style={styles.rightIcons}>
+                      {readiness ? (
+                        <View
+                          style={[
+                            styles.readinessDot,
+                            readiness === "green"
+                              ? styles.dotGreen
+                              : readiness === "red"
+                                ? styles.dotRed
+                                : styles.dotAmber,
+                          ]}
+                        />
+                      ) : null}
+
+                      <Ionicons name="chevron-forward-outline" size={22} color="#9CA3AF" />
+                    </View>
+                  </View>
                 </View>
               </TouchableOpacity>
             );
           }}
         />
+
+        <AvailabilityGridModal visible={gridOpen} onClose={() => setGridOpen(false)} events={filteredEventsRef.current} />
       </View>
-      <AvailabilityGridModal
-  visible={gridOpen}
-  onClose={() => setGridOpen(false)}
-  events={filteredEventsRef.current}
-/>
     </>
   );
 }
@@ -494,7 +632,7 @@ function buildUpcomingShareMessage(opts: { bandName?: string | null; events: Eve
     lines.push([mark, dateText, venueName, city, status].filter(Boolean).join(" · "));
   }
   lines.push("");
-lines.push("Shared via GigLog");
+  lines.push("Shared via GigLog");
 
   return lines.join("\n").trim();
 }
@@ -590,7 +728,6 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: 12,
     fontWeight: "700",
-    textTransform: "uppercase",
   },
 
   archivedBadge: {
@@ -650,18 +787,53 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // CONFIRM AVAILABILITY (quiet, below meta)
-  responseBadge: {
-    alignSelf: "flex-start",
-    marginTop: 6,
-    fontSize: 12,
-    fontWeight: "600",
-    color: colors.danger,
-    backgroundColor: colors.dangerBg,
-    borderWidth: 1,
-    borderColor: colors.dangerBorder,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 999,
+  eventMetaStatus: {
+    fontWeight: "700",
   },
+  statusProvisional: {
+    color: "#F59E0B",
+    fontWeight: "800",
+  },
+  statusCancelled: {
+    color: "#EF4444",
+    fontWeight: "800",
+  },
+
+  // RHS column that is always flush-right
+  rightCol: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+    marginLeft: 12,
+  },
+
+  rightIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  responseBadgeSmall: {
+    alignSelf: "flex-end",
+    marginBottom: 10,
+
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+    backgroundColor: "rgba(239, 68, 68, 0.08)",
+    color: "#DC2626",
+    fontSize: 11,
+    fontWeight: "600",
+    textTransform: "none",
+  },
+
+  readinessDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  dotGreen: { backgroundColor: "#22C55E" },
+  dotAmber: { backgroundColor: "#F59E0B" },
+  dotRed: { backgroundColor: "#EF4444" },
 });

@@ -22,9 +22,13 @@ type EventRow = {
   event_date: string | null;
   event_type: string | null;
   event_status: string | null;
+
   promoter_contact_name: string | null;
   promoter_contact_phone: string | null;
   promoter_contact_email: string | null;
+
+  // ✅ add notes
+  event_notes: string | null;
 };
 
 type DetailsSectionProps = {
@@ -34,12 +38,7 @@ type DetailsSectionProps = {
   venueId?: string | null; // optional, only if you want edit-venue shortcut
 };
 
-export default function DetailsSection({
-  eventId,
-  event,
-  venue,
-  venueId,
-}: DetailsSectionProps) {
+export default function DetailsSection({ eventId, event, venue, venueId }: DetailsSectionProps) {
   const router = useRouter();
   const { isAdmin, adminModeEnabled } = useCurrentMember();
   const canEdit = isAdmin && adminModeEnabled;
@@ -60,15 +59,13 @@ export default function DetailsSection({
   };
 
   const editPill = (onPress: () => void) => (
-  <Pressable onPress={onPress} hitSlop={10} style={styles.editPill}>
-    <Ionicons name="create-outline" size={16} color={colors.primary} />
-    <Text style={styles.editPillText}>Edit</Text>
-  </Pressable>
-);
+    <Pressable onPress={onPress} hitSlop={10} style={styles.editPill}>
+      <Ionicons name="create-outline" size={16} color={colors.primary} />
+      <Text style={styles.editPillText}>Edit</Text>
+    </Pressable>
+  );
 
-  const editEventDetails = canEdit
-    ? editPill(() => router.push(`/events/${eventId}/edit/details`))
-    : undefined;
+  const editEventDetails = canEdit ? editPill(() => router.push(`/events/${eventId}/edit/details`)) : undefined;
 
   const editVenueDetails =
     canEdit && venueId
@@ -105,11 +102,15 @@ export default function DetailsSection({
             <Text style={styles.value}>{event.event_status || "—"}</Text>
           </View>
 
-          <View style={styles.rowLast}>
-            <View style={styles.rowNoBorder}>
-              <Text style={styles.label}>Type</Text>
-              <Text style={styles.value}>{event.event_type || "—"}</Text>
-            </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Type</Text>
+            <Text style={styles.value}>{event.event_type || "—"}</Text>
+          </View>
+
+          {/* ✅ Notes */}
+          <View style={[styles.row, styles.rowLast]}>
+            <Text style={styles.label}>Event Notes</Text>
+            <Text style={styles.value}>{event.event_notes || "—"}</Text>
           </View>
         </InfoCard>
 
@@ -193,19 +194,19 @@ const styles = StyleSheet.create({
   },
 
   editPill: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 8,
-  paddingHorizontal: 12,
-  paddingVertical: 8,
-  borderRadius: 12,
-  backgroundColor: "rgba(13,148,136,0.10)",
-},
-editPillText: {
-  fontSize: 13,
-  fontWeight: "900",
-  color: colors.primary,
-},
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(13,148,136,0.10)",
+  },
+  editPillText: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: colors.primary,
+  },
 
   row: {
     flexDirection: "row",
@@ -218,7 +219,6 @@ editPillText: {
     borderBottomWidth: 0,
   },
 
-  // helper to ensure the last row doesn't accidentally keep a border if you tweak later
   rowNoBorder: {
     flexDirection: "row",
     justifyContent: "space-between",

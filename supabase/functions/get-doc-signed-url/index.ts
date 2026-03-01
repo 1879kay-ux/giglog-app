@@ -1,31 +1,52 @@
-const supabaseUrl = Deno.env.get("SUPABASE_URL");// supabase/functions/get-doc-signed-url/index.ts
+// supabase/functions/get-doc-signed-url/index.ts
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 type Scope = "band" | "event";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...corsHeaders,
+    },
   });
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
   if (req.method !== "POST") {
     return json(405, { error: "Method not allowed" });
   }
 
-const supabaseUrl = Deno.env.get("PROJECT_URL");
-const anonKey = Deno.env.get("ANON_KEY");
-const serviceRoleKey = Deno.env.get("SERVICE_ROLE_KEY");
-
-  if (!supabaseUrl || !anonKey || !serviceRoleKey) {
-    return json(500, { error: "Missing env vars" });
-  }
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
   const authHeader = req.headers.get("Authorization") ?? "";
-  if (!authHeader.toLowerCase().startsWith("bearer ")) {
+  if (!authHeader.startsWith("Bearer ")) {
     return json(401, { error: "Missing bearer token" });
+  }
+
+  const token = authHeader.replace("Bearer ", "").trim();
+
+  // Explicitly validate JWT first
+  const authClient = createClient(supabaseUrl, anonKey);
+  const { data: userData, error: userError } = await authClient.auth.getUser(
+    token
+  );
+
+  if (userError || !userData?.user) {
+    return json(401, { error: "Invalid JWT" });
   }
 
   let payload: { scope?: Scope; docId?: string };
@@ -39,44 +60,45 @@ const serviceRoleKey = Deno.env.get("SERVICE_ROLE_KEY");
   const docId = payload.docId;
 
   if ((scope !== "band" && scope !== "event") || !docId) {
-    return json(400, { error: "Expected { scope: 'band'|'event', docId: uuid }" });
-  }
-
-  // Client with user JWT for RLS reads
-  const userClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authHeader } },
-  });
-
-  // Confirm user
-  const { data: userData, error: userErr } = await userClient.auth.getUser();
-  if (userErr || !userData?.user) {
-    return json(401, { error: "Unauthorized" });
+    return json(400, {
+      error: "Expected { scope: 'band'|'event', docId: uuid }",
+    });
   }
 
   const table = scope === "band" ? "band_documents" : "event_documents";
 
-  // RLS enforced here
+  // RLS client using user token
+  const userClient = createClient(supabaseUrl, anonKey, {
+    global: {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  });
+
   const { data: docRow, error: docErr } = await userClient
     .from(table)
     .select("storage_bucket, storage_path")
     .eq("doc_id", docId)
     .maybeSingle();
 
-  if (docErr) return json(500, { error: docErr.message });
-  if (!docRow) return json(403, { error: "Not allowed or not found" });
+  if (docErr) {
+    return json(500, { error: docErr.message });
+  }
 
-  const bucket = docRow.storage_bucket as string;
-  const path = docRow.storage_path as string;
+  if (!docRow) {
+    return json(403, { error: "Not allowed or not found" });
+  }
 
-  // Admin client signs URL, bypassing storage policies safely
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-  const expiresIn = 60 * 10; // 10 minutes
-  const { data: signed, error: signErr } = await adminClient.storage
-    .from(bucket)
-    .createSignedUrl(path, expiresIn);
+  const expiresIn = 60 * 10;
 
-  if (signErr) return json(500, { error: signErr.message });
+  const { data: signed, error: signErr } = await adminClient.storage
+    .from(docRow.storage_bucket)
+    .createSignedUrl(docRow.storage_path, expiresIn);
+
+  if (signErr) {
+    return json(500, { error: signErr.message });
+  }
 
   return json(200, { url: signed.signedUrl, expiresIn });
 });

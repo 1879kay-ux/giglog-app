@@ -6,7 +6,6 @@ import { Link, Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-
 type NextEvent = {
   event_id: string;
   event_date_label: string;
@@ -16,7 +15,7 @@ type NextEvent = {
 
 type NextEventQueryRow = {
   event_id: string;
-  event_date: string; // date
+  event_date: string;
   event_type: string;
   event_status: string;
   venues: {
@@ -40,53 +39,52 @@ export default function HomeScreen() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [nextEvent, setNextEvent] = useState<NextEvent | null>(null);
 
-  // Load band name + logo (via band_members -> bands)
-async function loadBandBranding() {
-  const { data: userData } = await supabase.auth.getUser();
-  const userId = userData.user?.id;
-  if (!userId) return;
+  async function loadBandBranding() {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
+    if (!userId) return;
 
-  const { data, error } = await supabase
-    .from("band_members")
-    .select(
-      `
+    const { data, error } = await supabase
+      .from("band_members")
+      .select(
+        `
       band_id,
       bands:band_id (
         band_name,
         logo_url
       )
     `
-    )
-    .eq("auth_user_id", userId)
-    .maybeSingle();
+      )
+      .eq("auth_user_id", userId)
+      .maybeSingle();
 
-  if (error) {
-    console.log("band branding load error", error);
-    return;
+    if (error) {
+      console.log("band branding load error", error);
+      return;
+    }
+
+    const row = data as unknown as BandBrandingQueryRow | null;
+    const bandObj = Array.isArray(row?.bands) ? row?.bands?.[0] : row?.bands;
+
+    setBandName(bandObj?.band_name ?? "GigLog");
+    setLogoUrl(bandObj?.logo_url ?? null);
   }
 
-  const row = data as unknown as BandBrandingQueryRow | null;
-  const bandObj = Array.isArray(row?.bands) ? row?.bands?.[0] : row?.bands;
-
-  setBandName(bandObj?.band_name ?? "GigLog");
-  setLogoUrl(bandObj?.logo_url ?? null);
-}
-
-useEffect(() => {
-  loadBandBranding();
-}, []);
-useFocusEffect(
-  React.useCallback(() => {
+  useEffect(() => {
     loadBandBranding();
-  }, [])
-);
+  }, []);
 
-  // Load next upcoming event
+  useFocusEffect(
+    React.useCallback(() => {
+      loadBandBranding();
+    }, [])
+  );
+
   useEffect(() => {
     let cancelled = false;
 
     async function loadNextEvent() {
-      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const today = new Date().toISOString().slice(0, 10);
 
       const { data, error } = await supabase
         .from("events")
@@ -110,13 +108,7 @@ useFocusEffect(
 
       if (cancelled) return;
 
-      if (error) {
-        console.log("next event load error", error);
-        setNextEvent(null);
-        return;
-      }
-
-      if (!data) {
+      if (error || !data) {
         setNextEvent(null);
         return;
       }
@@ -166,7 +158,6 @@ useFocusEffect(
       />
 
       <View style={styles.container}>
-        {/* Brand hero (banner vibe, less boxed) */}
         <View style={styles.brandHero}>
           <View style={styles.brandHeroAccent} />
 
@@ -174,7 +165,9 @@ useFocusEffect(
             <Image source={{ uri: logoUrl }} style={styles.brandHeroImage} resizeMode="contain" />
           ) : (
             <View style={styles.brandHeroFallback}>
-              <Text style={styles.brandHeroFallbackText}>{bandName?.[0]?.toUpperCase() ?? "G"}</Text>
+              <Text style={styles.brandHeroFallbackText}>
+                {bandName?.[0]?.toUpperCase() ?? "G"}
+              </Text>
             </View>
           )}
 
@@ -183,7 +176,6 @@ useFocusEffect(
           </Text>
         </View>
 
-        {/* Next event */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Next Event</Text>
         </View>
@@ -199,7 +191,6 @@ useFocusEffect(
           {nextEvent ? (
             <>
               <View style={styles.nextEventLeftAccent} />
-
               <View style={styles.nextEventContent}>
                 <Text style={styles.nextEventDate}>{nextEvent.event_date_label}</Text>
                 <Text style={styles.nextEventVenue} numberOfLines={1}>
@@ -209,7 +200,6 @@ useFocusEffect(
                   {nextEvent.type_status_label}
                 </Text>
               </View>
-
               <View style={styles.chevronWrap}>
                 <Ionicons name="chevron-forward" size={22} color="#666" />
               </View>
@@ -219,7 +209,6 @@ useFocusEffect(
           )}
         </Pressable>
 
-        {/* Navigation grid */}
         <View style={[styles.sectionHeaderRow, { marginTop: 18 }]}>
           <Text style={styles.sectionTitle}>Quick Links</Text>
         </View>
@@ -228,6 +217,7 @@ useFocusEffect(
           <NavTile label="Events" icon="calendar" onPress={() => router.push("/events")} />
           <NavTile label="Venues" icon="map-marker" onPress={() => router.push("/venue")} />
           <NavTile label="Band & Crew" icon="users" onPress={() => router.push("/band")} />
+          <NavTile label="Band Docs" icon="file-text-o" onPress={() => router.push("/band-documents")} />
           <NavTile label="Profile" icon="user" onPress={() => router.push("/profile")} />
         </View>
       </View>
@@ -284,7 +274,6 @@ const styles = StyleSheet.create({
     color: "#444",
   },
 
-  // Brand hero (banner)
   brandHero: {
     borderRadius: 16,
     overflow: "hidden",
@@ -307,7 +296,7 @@ const styles = StyleSheet.create({
     maxWidth: 520,
     height: 110,
     marginTop: 6,
-    marginBottom: 6, // tightened
+    marginBottom: 6,
   },
   brandHeroFallback: {
     width: 64,
@@ -327,13 +316,12 @@ const styles = StyleSheet.create({
     color: "#111",
   },
   brandHeroName: {
-    fontSize: 22, // bigger
+    fontSize: 22,
     fontWeight: "900",
     color: "#111",
-    textAlign: "center", // supports wrapping nicely
+    textAlign: "center",
   },
 
-  // Next event
   nextEventCard: {
     flexDirection: "row",
     alignItems: "stretch",
@@ -381,7 +369,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // Grid
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",

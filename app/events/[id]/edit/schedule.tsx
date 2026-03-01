@@ -1,9 +1,9 @@
-import { supabase } from '@/lib/supabase';
+import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
-import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,7 +16,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
 
 type EventScheduleRow = {
   travel_venue: string | null;
@@ -31,10 +31,10 @@ type EventScheduleRow = {
 };
 
 function toHHMM(value?: string | null) {
-  if (!value) return '';
+  if (!value) return "";
   const m = String(value).trim().match(/^(\d{1,2}):(\d{2})/);
-  if (!m) return '';
-  return `${m[1].padStart(2, '0')}:${m[2]}`;
+  if (!m) return "";
+  return `${m[1].padStart(2, "0")}:${m[2]}`;
 }
 
 function hhmmToDbTime(hhmm: string) {
@@ -42,12 +42,12 @@ function hhmmToDbTime(hhmm: string) {
   if (!v) return null;
   const m = v.match(/^(\d{2}):(\d{2})$/);
   if (!m) return null;
-  return `${m[1]}:${m[2]}:00`; // safe for Postgres time
+  return `${m[1]}:${m[2]}:00`; // Postgres time
 }
 
 function hhmmToDate(hhmm: string) {
   const d = new Date();
-  const [hh, mm] = hhmm.split(':').map(Number);
+  const [hh, mm] = hhmm.split(":").map(Number);
   d.setHours(Number.isFinite(hh) ? hh : 0);
   d.setMinutes(Number.isFinite(mm) ? mm : 0);
   d.setSeconds(0);
@@ -56,20 +56,20 @@ function hhmmToDate(hhmm: string) {
 }
 
 function dateToHHMM(d: Date) {
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
   return `${hh}:${mm}`;
 }
 
 type TimeFieldKey =
-  | 'travel_venue'
-  | 'loadin'
-  | 'soundcheck'
-  | 'doors'
-  | 'onstage'
-  | 'offstage'
-  | 'venue_curfew'
-  | 'depart_venue';
+  | "travel_venue"
+  | "loadin"
+  | "soundcheck"
+  | "doors"
+  | "onstage"
+  | "offstage"
+  | "venue_curfew"
+  | "depart_venue";
 
 export default function EditEventScheduleScreen() {
   const router = useRouter();
@@ -81,38 +81,36 @@ export default function EditEventScheduleScreen() {
 
   // store edit values as HH:MM strings (or '')
   const [times, setTimes] = useState<Record<TimeFieldKey, string>>({
-    travel_venue: '',
-    loadin: '',
-    soundcheck: '',
-    doors: '',
-    onstage: '',
-    offstage: '',
-    venue_curfew: '',
-    depart_venue: '',
+    travel_venue: "",
+    loadin: "",
+    soundcheck: "",
+    doors: "",
+    onstage: "",
+    offstage: "",
+    venue_curfew: "",
+    depart_venue: "",
   });
 
-  const [scheduleNotes, setScheduleNotes] = useState('');
+  const [scheduleNotes, setScheduleNotes] = useState("");
 
-  // native picker state (iOS/Android)
+  // picker state
   const [pickerKey, setPickerKey] = useState<TimeFieldKey | null>(null);
 
-  
-// iOS modal picker state (extra)
-const [iosPickerVisible, setIosPickerVisible] = useState(false);
-const [iosTempTime, setIosTempTime] = useState<Date>(new Date());
-
+  // iOS modal picker state
+  const [iosPickerVisible, setIosPickerVisible] = useState(false);
+  const [iosTempTime, setIosTempTime] = useState<Date>(new Date());
 
   const fields = useMemo(
     () =>
       [
-        { key: 'travel_venue', label: 'Travel to Venue' },
-        { key: 'loadin', label: 'Load-in' },
-        { key: 'soundcheck', label: 'Soundcheck' },
-        { key: 'doors', label: 'Doors' },
-        { key: 'onstage', label: 'Onstage' },
-        { key: 'offstage', label: 'Offstage' },
-        { key: 'venue_curfew', label: 'Venue Curfew' },
-        { key: 'depart_venue', label: 'Depart Venue' },
+        { key: "travel_venue", label: "Travel to Venue" },
+        { key: "loadin", label: "Load-in" },
+        { key: "soundcheck", label: "Soundcheck" },
+        { key: "doors", label: "Doors" },
+        { key: "onstage", label: "Onstage" },
+        { key: "offstage", label: "Offstage" },
+        { key: "venue_curfew", label: "Venue Curfew" },
+        { key: "depart_venue", label: "Depart Venue" },
       ] as { key: TimeFieldKey; label: string }[],
     []
   );
@@ -129,16 +127,16 @@ const [iosTempTime, setIosTempTime] = useState<Date>(new Date());
     setLoading(true);
 
     const { data, error } = await supabase
-      .from('events')
+      .from("events")
       .select(
-        'travel_venue,loadin,soundcheck,doors,onstage,offstage,venue_curfew,depart_venue,schedule_notes'
+        "travel_venue,loadin,soundcheck,doors,onstage,offstage,venue_curfew,depart_venue,schedule_notes"
       )
-      .eq('event_id', id)
+      .eq("event_id", id)
       .single();
 
     if (error || !data) {
       setLoading(false);
-      Alert.alert('Error', error?.message ?? 'Could not load schedule.');
+      Alert.alert("Error", error?.message ?? "Could not load schedule.");
       return;
     }
 
@@ -155,12 +153,12 @@ const [iosTempTime, setIosTempTime] = useState<Date>(new Date());
       depart_venue: toHHMM(row.depart_venue),
     });
 
-    setScheduleNotes(row.schedule_notes ?? '');
+    setScheduleNotes(row.schedule_notes ?? "");
     setLoading(false);
   }
 
   function setTime(key: TimeFieldKey, hhmm: string) {
-    setTimes(prev => ({ ...prev, [key]: hhmm }));
+    setTimes((prev) => ({ ...prev, [key]: hhmm }));
   }
 
   async function onSave() {
@@ -180,12 +178,12 @@ const [iosTempTime, setIosTempTime] = useState<Date>(new Date());
       schedule_notes: scheduleNotes.trim() ? scheduleNotes.trim() : null,
     };
 
-    const { error } = await supabase.from('events').update(payload).eq('event_id', id);
+    const { error } = await supabase.from("events").update(payload).eq("event_id", id);
 
     setSaving(false);
 
     if (error) {
-      Alert.alert('Save failed', error.message);
+      Alert.alert("Save failed", error.message);
       return;
     }
 
@@ -195,7 +193,7 @@ const [iosTempTime, setIosTempTime] = useState<Date>(new Date());
   if (loading) {
     return (
       <View style={styles.loading}>
-        <Stack.Screen options={{ title: 'Edit Schedule' }} />
+        <Stack.Screen options={{ title: "Edit Schedule" }} />
         <ActivityIndicator size="large" color="#333" />
       </View>
     );
@@ -203,22 +201,21 @@ const [iosTempTime, setIosTempTime] = useState<Date>(new Date());
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Edit Schedule' }} />
+      <Stack.Screen options={{ title: "Edit Schedule" }} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Schedule</Text>
 
-            {fields.map(f => (
+            {fields.map((f) => (
               <View key={f.key} style={styles.row}>
                 <Text style={styles.rowLabel}>{f.label}</Text>
 
-                {/* Web: native time input */}
-                {Platform.OS === 'web' ? (
+                {Platform.OS === "web" ? (
                   // @ts-ignore web-only input
                   <input
                     type="time"
@@ -228,27 +225,26 @@ const [iosTempTime, setIosTempTime] = useState<Date>(new Date());
                       width: 110,
                       padding: 8,
                       borderRadius: 8,
-                      border: '1px solid #ddd',
+                      border: "1px solid #ddd",
                       fontSize: 14,
-                      textAlign: 'right',
+                      textAlign: "right",
                     }}
                   />
                 ) : (
                   <TouchableOpacity
                     style={styles.timeButton}
                     onPress={() => {
-                    setPickerKey(f.key);
-                    const current = times[f.key] || '00:00';
-                    setIosTempTime(hhmmToDate(current));
+                      const current = times[f.key] || "00:00";
+                      setPickerKey(f.key);
+                      setIosTempTime(hhmmToDate(current));
 
-                    if (Platform.OS === 'ios') {
-                    setIosPickerVisible(true);
-                 }
-                }}
-
+                      if (Platform.OS === "ios") {
+                        setIosPickerVisible(true);
+                      }
+                    }}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.timeText}>{times[f.key] || '—'}</Text>
+                    <Text style={styles.timeText}>{times[f.key] || "—"}</Text>
                     <Ionicons name="time-outline" size={16} color={colors.primary} />
                   </TouchableOpacity>
                 )}
@@ -269,76 +265,77 @@ const [iosTempTime, setIosTempTime] = useState<Date>(new Date());
           </View>
 
           <TouchableOpacity style={styles.saveButton} onPress={onSave} disabled={saving}>
-            <Text style={styles.saveButtonText}>{saving ? 'Saving…' : 'Save'}</Text>
+            <Text style={styles.saveButtonText}>{saving ? "Saving…" : "Save"}</Text>
           </TouchableOpacity>
         </ScrollView>
 
-        {/* Native time picker */}
-       {/* ANDROID picker: close on selection (works fine) */}
-{Platform.OS === 'android' && pickerKey && (
-  <DateTimePicker
-    value={hhmmToDate(times[pickerKey] || '00:00')}
-    mode="time"
-    is24Hour
-    display="default"
-    onChange={(event, selected) => {
-      if (event.type === 'dismissed') {
-        setPickerKey(null);
-        return;
-      }
-      if (selected) setTime(pickerKey, dateToHHMM(selected));
-      setPickerKey(null);
-    }}
-  />
-)}
+        {/* ANDROID picker: close on selection */}
+        {Platform.OS === "android" && pickerKey && (
+          <DateTimePicker
+            value={hhmmToDate(times[pickerKey] || "00:00")}
+            mode="time"
+            is24Hour
+            display="default"
+            onChange={(event, selected) => {
+              if (event.type === "dismissed") {
+                setPickerKey(null);
+                return;
+              }
+              if (selected) setTime(pickerKey, dateToHHMM(selected));
+              setPickerKey(null);
+            }}
+          />
+        )}
 
-{/* IOS picker: modal with Cancel / Done (does NOT auto-close) */}
-{Platform.OS === 'ios' && pickerKey && (
-  <Modal
-    visible={iosPickerVisible}
-    transparent
-    animationType="fade"
-    onRequestClose={() => setIosPickerVisible(false)}
-  >
-    <View style={styles.modalBackdrop}>
-      <View style={styles.iosPickerCard}>
-        <View style={styles.iosPickerHeader}>
-          <TouchableOpacity
-            onPress={() => {
+        {/* IOS picker: modal with Cancel / Done */}
+        {Platform.OS === "ios" && iosPickerVisible && pickerKey && (
+          <Modal
+            visible={iosPickerVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => {
               setIosPickerVisible(false);
               setPickerKey(null);
             }}
           >
-            <Text style={styles.iosPickerBtn}>Cancel</Text>
-          </TouchableOpacity>
+            <View style={styles.modalBackdrop}>
+              <View style={styles.iosPickerCard}>
+                <View style={styles.iosPickerHeader}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setIosPickerVisible(false);
+                      setPickerKey(null);
+                    }}
+                  >
+                    <Text style={styles.iosPickerBtn}>Cancel</Text>
+                  </TouchableOpacity>
 
-          <Text style={styles.iosPickerTitle}>Select time</Text>
+                  <Text style={styles.iosPickerTitle}>Select time</Text>
 
-          <TouchableOpacity
-            onPress={() => {
-              setTime(pickerKey, dateToHHMM(iosTempTime));
-              setIosPickerVisible(false);
-              setPickerKey(null);
-            }}
-          >
-            <Text style={styles.iosPickerBtn}>Done</Text>
-          </TouchableOpacity>
-        </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setTime(pickerKey, dateToHHMM(iosTempTime));
+                      setIosPickerVisible(false);
+                      setPickerKey(null);
+                    }}
+                  >
+                    <Text style={styles.iosPickerBtn}>Done</Text>
+                  </TouchableOpacity>
+                </View>
 
-        <DateTimePicker
-          value={iosTempTime}
-          mode="time"
-          is24Hour
-          display="spinner"
-          onChange={(_, selected) => {
-            if (selected) setIosTempTime(selected);
-          }}
-        />
-      </View>
-    </View>
-  </Modal>
-)}
-
+                <DateTimePicker
+                  value={iosTempTime}
+                  mode="time"
+                  is24Hour
+                  display="spinner"
+                  onChange={(_, selected) => {
+                    if (selected) setIosTempTime(selected);
+                  }}
+                />
+              </View>
+            </View>
+          </Modal>
+        )}
       </KeyboardAvoidingView>
     </>
   );

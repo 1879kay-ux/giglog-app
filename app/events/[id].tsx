@@ -96,16 +96,23 @@ type EventRow = {
   promo_material_url: string | null;
   doc_other_url: string | null;
 
-  income_fee: number | null;
+   // --- Income ---
+  income_guarantee: number | null;
+  income_door: number | null;
+  income_fee?: number | null; // legacy field, keep optional during migration
   fee_type: string | null;
   paid_status: string | null;
 
+  // --- Costs ---
   van_hire: number | null;
   fuel: number | null;
+  accommodation_cost: number | null;
   dep_cost: number | null;
   driver_cost: number | null;
   foh_eng_cost: number | null;
   other_costs: number | null;
+
+  // --- Split ---
   manual_playing_share_override: number | null;
 
   // ✅ finance notes (needed for FinanceSection display)
@@ -273,12 +280,15 @@ if (!lineupErr) setHasCustomLineup((count ?? 0) > 0);
         promo_material_url,
         doc_other_url,
 
+                income_guarantee,
+        income_door,
         income_fee,
         fee_type,
         paid_status,
 
         van_hire,
         fuel,
+        accommodation_cost,
         dep_cost,
         driver_cost,
         foh_eng_cost,
@@ -544,29 +554,31 @@ if (!lineupErr) setHasCustomLineup((count ?? 0) > 0);
           </Section>
 
           {/* FINANCE */}
-          <Section
-            title="Finance"
-            icon="cash-outline"
-            open={openSections.finance}
-            onPress={() => toggleSection("finance")}
-          >
-            <FinanceSection
-              eventId={event.event_id}
-              isAdmin={canEdit}
-              shares={event.manual_playing_share_override}
-              incomeFee={event.income_fee}
-              feeType={event.fee_type}
-              paidStatus={event.paid_status}
-              vanHire={event.van_hire}
-              fuel={event.fuel}
-              depCost={event.dep_cost}
-              driverCost={event.driver_cost}
-              fohEngCost={event.foh_eng_cost}
-              otherCosts={event.other_costs}
-              feeNotes={event.fee_notes}
-              costNotes={event.cost_notes}
-            />
-          </Section>
+<Section
+  title="Finance"
+  icon="cash-outline"
+  open={openSections.finance}
+  onPress={() => toggleSection("finance")}
+>
+  <FinanceSection
+    eventId={event.event_id}
+    isAdmin={canEdit}
+    shares={event.manual_playing_share_override}
+    incomeGuarantee={event.income_guarantee}
+    incomeDoor={event.income_door}
+    feeType={event.fee_type}
+    paidStatus={event.paid_status}
+    vanHire={event.van_hire}
+    fuel={event.fuel}
+    accommodationCost={event.accommodation_cost}
+    depCost={event.dep_cost}
+    driverCost={event.driver_cost}
+    fohEngCost={event.foh_eng_cost}
+    otherCosts={event.other_costs}
+    feeNotes={event.fee_notes}
+    costNotes={event.cost_notes}
+  />
+</Section>
         </ScrollView>
       </View>
     </>
@@ -804,4 +816,18 @@ sectionHeaderChevron: {
     fontSize: 13,
     color: colors.textMuted,
   },
+  editPill: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 12,
+  backgroundColor: "rgba(13,148,136,0.10)",
+},
+editPillText: {
+  fontSize: 13,
+  fontWeight: "900",
+  color: colors.primary,
+},
 });

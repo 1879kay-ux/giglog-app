@@ -10,12 +10,14 @@ type FinanceSectionProps = {
   isAdmin: boolean;
   shares: number | null;
 
-  incomeFee: number | null;
+  incomeGuarantee: number | null;
+  incomeDoor: number | null;
   feeType: string | null;
   paidStatus: string | null;
 
   vanHire: number | null;
   fuel: number | null;
+  accommodationCost: number | null;
   depCost: number | null;
   driverCost: number | null;
   fohEngCost: number | null;
@@ -32,15 +34,36 @@ function formatCurrency(value: number | null | undefined) {
   return `£${n.toFixed(2)}`;
 }
 
+function Row({
+  label,
+  value,
+  last,
+  bold,
+}: {
+  label: string;
+  value: string;
+  last?: boolean;
+  bold?: boolean;
+}) {
+  return (
+    <View style={[styles.row, last ? styles.rowLast : null]}>
+      <Text style={bold ? styles.labelBold : styles.label}>{label}</Text>
+      <Text style={bold ? styles.valueBold : styles.value}>{value}</Text>
+    </View>
+  );
+}
+
 export default function FinanceSection({
   eventId,
   isAdmin,
   shares,
-  incomeFee,
+  incomeGuarantee,
+  incomeDoor,
   feeType,
   paidStatus,
   vanHire,
   fuel,
+  accommodationCost,
   depCost,
   driverCost,
   fohEngCost,
@@ -50,15 +73,18 @@ export default function FinanceSection({
 }: FinanceSectionProps) {
   const router = useRouter();
 
+  const grossIncome = (incomeGuarantee || 0) + (incomeDoor || 0);
+
   const totalCosts =
     (vanHire || 0) +
     (fuel || 0) +
+    (accommodationCost || 0) +
     (depCost || 0) +
     (driverCost || 0) +
     (fohEngCost || 0) +
     (otherCosts || 0);
 
-  const netIncome = (incomeFee || 0) - totalCosts;
+  const netIncome = grossIncome - totalCosts;
 
   const shareCount = shares ?? null;
   const perShare = shareCount && shareCount > 0 ? netIncome / shareCount : null;
@@ -81,98 +107,51 @@ export default function FinanceSection({
           ) : null}
         </View>
 
-        
-
         <InfoCard title="Income">
-          <View style={styles.row}>
-            <Text style={styles.label}>Fee</Text>
-            <Text style={styles.value}>{formatCurrency(incomeFee)}</Text>
-          </View>
-
-          <View style={styles.row}>
-            <Text style={styles.label}>Fee Type</Text>
-            <Text style={styles.value}>{feeType || "—"}</Text>
-          </View>
-
-          <View style={[styles.row, styles.rowLast]}>
-            <Text style={styles.label}>Paid Status</Text>
-            <Text style={styles.value}>{paidStatus || "—"}</Text>
-          </View>
+          <Row label="Guarantee" value={formatCurrency(incomeGuarantee)} />
+          <Row label="Door" value={formatCurrency(incomeDoor)} />
+          <Row label="Fee Type" value={feeType || "—"} />
+          <Row label="Paid Status" value={paidStatus || "—"} last />
 
           {feeNotes?.trim() ? (
-  <View style={styles.noteBlock}>
-    <Text style={styles.noteLabel}>Fee Notes</Text>
-    <Text style={styles.noteText}>{feeNotes}</Text>
-  </View>
-) : null}
+            <View style={styles.noteBlock}>
+              <Text style={styles.noteLabel}>Fee Notes</Text>
+              <Text style={styles.noteText}>{feeNotes}</Text>
+            </View>
+          ) : null}
         </InfoCard>
 
         <InfoCard title="Costs">
-          <View style={styles.row}>
-            <Text style={styles.label}>Van Hire</Text>
-            <Text style={styles.value}>{formatCurrency(vanHire)}</Text>
-          </View>
-
-          <View style={styles.row}>
-            <Text style={styles.label}>Fuel</Text>
-            <Text style={styles.value}>{formatCurrency(fuel)}</Text>
-          </View>
-
-          <View style={styles.row}>
-            <Text style={styles.label}>Dep Fees</Text>
-            <Text style={styles.value}>{formatCurrency(depCost)}</Text>
-          </View>
-
-          <View style={styles.row}>
-            <Text style={styles.label}>Driver Cost</Text>
-            <Text style={styles.value}>{formatCurrency(driverCost)}</Text>
-          </View>
-
-          <View style={styles.row}>
-            <Text style={styles.label}>FOH/Engineer</Text>
-            <Text style={styles.value}>{formatCurrency(fohEngCost)}</Text>
-          </View>
-
-          <View style={[styles.row, styles.rowLast]}>
-            <Text style={styles.label}>Other Costs</Text>
-            <Text style={styles.value}>{formatCurrency(otherCosts)}</Text>
-          </View>
+          <Row label="Van Hire" value={formatCurrency(vanHire)} />
+          <Row label="Fuel" value={formatCurrency(fuel)} />
+          <Row label="Accommodation" value={formatCurrency(accommodationCost)} />
+          <Row label="Dep Fees" value={formatCurrency(depCost)} />
+          <Row label="Driver Cost" value={formatCurrency(driverCost)} />
+          <Row label="FOH/Engineer" value={formatCurrency(fohEngCost)} />
+          <Row label="Other Costs" value={formatCurrency(otherCosts)} last />
 
           {costNotes?.trim() ? (
-  <View style={styles.noteBlock}>
-    <Text style={styles.noteLabel}>Cost Notes</Text>
-    <Text style={styles.noteText}>{costNotes}</Text>
-  </View>
-) : null}
+            <View style={styles.noteBlock}>
+              <Text style={styles.noteLabel}>Cost Notes</Text>
+              <Text style={styles.noteText}>{costNotes}</Text>
+            </View>
+          ) : null}
         </InfoCard>
 
         <InfoCard title="Summary">
-          <View style={styles.row}>
-            <Text style={styles.labelBold}>Gross Income</Text>
-            <Text style={styles.valueBold}>{formatCurrency(incomeFee)}</Text>
-          </View>
+          <Row label="Gross Income" value={formatCurrency(grossIncome)} bold />
+          <Row label="Total Costs" value={formatCurrency(totalCosts)} bold />
 
-          <View style={styles.row}>
-            <Text style={styles.labelBold}>Total Costs</Text>
-            <Text style={styles.valueBold}>{formatCurrency(totalCosts)}</Text>
-          </View>
+          <View style={styles.netDivider} />
+          <Row label="Net Income" value={formatCurrency(netIncome)} bold />
 
-          <View style={[styles.row, styles.netRow, styles.rowLast]}>
-            <Text style={styles.labelBold}>Net Income</Text>
-            <Text style={styles.valueBold}>{formatCurrency(netIncome)}</Text>
-          </View>
-
-          <View style={[styles.row, styles.rowLast]}>
-            <Text style={styles.labelBold}>Shares</Text>
-            <Text style={styles.valueBold}>
-              {shareCount && shareCount > 0 ? String(shareCount) : "—"}
-            </Text>
-          </View>
-
-          <View style={[styles.row, styles.rowLast]}>
-            <Text style={styles.labelBold}>Per Share</Text>
-            <Text style={styles.valueBold}>{formatCurrency(perShare)}</Text>
-          </View>
+          <View style={styles.smallDivider} />
+          <Row
+            label="Shares"
+            value={shareCount && shareCount > 0 ? String(shareCount) : "—"}
+            bold
+          />
+          <Row label="Per Share" value={formatCurrency(perShare)} bold last />
         </InfoCard>
       </View>
     </ScrollView>
@@ -202,12 +181,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: "colors.primary,0.10)",
+    backgroundColor: "rgba(13,148,136,0.10)",
   },
   editPillText: {
     fontSize: 13,
     fontWeight: "900",
-      color: colors.primary
+    color: colors.primary,
   },
 
   row: {
@@ -221,18 +200,25 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
 
-  netRow: {
-    borderTopWidth: 2,
-    color: colors.primary,
-    paddingTop: 12,
-    marginTop: 4,
-  },
-
   label: { fontSize: 14, fontWeight: "600", color: "#666" },
-  labelBold: { fontSize: 14, fontWeight: "700", color: "#333" },
+  labelBold: { fontSize: 14, fontWeight: "800", color: "#333" },
 
   value: { fontSize: 14, color: "#333" },
-  valueBold: { fontSize: 14, fontWeight: "700",   color: colors.primary},
+  valueBold: { fontSize: 14, fontWeight: "800", color: colors.primary },
+
+  netDivider: {
+    height: 2,
+    backgroundColor: "#111",
+    marginTop: 8,
+    marginBottom: 8,
+    opacity: 0.15,
+  },
+  smallDivider: {
+    height: 1,
+    backgroundColor: "#eee",
+    marginTop: 8,
+    marginBottom: 8,
+  },
 
   noteBlock: {
     marginTop: 10,

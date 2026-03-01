@@ -42,7 +42,7 @@ export default function TravelSection({
 }: Props) {
   const router = useRouter();
   const { isAdmin, adminModeEnabled } = useCurrentMember();
-  const canEdit = isAdmin && adminModeEnabled;
+  const canEdit = !!isAdmin && !!adminModeEnabled;
 
   const goEditEvent = () => router.push(`/events/${eventId}/edit/travel`);
   const goDefaults = () => router.push("/settings/travel" as any);
@@ -259,20 +259,14 @@ export default function TravelSection({
             <Text style={styles.webModalText}>What do you want to change?</Text>
 
             <Pressable
-  style={styles.webModalBtn}
-  onPress={() => {
-    console.log("WEB PICKER: Default for all events pressed");
-    Alert.alert("Pressed", "Going to Settings → Travel defaults");
-    setShowWebPicker(false);
-
-    setTimeout(() => {
-      console.log("WEB PICKER: pushing /settings/travel");
-      router.push("/settings/travel" as any);
-    }, 250);
-  }}
->
-  <Text style={styles.webModalBtnText}>Default for all events</Text>
-</Pressable>
+              style={styles.webModalBtn}
+              onPress={() => {
+                setShowWebPicker(false);
+                router.push("/settings/travel" as any);
+              }}
+            >
+              <Text style={styles.webModalBtnText}>Default for all events</Text>
+            </Pressable>
 
             <Pressable
               style={styles.webModalBtn}
@@ -315,6 +309,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 
+  // ✅ fixed to match other sections
   editPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -322,12 +317,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: "colors.primary,0.10)",
+    backgroundColor: "rgba(13,148,136,0.10)",
   },
   editPillText: {
     fontSize: 13,
     fontWeight: "900",
-      color: colors.primary
+    color: colors.primary,
   },
 
   travelRow: { marginBottom: 14 },
@@ -345,21 +340,21 @@ const styles = StyleSheet.create({
   },
 
   chip: {
-  backgroundColor: colors.primary,
-  paddingVertical: 10,
-  paddingHorizontal: 14,
-  borderRadius: 12,
-  minHeight: 44,            // proper tap target
-  justifyContent: "center",
-  borderWidth: 1,
-  borderColor: colors.primaryDark,
-},
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    minHeight: 44,
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.primaryDark,
+  },
 
-chipText: {
-  color: "#fff",
-  fontWeight: "900",
-  fontSize: 14,
-},
+  chipText: {
+    color: "#fff",
+    fontWeight: "900",
+    fontSize: 14,
+  },
 
   locationBox: {
     marginTop: 10,
@@ -384,7 +379,7 @@ chipText: {
     paddingVertical: 4,
   },
 
-  badgeText: {   color: colors.primary, fontSize: 11, fontWeight: "900" },
+  badgeText: { color: colors.primary, fontSize: 11, fontWeight: "900" },
 
   locationText: { fontSize: 13, color: "#555" },
 
@@ -430,7 +425,7 @@ chipText: {
   webModalBtnCancel: { backgroundColor: "#f2f2f2" },
 
   webModalBtnText: {
-      color: colors.primary,
+    color: colors.primary,
     fontSize: 13,
     fontWeight: "800",
     textAlign: "center",

@@ -17,8 +17,8 @@ type ScheduleSectionProps = {
   offstage?: string | null;
   venueCurfew?: string | null;
 
-  travelVenue?: string | null; // renamed from call_time
-  departVenue?: string | null; // renamed from bus_leave_time
+  travelVenue?: string | null;
+  departVenue?: string | null;
 
   scheduleNotes?: string | null;
 };
@@ -26,7 +26,6 @@ type ScheduleSectionProps = {
 function formatTime(value?: string | null) {
   if (!value) return null;
 
-  // "HH:MM:SS" or "HH:MM"
   const m = String(value).trim().match(/^(\d{1,2}):(\d{2})/);
   if (!m) return String(value).trim();
   const hh = m[1].padStart(2, "0");
@@ -49,7 +48,7 @@ export default function ScheduleSection({
 }: ScheduleSectionProps) {
   const router = useRouter();
   const { isAdmin, adminModeEnabled } = useCurrentMember();
-  const canEdit = isAdmin && adminModeEnabled;
+  const canEdit = !!isAdmin && !!adminModeEnabled;
 
   const editSchedule = canEdit ? (
     <Pressable
@@ -63,7 +62,7 @@ export default function ScheduleSection({
   ) : undefined;
 
   const timeFields = [
-    { label: "Travel to Venue", value: travelVenue ?? callTime }, // supports old + new
+    { label: "Travel to Venue", value: travelVenue ?? callTime },
     { label: "Load-in", value: loadin },
     { label: "Soundcheck", value: soundcheck },
     { label: "Doors", value: doors },
@@ -112,12 +111,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: "colors.primary,0.10)",
+    backgroundColor: "rgba(13,148,136,0.10)",
   },
   editPillText: {
     fontSize: 13,
     fontWeight: "900",
-      color: colors.primary
+    color: colors.primary,
   },
 
   timeRow: {

@@ -16,7 +16,8 @@ import {
 } from "react-native";
 
 type EventFinanceRow = {
-  income_fee: number | null;
+  income_guarantee: number | null;
+  income_door: number | null;
   manual_playing_share_override: number | null;
 
   fee_type: string | null;
@@ -24,13 +25,14 @@ type EventFinanceRow = {
 
   van_hire: number | null;
   fuel: number | null;
+  accommodation_cost: number | null;
   dep_cost: number | null;
   driver_cost: number | null;
   foh_eng_cost: number | null;
   other_costs: number | null;
 
   fee_notes: string | null;
-  cost_notes: string | null; // change to cost_nots if that is your real column
+  cost_notes: string | null;
 };
 
 const FEE_TYPE_OPTIONS = [
@@ -79,7 +81,8 @@ export default function EditEventFinanceScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [incomeFee, setIncomeFee] = useState("");
+  const [incomeGuarantee, setIncomeGuarantee] = useState("");
+  const [incomeDoor, setIncomeDoor] = useState("");
   const [shares, setShares] = useState("");
 
   const [feeType, setFeeType] = useState("");
@@ -87,32 +90,56 @@ export default function EditEventFinanceScreen() {
 
   const [vanHire, setVanHire] = useState("");
   const [fuel, setFuel] = useState("");
+  const [accommodation, setAccommodation] = useState("");
   const [depCost, setDepCost] = useState("");
   const [driverCost, setDriverCost] = useState("");
   const [fohEngCost, setFohEngCost] = useState("");
   const [otherCosts, setOtherCosts] = useState("");
 
-  // NEW
   const [feeNotes, setFeeNotes] = useState("");
   const [costNotes, setCostNotes] = useState("");
 
   const numericFields = useMemo(
     () => [
-      { key: "income_fee", label: "Fee", value: incomeFee, setValue: setIncomeFee },
+      {
+        key: "income_guarantee",
+        label: "Guarantee",
+        value: incomeGuarantee,
+        setValue: setIncomeGuarantee,
+      },
+      { key: "income_door", label: "Door", value: incomeDoor, setValue: setIncomeDoor },
       {
         key: "manual_playing_share_override",
         label: "Shares",
         value: shares,
         setValue: setShares,
       },
+
       { key: "van_hire", label: "Van Hire", value: vanHire, setValue: setVanHire },
       { key: "fuel", label: "Fuel", value: fuel, setValue: setFuel },
+      {
+        key: "accommodation_cost",
+        label: "Accommodation",
+        value: accommodation,
+        setValue: setAccommodation,
+      },
       { key: "dep_cost", label: "Dep Fees", value: depCost, setValue: setDepCost },
       { key: "driver_cost", label: "Driver Cost", value: driverCost, setValue: setDriverCost },
       { key: "foh_eng_cost", label: "FOH/Engineer", value: fohEngCost, setValue: setFohEngCost },
       { key: "other_costs", label: "Other Costs", value: otherCosts, setValue: setOtherCosts },
     ],
-    [incomeFee, shares, vanHire, fuel, depCost, driverCost, fohEngCost, otherCosts]
+    [
+      incomeGuarantee,
+      incomeDoor,
+      shares,
+      vanHire,
+      fuel,
+      accommodation,
+      depCost,
+      driverCost,
+      fohEngCost,
+      otherCosts,
+    ]
   );
 
   useEffect(() => {
@@ -129,7 +156,22 @@ export default function EditEventFinanceScreen() {
     const { data, error } = await supabase
       .from("events")
       .select(
-        "income_fee,manual_playing_share_override,fee_type,paid_status,van_hire,fuel,dep_cost,driver_cost,foh_eng_cost,other_costs,fee_notes,cost_notes"
+        [
+          "income_guarantee",
+          "income_door",
+          "manual_playing_share_override",
+          "fee_type",
+          "paid_status",
+          "van_hire",
+          "fuel",
+          "accommodation_cost",
+          "dep_cost",
+          "driver_cost",
+          "foh_eng_cost",
+          "other_costs",
+          "fee_notes",
+          "cost_notes",
+        ].join(",")
       )
       .eq("event_id", id)
       .single();
@@ -140,9 +182,10 @@ export default function EditEventFinanceScreen() {
       return;
     }
 
-    const row = data as EventFinanceRow;
+    const row = data as unknown as EventFinanceRow;
 
-    setIncomeFee(numToStr(row.income_fee));
+    setIncomeGuarantee(numToStr(row.income_guarantee));
+    setIncomeDoor(numToStr(row.income_door));
     setShares(numToStr(row.manual_playing_share_override));
 
     setFeeType(row.fee_type ?? "");
@@ -150,12 +193,12 @@ export default function EditEventFinanceScreen() {
 
     setVanHire(numToStr(row.van_hire));
     setFuel(numToStr(row.fuel));
+    setAccommodation(numToStr(row.accommodation_cost));
     setDepCost(numToStr(row.dep_cost));
     setDriverCost(numToStr(row.driver_cost));
     setFohEngCost(numToStr(row.foh_eng_cost));
     setOtherCosts(numToStr(row.other_costs));
 
-    // NEW
     setFeeNotes(row.fee_notes ?? "");
     setCostNotes(row.cost_notes ?? "");
 
@@ -180,7 +223,8 @@ export default function EditEventFinanceScreen() {
     }
 
     const payload = {
-      income_fee: (parsed["income_fee"] as any).value,
+      income_guarantee: (parsed["income_guarantee"] as any).value,
+      income_door: (parsed["income_door"] as any).value,
       manual_playing_share_override: (parsed["manual_playing_share_override"] as any).value,
 
       fee_type: feeType.trim() ? feeType.trim() : null,
@@ -188,19 +232,24 @@ export default function EditEventFinanceScreen() {
 
       van_hire: (parsed["van_hire"] as any).value,
       fuel: (parsed["fuel"] as any).value,
+      accommodation_cost: (parsed["accommodation_cost"] as any).value,
       dep_cost: (parsed["dep_cost"] as any).value,
       driver_cost: (parsed["driver_cost"] as any).value,
       foh_eng_cost: (parsed["foh_eng_cost"] as any).value,
       other_costs: (parsed["other_costs"] as any).value,
 
-      // NEW
       fee_notes: cleanText(feeNotes),
-      cost_notes: cleanText(costNotes), // change to cost_nots if needed
+      cost_notes: cleanText(costNotes),
     };
 
     setSaving(true);
 
-    const { error } = await supabase.from("events").update(payload).eq("event_id", id);
+    const { data: saved, error } = await supabase
+      .from("events")
+      .update(payload)
+      .eq("event_id", id)
+      .select("income_guarantee,income_door,accommodation_cost,manual_playing_share_override")
+      .single();
 
     setSaving(false);
 
@@ -208,6 +257,8 @@ export default function EditEventFinanceScreen() {
       Alert.alert("Save failed", error.message);
       return;
     }
+
+    console.log("FINANCE SAVED", saved);
 
     router.back();
   }
@@ -235,7 +286,8 @@ export default function EditEventFinanceScreen() {
 
             <Text style={styles.sectionLabel}>Income</Text>
 
-            <RowNumber label="Fee" value={incomeFee} onChange={setIncomeFee} />
+            <RowNumber label="Guarantee" value={incomeGuarantee} onChange={setIncomeGuarantee} />
+            <RowNumber label="Door" value={incomeDoor} onChange={setIncomeDoor} />
 
             <RowChips
               label="Fee Type"
@@ -251,7 +303,6 @@ export default function EditEventFinanceScreen() {
               onChange={setPaidStatus}
             />
 
-            {/* NEW */}
             <RowNotes label="Fee Notes" value={feeNotes} onChange={setFeeNotes} />
 
             <View style={styles.divider} />
@@ -260,12 +311,12 @@ export default function EditEventFinanceScreen() {
 
             <RowNumber label="Van Hire" value={vanHire} onChange={setVanHire} />
             <RowNumber label="Fuel" value={fuel} onChange={setFuel} />
+            <RowNumber label="Accommodation" value={accommodation} onChange={setAccommodation} />
             <RowNumber label="Dep Fees" value={depCost} onChange={setDepCost} />
             <RowNumber label="Driver Cost" value={driverCost} onChange={setDriverCost} />
             <RowNumber label="FOH/Engineer" value={fohEngCost} onChange={setFohEngCost} />
             <RowNumber label="Other Costs" value={otherCosts} onChange={setOtherCosts} />
 
-            {/* NEW */}
             <RowNotes label="Cost Notes" value={costNotes} onChange={setCostNotes} />
 
             <View style={styles.divider} />

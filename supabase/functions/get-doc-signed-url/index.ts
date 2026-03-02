@@ -41,9 +41,7 @@ Deno.serve(async (req: Request) => {
 
   // Explicitly validate JWT first
   const authClient = createClient(supabaseUrl, anonKey);
-  const { data: userData, error: userError } = await authClient.auth.getUser(
-    token
-  );
+  const { data: userData, error: userError } = await authClient.auth.getUser(token);
 
   if (userError || !userData?.user) {
     return json(401, { error: "Invalid JWT" });
@@ -67,7 +65,7 @@ Deno.serve(async (req: Request) => {
 
   const table = scope === "band" ? "band_documents" : "event_documents";
 
-  // RLS client using user token
+  // RLS client using user token (authorizes access to the doc row)
   const userClient = createClient(supabaseUrl, anonKey, {
     global: {
       headers: { Authorization: `Bearer ${token}` },
@@ -90,7 +88,8 @@ Deno.serve(async (req: Request) => {
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-  const expiresIn = 60 * 10;
+  // 7 days in seconds
+  const expiresIn = 60 * 60 * 24 * 7;
 
   const { data: signed, error: signErr } = await adminClient.storage
     .from(docRow.storage_bucket)

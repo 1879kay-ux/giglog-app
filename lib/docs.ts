@@ -1,3 +1,4 @@
+import { SIGNED_URL_TTL } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
 import * as Clipboard from "expo-clipboard";
 import * as Linking from "expo-linking";
@@ -19,7 +20,7 @@ async function getSignedDocUrl(scope: Scope, docId: string): Promise<string> {
 
   const { data: signed, error: signErr } = await supabase.storage
     .from(docRow.storage_bucket)
-    .createSignedUrl(docRow.storage_path, 60 * 10);
+    .createSignedUrl(docRow.storage_path, SIGNED_URL_TTL);
 
   if (signErr) throw signErr;
   if (!signed?.signedUrl) throw new Error("No signed URL returned");

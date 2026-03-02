@@ -1,82 +1,118 @@
 import InfoCard from "@/components/InfoCard";
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
+import { SIGNED_URL_TTL } from "@/lib/storage";
+import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useMemo } from "react";
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Alert, Linking, Pressable, Share, StyleSheet, Text, View } from "react-native";
 
 type DocumentsSectionProps = {
   eventId: string;
-  setlistUrl?: string | null;
-  eventinfoUrl?: string | null;
-  promoMaterialUrl?: string | null;
-  docOtherUrl?: string | null;
 };
 
-function normaliseUrl(raw?: string | null) {
-  const v = (raw ?? "").trim();
-  if (!v) return null;
+type EventDocRow = {
+  doc_id: string;
+  title: string;
+  doc_type: string | null;
+  storage_bucket: string;
+  storage_path: string;
+  created_at: string;
+};
 
-  const withScheme = /^https?:\/\//i.test(v) ? v : `https://${v}`;
-
-  try {
-    const u = new URL(withScheme);
-    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
-    return u.toString();
-  } catch {
-    return null;
-  }
-}
-
-function getDomain(url: string) {
-  try {
-    const u = new URL(url);
-    return u.host.replace(/^www\./i, "");
-  } catch {
-    return "";
-  }
-}
-
-type DocItem = {
-  key: "setlist" | "eventinfo" | "promo" | "other";
+type StorageDocItem = {
+  docId: string;
   label: string;
-  url: string;
+  bucket: string;
+  path: string;
+  sub?: string;
 };
 
-export default function DocumentsSection({
-  eventId,
-  setlistUrl,
-  eventinfoUrl,
-  promoMaterialUrl,
-  docOtherUrl,
-}: DocumentsSectionProps) {
+export default function DocumentsSection({ eventId }: DocumentsSectionProps) {
   const router = useRouter();
   const { isAdmin, adminModeEnabled } = useCurrentMember();
   const canEdit = isAdmin && adminModeEnabled;
 
   const goEdit = () => router.push(`/events/${eventId}/edit/documents`);
 
-  const docs = useMemo<DocItem[]>(() => {
-    const items: Array<{ key: DocItem["key"]; label: string; url: string | null }> = [
-      { key: "setlist", label: "Setlist", url: normaliseUrl(setlistUrl) },
-      { key: "eventinfo", label: "Event Info", url: normaliseUrl(eventinfoUrl) },
-      { key: "promo", label: "Promo Material", url: normaliseUrl(promoMaterialUrl) },
-      { key: "other", label: "Other", url: normaliseUrl(docOtherUrl) },
-    ];
+  const [docs, setDocs] = useState<StorageDocItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-    return items
-      .filter((x): x is { key: DocItem["key"]; label: string; url: string } => !!x.url)
-      .map((x) => ({ key: x.key, label: x.label, url: x.url }));
-  }, [setlistUrl, eventinfoUrl, promoMaterialUrl, docOtherUrl]);
+  useEffect(() => {
+    let cancelled = false;
 
-  const openUrl = async (url: string) => {
+    const load = async () => {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from("event_documents")
+        .select("doc_id,title,doc_type,storage_bucket,storage_path,created_at")
+        .eq("event_id", eventId)
+        .order("created_at", { ascending: false });
+
+      if (cancelled) return;
+
+      if (error) {
+        setLoading(false);
+        setDocs([]);
+        Alert.alert("Docs error", error.message);
+        return;
+      }
+
+      const rows = (data ?? []) as EventDocRow[];
+      setDocs(
+        rows.map((r) => ({
+          docId: r.doc_id,
+          label: r.title,
+          bucket: r.storage_bucket,
+          path: r.storage_path,
+          sub: r.doc_type ?? undefined,
+        }))
+      );
+
+      setLoading(false);
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId]);
+
+  const openStorageDoc = async (d: StorageDocItem) => {
     try {
-      await Linking.openURL(url);
-    } catch {
-      Alert.alert("Can't open link", "Check the URL format and try again.");
+      const { data, error } = await supabase.storage
+        .from(d.bucket)
+        .createSignedUrl(d.path, SIGNED_URL_TTL); // 7 days (configured in lib/storage)
+
+      if (error || !data?.signedUrl) {
+        throw new Error(error?.message || "Failed to create signed URL");
+      }
+
+      await Linking.openURL(data.signedUrl);
+    } catch (e: any) {
+      Alert.alert("Can't open document", e?.message ?? "Please try again.");
     }
   };
+
+  const shareStorageDoc = async (d: StorageDocItem) => {
+  try {
+    const { data, error } = await supabase.storage
+      .from(d.bucket)
+      .createSignedUrl(d.path, SIGNED_URL_TTL); // 7 days (configured in lib/storage)
+
+    if (error || !data?.signedUrl) {
+      throw new Error(error?.message || "Failed to create signed URL");
+    }
+
+    await Share.share({
+      message: data.signedUrl,
+    });
+  } catch (e: any) {
+    Alert.alert("Can't share document", e?.message ?? "Please try again.");
+  }
+};
 
   const HeaderRight = canEdit ? (
     <Pressable onPress={goEdit} hitSlop={10} style={styles.headerBtn}>
@@ -85,7 +121,7 @@ export default function DocumentsSection({
     </Pressable>
   ) : undefined;
 
-  const isEmpty = docs.length === 0;
+  const isEmpty = !loading && docs.length === 0;
 
   return (
     <InfoCard title="Documents" right={HeaderRight}>
@@ -96,39 +132,47 @@ export default function DocumentsSection({
           </View>
 
           <View style={{ flex: 1 }}>
-            <Text style={styles.emptyTitle}>No document links yet</Text>
-            <Text style={styles.emptySub}>
-              Add links for setlist, event info, promo material, or anything else.
-            </Text>
+            <Text style={styles.emptyTitle}>No documents yet</Text>
+            <Text style={styles.emptySub}>Upload documents in admin mode.</Text>
           </View>
         </View>
       ) : (
         <View style={styles.list}>
           {docs.map((d, idx) => {
             const last = idx === docs.length - 1;
-            const domain = getDomain(d.url);
 
             return (
               <Pressable
-                key={d.key}
-                onPress={() => openUrl(d.url)}
+                key={d.docId}
+                onPress={() => openStorageDoc(d)}
                 style={[styles.row, last && styles.rowLast]}
               >
                 <View style={styles.rowLeft}>
-                  <View style={styles.linkIcon}>
-                    <Ionicons name="link-outline" size={16} color={colors.primary} />
+                  <View style={styles.docIcon}>
+                    <Ionicons name="document-text-outline" size={16} color={colors.primary} />
                   </View>
 
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>{d.label}</Text>
-                    {!!domain && <Text style={styles.sub}>{domain}</Text>}
+                    {!!d.sub && <Text style={styles.sub}>{d.sub}</Text>}
                   </View>
                 </View>
 
-                <Ionicons name="open-outline" size={18} color="#7a7a7a" />
+                <Pressable
+  onPress={(e) => {
+    e.stopPropagation();
+    shareStorageDoc(d);
+  }}
+  hitSlop={10}
+  style={styles.shareBtn}
+>
+  <Ionicons name="share-outline" size={18} color="#7a7a7a" />
+</Pressable>
               </Pressable>
             );
           })}
+
+          {loading ? <Text style={styles.loadingText}>Loading documents…</Text> : null}
         </View>
       )}
     </InfoCard>
@@ -146,7 +190,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E9F6F6",
   },
   headerBtnText: {
-      color: colors.primary,
+    color: colors.primary,
     fontWeight: "800",
     fontSize: 13,
   },
@@ -198,7 +242,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingRight: 10,
   },
-  linkIcon: {
+  docIcon: {
     width: 30,
     height: 30,
     borderRadius: 10,
@@ -216,4 +260,14 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 2,
   },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#666",
+  },
+  shareBtn: {
+  paddingHorizontal: 6,
+  paddingVertical: 6,
+  borderRadius: 10,
+},
 });

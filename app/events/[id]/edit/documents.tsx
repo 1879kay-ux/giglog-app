@@ -1,31 +1,60 @@
-import { supabase } from '@/lib/supabase';
+import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
-import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import * as DocumentPicker from "expo-document-picker";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
 
-type EventDocsRow = {
-  setlist_url: string | null;
-  eventinfo_url: string | null;
-  promo_material_url: string | null;
-  doc_other_url: string | null;
+type EventDocRow = {
+  doc_id: string;
+  title: string;
+  doc_type: string | null;
+  storage_bucket: string;
+  storage_path: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  created_at: string;
 };
 
-function cleanUrlInput(v: string) {
-  const s = v.trim();
-  return s ? s : null;
+function sanitizeFilename(name: string) {
+  return name.replace(/[^\w.\-]+/g, "_").replace(/_+/g, "_");
+}
+
+function formatBytes(n?: number | null) {
+  if (!n || n <= 0) return "";
+  const units = ["B", "KB", "MB", "GB"];
+  let v = n;
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i += 1;
+  }
+  return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
+async function confirmDelete(message: string) {
+  if (Platform.OS === "web") {
+    // Alert.alert is unreliable on web
+    // eslint-disable-next-line no-restricted-globals
+    return window.confirm(message);
+  }
+  return new Promise<boolean>((resolve) => {
+    Alert.alert("Confirm delete", message, [
+      { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+      { text: "Delete", style: "destructive", onPress: () => resolve(true) },
+    ]);
+  });
 }
 
 export default function EditEventDocumentsScreen() {
@@ -34,74 +63,121 @@ export default function EditEventDocumentsScreen() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const [setlistUrl, setSetlistUrl] = useState('');
-  const [eventinfoUrl, setEventinfoUrl] = useState('');
-  const [promoMaterialUrl, setPromoMaterialUrl] = useState('');
-  const [docOtherUrl, setDocOtherUrl] = useState('');
+  const [docs, setDocs] = useState<EventDocRow[]>([]);
 
   useEffect(() => {
     if (!id) return;
-    load();
+    loadDocs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  async function load() {
+  async function loadDocs() {
     if (!id) return;
-
     setLoading(true);
 
     const { data, error } = await supabase
-      .from('events')
-      .select('setlist_url,eventinfo_url,promo_material_url,doc_other_url')
-      .eq('event_id', id)
-      .single();
+      .from("event_documents")
+      .select("doc_id,title,doc_type,storage_bucket,storage_path,mime_type,size_bytes,created_at")
+      .eq("event_id", id)
+      .order("created_at", { ascending: false });
 
-    if (error || !data) {
+    if (error) {
       setLoading(false);
-      Alert.alert('Error', error?.message ?? 'Could not load documents.');
+      Alert.alert("Error", error.message);
       return;
     }
 
-    const row = data as EventDocsRow;
-
-    setSetlistUrl(row.setlist_url ?? '');
-    setEventinfoUrl(row.eventinfo_url ?? '');
-    setPromoMaterialUrl(row.promo_material_url ?? '');
-    setDocOtherUrl(row.doc_other_url ?? '');
-
+    setDocs((data ?? []) as EventDocRow[]);
     setLoading(false);
   }
 
-  async function onSave() {
+  async function onUpload() {
     if (!id) return;
 
-    setSaving(true);
+    try {
+      setUploading(true);
 
-    const payload = {
-      setlist_url: cleanUrlInput(setlistUrl),
-      eventinfo_url: cleanUrlInput(eventinfoUrl),
-      promo_material_url: cleanUrlInput(promoMaterialUrl),
-      doc_other_url: cleanUrlInput(docOtherUrl),
-    };
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
 
-    const { error } = await supabase.from('events').update(payload).eq('event_id', id);
+      if (result.canceled) {
+        setUploading(false);
+        return;
+      }
 
-    setSaving(false);
+      const file = result.assets?.[0];
+      if (!file?.uri) throw new Error("No file selected");
 
-    if (error) {
-      Alert.alert('Save failed', error.message);
-      return;
+      const filename = sanitizeFilename(file.name ?? "document");
+      const bucket = "event-docs";
+      const storagePath = `events/${id}/${Date.now()}-${filename}`;
+
+      const resp = await fetch(file.uri);
+      const blob = await resp.blob();
+
+      const { error: uploadErr } = await supabase.storage.from(bucket).upload(storagePath, blob, {
+        contentType: file.mimeType ?? undefined,
+        upsert: false,
+      });
+      if (uploadErr) throw uploadErr;
+
+      const { error: insertErr } = await supabase.from("event_documents").insert({
+        event_id: id,
+        title: file.name ?? "Document",
+        doc_type: null,
+        storage_bucket: bucket,
+        storage_path: storagePath,
+        mime_type: file.mimeType ?? null,
+        size_bytes: file.size ?? null,
+        uploaded_by_member_id: null,
+      });
+      if (insertErr) throw insertErr;
+
+      setUploading(false);
+      await loadDocs();
+    } catch (e: any) {
+      setUploading(false);
+      Alert.alert("Upload failed", e?.message ?? "Please try again.");
     }
+  }
 
-    router.back();
+  async function onDelete(doc: EventDocRow) {
+    if (!id) return;
+
+    const ok = await confirmDelete(`Delete "${doc.title}"? This cannot be undone.`);
+    if (!ok) return;
+
+    try {
+      setDeletingId(doc.doc_id);
+
+      // 1) delete storage object
+      const { error: storageErr } = await supabase.storage
+        .from(doc.storage_bucket)
+        .remove([doc.storage_path]);
+
+      if (storageErr) throw storageErr;
+
+      // 2) delete DB row
+      const { error: dbErr } = await supabase.from("event_documents").delete().eq("doc_id", doc.doc_id);
+      if (dbErr) throw dbErr;
+
+      setDeletingId(null);
+      await loadDocs();
+    } catch (e: any) {
+      setDeletingId(null);
+      Alert.alert("Delete failed", e?.message ?? "Please try again.");
+    }
   }
 
   if (loading) {
     return (
       <View style={styles.loading}>
-        <Stack.Screen options={{ title: 'Edit Documents' }} />
+        <Stack.Screen options={{ title: "Edit Documents" }} />
         <ActivityIndicator size="large" color="#333" />
       </View>
     );
@@ -109,94 +185,73 @@ export default function EditEventDocumentsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Edit Documents' }} />
+      <Stack.Screen options={{ title: "Edit Documents" }} />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Document Links</Text>
-            <Text style={styles.cardSub}>
-              Paste URLs to setlist, event info, promo material, or anything else. Leave blank to
-              remove.
-            </Text>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Upload Event Document</Text>
+          <Text style={styles.cardSub}>
+            Uploads to Supabase Storage (event-docs) and creates an event_documents row.
+          </Text>
 
-            <View style={styles.field}>
-              <Text style={styles.label}>Setlist URL</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="link-outline" size={16} color={colors.primary} />
-                <TextInput
-                  value={setlistUrl}
-                  onChangeText={setSetlistUrl}
-                  placeholder="https://..."
-                  placeholderTextColor="#999"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="url"
-                  style={styles.input}
-                />
-              </View>
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>Event Info URL</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="link-outline" size={16} color={colors.primary} />
-                <TextInput
-                  value={eventinfoUrl}
-                  onChangeText={setEventinfoUrl}
-                  placeholder="https://..."
-                  placeholderTextColor="#999"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="url"
-                  style={styles.input}
-                />
-              </View>
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>Promo Material URL</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="link-outline" size={16} color={colors.primary} />
-                <TextInput
-                  value={promoMaterialUrl}
-                  onChangeText={setPromoMaterialUrl}
-                  placeholder="https://..."
-                  placeholderTextColor="#999"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="url"
-                  style={styles.input}
-                />
-              </View>
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>Other URL</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="link-outline" size={16} color={colors.primary} />
-                <TextInput
-                  value={docOtherUrl}
-                  onChangeText={setDocOtherUrl}
-                  placeholder="https://..."
-                  placeholderTextColor="#999"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="url"
-                  style={styles.input}
-                />
-              </View>
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.saveButton} onPress={onSave} disabled={saving}>
-            <Text style={styles.saveButtonText}>{saving ? 'Saving…' : 'Save'}</Text>
+          <TouchableOpacity
+            style={[styles.primaryButton, uploading && { opacity: 0.6 }]}
+            onPress={onUpload}
+            disabled={uploading}
+          >
+            <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+            <Text style={styles.primaryButtonText}>{uploading ? "Uploading…" : "Pick & Upload"}</Text>
           </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+
+          <Text style={styles.note}>Path format enforced: events/{`{event_id}`}/…</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Uploaded Documents</Text>
+          <Text style={styles.cardSub}>These are the storage-backed docs for this event.</Text>
+
+          {docs.length === 0 ? (
+            <Text style={styles.emptyText}>No uploaded documents yet.</Text>
+          ) : (
+            <View style={styles.list}>
+              {docs.map((d, idx) => {
+                const last = idx === docs.length - 1;
+                const size = formatBytes(d.size_bytes);
+                return (
+                  <View key={d.doc_id} style={[styles.row, last && styles.rowLast]}>
+                    <View style={styles.rowLeft}>
+                      <View style={styles.docIcon}>
+                        <Ionicons name="document-text-outline" size={16} color={colors.primary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.docTitle} numberOfLines={2}>
+                          {d.title}
+                        </Text>
+                        <Text style={styles.docMeta}>
+                          {[d.doc_type, size].filter(Boolean).join(" · ") || " "}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Pressable
+                      onPress={() => onDelete(d)}
+                      disabled={deletingId === d.doc_id}
+                      style={[styles.deleteBtn, deletingId === d.doc_id && { opacity: 0.6 }]}
+                      hitSlop={10}
+                    >
+                      <Ionicons name="trash-outline" size={18} color={colors.danger ?? "#DC2626"} />
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+        <TouchableOpacity style={styles.doneButton} onPress={() => router.back()}>
+          <Text style={styles.doneButtonText}>Done</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </>
   );
 }
@@ -208,13 +263,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.pageBg,
   },
-
   container: {
     padding: 16,
     paddingBottom: 28,
     backgroundColor: colors.pageBg,
   },
-
   card: {
     backgroundColor: colors.cardBg,
     borderRadius: 12,
@@ -235,42 +288,82 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginBottom: 12,
   },
-
-  field: {
-    marginBottom: 12,
+  primaryButton: {
+    backgroundColor: colors.button,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
   },
-  label: {
+  primaryButtonText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  note: {
+    marginTop: 10,
     fontSize: 12,
-    fontWeight: "800",
     color: colors.textMuted,
-    marginBottom: 6,
   },
-  inputWrap: {
+  emptyText: {
+    fontSize: 13,
+    color: colors.textMuted,
+    paddingVertical: 6,
+  },
+  list: {
+    marginTop: 4,
+  },
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: colors.cardBg,
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
   },
-  input: {
+  rowLast: {
+    borderBottomWidth: 0,
+  },
+  rowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
     flex: 1,
-    fontSize: 14,
-    color: colors.text,
-    padding: 0,
+    paddingRight: 10,
   },
-
-  saveButton: {
+  docIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: "#F2FAFA",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  docTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#111",
+  },
+  docMeta: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 2,
+  },
+  deleteBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  doneButton: {
     backgroundColor: colors.button,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
     marginTop: 6,
   },
-  saveButtonText: {
+  doneButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "900",

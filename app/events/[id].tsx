@@ -112,6 +112,7 @@ type EventRow = {
   driver_cost: number | null;
   foh_eng_cost: number | null;
   other_costs: number | null;
+  
 
   // --- Split ---
   manual_playing_share_override: number | null;
@@ -592,31 +593,32 @@ export default function EventDetailsScreen() {
           ) : null}
 
           {/* FINANCE */}
-          <Section
-            title="Finance"
-            icon="cash-outline"
-            open={openSections.finance}
-            onPress={() => toggleSection("finance")}
-          >
-            <FinanceSection
-              eventId={event.event_id}
-              isAdmin={canEdit}
-              shares={event.manual_playing_share_override}
-              incomeGuarantee={event.income_guarantee}
-              incomeDoor={event.income_door}
-              feeType={event.fee_type}
-              paidStatus={event.paid_status}
-              vanHire={event.van_hire}
-              fuel={event.fuel}
-              accommodationCost={event.accommodation_cost}
-              depCost={event.dep_cost}
-              driverCost={event.driver_cost}
-              fohEngCost={event.foh_eng_cost}
-              otherCosts={event.other_costs}
-              feeNotes={event.fee_notes}
-              costNotes={event.cost_notes}
-            />
-          </Section>
+<Section
+  title="Finance"
+  icon="cash-outline"
+  open={openSections.finance}
+  onPress={() => toggleSection("finance")}
+>
+  <FinanceSection
+    eventId={event.event_id}
+    isAdmin={canEdit}
+    shares={event.manual_playing_share_override}
+    incomeGuarantee={event.income_guarantee}
+    incomeDoor={event.income_door}
+    feeType={event.fee_type}
+    paidStatus={event.paid_status}
+    vanHire={event.van_hire}
+    fuel={event.fuel}
+    accommodationCost={accommodation?.total_cost ?? event.accommodation_cost}
+    accommodationCostSource={accommodation?.total_cost != null ? "accommodation" : "event"}
+    depCost={event.dep_cost}
+    driverCost={event.driver_cost}
+    fohEngCost={event.foh_eng_cost}
+    otherCosts={event.other_costs}
+    feeNotes={event.fee_notes}
+    costNotes={event.cost_notes}
+  />
+</Section>
         </ScrollView>
       </View>
     </>

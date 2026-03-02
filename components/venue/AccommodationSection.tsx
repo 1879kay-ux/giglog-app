@@ -3,7 +3,7 @@
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 
 export type AccommodationRow = {
   id: string;
@@ -31,10 +31,29 @@ export type AccommodationRow = {
   updated_at: string;
 };
 
+function enc(s: string) {
+  return encodeURIComponent(s.trim());
+}
+
+function clean(v?: string | null) {
+  const t = (v ?? "").trim();
+  return t.length ? t : null;
+}
+
+async function openUrl(url: string) {
+  try {
+    const can = await Linking.canOpenURL(url);
+    if (!can) throw new Error("cannot open");
+    await Linking.openURL(url);
+  } catch {
+    Alert.alert("Can't open maps", "Check the address/postcode and try again.");
+  }
+}
+
 function formatDateTime(iso: string) {
   if (!iso) return "";
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso; // fall back if weird value
+  if (Number.isNaN(d.getTime())) return iso;
 
   return d.toLocaleString("en-GB", {
     weekday: "short",
@@ -66,6 +85,14 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+function Chip({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={styles.chip} android_ripple={{ color: "#d9f0f0" }}>
+      <Text style={styles.chipText}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export default function AccommodationSection({
   accommodation,
   canEdit,
@@ -91,7 +118,33 @@ export default function AccommodationSection({
     );
   }
 
-  const addressBits = [accommodation.address_line, accommodation.postcode].filter(Boolean).join(", ");
+  const addressBits = [clean(accommodation.address_line), clean(accommodation.postcode)]
+    .filter(Boolean)
+    .join(", ");
+
+  // Prefer address + postcode, fallback to postcode
+  const hotelDest =
+    [clean(accommodation.address_line), clean(accommodation.postcode)].filter(Boolean).join(", ") ||
+    clean(accommodation.postcode) ||
+    "";
+
+  function openToHotel(app: "apple" | "google" | "waze") {
+    if (!hotelDest) {
+      Alert.alert("Hotel location missing", "Add a postcode (or address) to the accommodation.");
+      return;
+    }
+
+    const d = enc(hotelDest);
+
+    const url =
+      app === "apple"
+        ? `http://maps.apple.com/?daddr=${d}&dirflg=d`
+        : app === "google"
+          ? `https://www.google.com/maps/dir/?api=1&destination=${d}&travelmode=driving`
+          : `https://waze.com/ul?q=${d}&navigate=yes`;
+
+    openUrl(url);
+  }
 
   return (
     <View>
@@ -107,6 +160,19 @@ export default function AccommodationSection({
       </View>
 
       {addressBits ? <Text style={styles.subtle}>{addressBits}</Text> : null}
+
+      {/* Current location -> Hotel directions (match Travel section chips) */}
+      {hotelDest ? (
+        <View style={styles.directionsBlock}>
+          <Text style={styles.directionsLabel}>Current Location → Accommodation</Text>
+
+          <View style={styles.travelButtonRow}>
+            <Chip label="Apple" onPress={() => openToHotel("apple")} />
+            <Chip label="Google" onPress={() => openToHotel("google")} />
+            <Chip label="Waze" onPress={() => openToHotel("waze")} />
+          </View>
+        </View>
+      ) : null}
 
       <View style={styles.card}>
         <Row label="Check-in" value={formatDateTime(accommodation.check_in_at)} />
@@ -166,6 +232,39 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontWeight: "600",
     marginBottom: 10,
+  },
+
+  directionsBlock: {
+    marginBottom: 12,
+  },
+  directionsLabel: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#111",
+    marginBottom: 8,
+  },
+
+  travelButtonRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+
+  chip: {
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    minHeight: 44,
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.primaryDark,
+  },
+
+  chipText: {
+    color: "#fff",
+    fontWeight: "900",
+    fontSize: 14,
   },
 
   card: {

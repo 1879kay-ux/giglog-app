@@ -23,6 +23,9 @@ type FinanceSectionProps = {
   fohEngCost: number | null;
   otherCosts: number | null;
 
+  // Optional: if the Accommodation cost shown here is coming from accommodation.total_cost
+  accommodationCostSource?: "accommodation" | "event" | null;
+
   feeNotes?: string | null;
   costNotes?: string | null;
 };
@@ -68,6 +71,7 @@ export default function FinanceSection({
   driverCost,
   fohEngCost,
   otherCosts,
+  accommodationCostSource,
   feeNotes,
   costNotes,
 }: FinanceSectionProps) {
@@ -88,6 +92,9 @@ export default function FinanceSection({
 
   const shareCount = shares ?? null;
   const perShare = shareCount && shareCount > 0 ? netIncome / shareCount : null;
+
+  const showAccommodationSourceHint =
+    accommodationCostSource === "accommodation" && accommodationCost !== null;
 
   return (
     <ScrollView style={styles.container}>
@@ -124,7 +131,12 @@ export default function FinanceSection({
         <InfoCard title="Costs">
           <Row label="Van Hire" value={formatCurrency(vanHire)} />
           <Row label="Fuel" value={formatCurrency(fuel)} />
+
           <Row label="Accommodation" value={formatCurrency(accommodationCost)} />
+          {showAccommodationSourceHint ? (
+            <Text style={styles.sourceHint}>From accommodation details</Text>
+          ) : null}
+
           <Row label="Dep Fees" value={formatCurrency(depCost)} />
           <Row label="Driver Cost" value={formatCurrency(driverCost)} />
           <Row label="FOH/Engineer" value={formatCurrency(fohEngCost)} />
@@ -205,6 +217,15 @@ const styles = StyleSheet.create({
 
   value: { fontSize: 14, color: "#333" },
   valueBold: { fontSize: 14, fontWeight: "800", color: colors.primary },
+
+  sourceHint: {
+    marginTop: -2,
+    marginBottom: 8,
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.textMuted,
+    textAlign: "right",
+  },
 
   netDivider: {
     height: 2,

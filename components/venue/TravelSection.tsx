@@ -158,7 +158,7 @@ export default function TravelSection({
     openUrl(url);
   }
 
-  function openFromDeparture(app: "apple" | "google" | "waze") {
+  function openFromDeparture(app: "apple" | "google") {
     if (!departureOrigin) {
       Alert.alert(
         "Departure location not set",
@@ -172,16 +172,14 @@ export default function TravelSection({
     }
 
     const o = enc(departureOrigin);
-    const d = enc(venueDest);
+const d = enc(venueDest);
 
-    const url =
-      app === "apple"
-        ? `http://maps.apple.com/?saddr=${o}&daddr=${d}&dirflg=d`
-        : app === "google"
-          ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`
-          : `https://waze.com/ul?q=${d}&navigate=yes`;
+const url =
+  app === "apple"
+    ? `http://maps.apple.com/?saddr=${o}&daddr=${d}&dirflg=d`
+    : `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`;
 
-    openUrl(url);
+openUrl(url);
   }
 
   const showingGlobalDefault =
@@ -205,10 +203,10 @@ export default function TravelSection({
         </View>
 
         <View style={styles.travelButtonRow}>
-          <Chip label="Apple" onPress={() => openFromDeparture("apple")} />
-          <Chip label="Google" onPress={() => openFromDeparture("google")} />
-          <Chip label="Waze" onPress={() => openFromDeparture("waze")} />
-        </View>
+  <Chip label="Apple" onPress={() => openFromDeparture("apple")} />
+  <Chip label="Google" onPress={() => openFromDeparture("google")} />
+  {/* Waze removed here: Waze deep links route from current location only */}
+</View>
 
         <View style={styles.locationBox}>
           <View style={styles.locationHeaderRow}>

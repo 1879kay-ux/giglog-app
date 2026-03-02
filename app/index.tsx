@@ -4,7 +4,15 @@ import { supabase } from "@/lib/supabase";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { Link, Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 type NextEvent = {
   event_id: string;
@@ -15,7 +23,7 @@ type NextEvent = {
 
 type NextEventQueryRow = {
   event_id: string;
-  event_date: string;
+  event_date: string; // date
   event_type: string;
   event_status: string;
   venues: {
@@ -84,7 +92,7 @@ export default function HomeScreen() {
     let cancelled = false;
 
     async function loadNextEvent() {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
       const { data, error } = await supabase
         .from("events")
@@ -157,7 +165,12 @@ export default function HomeScreen() {
         }}
       />
 
-      <View style={styles.container}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Brand hero */}
         <View style={styles.brandHero}>
           <View style={styles.brandHeroAccent} />
 
@@ -165,9 +178,7 @@ export default function HomeScreen() {
             <Image source={{ uri: logoUrl }} style={styles.brandHeroImage} resizeMode="contain" />
           ) : (
             <View style={styles.brandHeroFallback}>
-              <Text style={styles.brandHeroFallbackText}>
-                {bandName?.[0]?.toUpperCase() ?? "G"}
-              </Text>
+              <Text style={styles.brandHeroFallbackText}>{bandName?.[0]?.toUpperCase() ?? "G"}</Text>
             </View>
           )}
 
@@ -176,6 +187,7 @@ export default function HomeScreen() {
           </Text>
         </View>
 
+        {/* Next event */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Next Event</Text>
         </View>
@@ -209,6 +221,7 @@ export default function HomeScreen() {
           )}
         </Pressable>
 
+        {/* Quick links */}
         <View style={[styles.sectionHeaderRow, { marginTop: 18 }]}>
           <Text style={styles.sectionTitle}>Quick Links</Text>
         </View>
@@ -220,7 +233,7 @@ export default function HomeScreen() {
           <NavTile label="Band Docs" icon="file-text-o" onPress={() => router.push("/band-documents")} />
           <NavTile label="Profile" icon="user" onPress={() => router.push("/profile")} />
         </View>
-      </View>
+      </ScrollView>
     </>
   );
 }
@@ -233,7 +246,10 @@ type NavTileProps = {
 
 function NavTile({ label, icon, onPress }: NavTileProps) {
   return (
-    <Pressable style={({ pressed }) => [styles.tile, pressed ? styles.pressed : null]} onPress={onPress}>
+    <Pressable
+      style={({ pressed }) => [styles.tile, pressed ? styles.pressed : null]}
+      onPress={onPress}
+    >
       <FontAwesome name={icon} size={22} color="#333" />
       <Text style={styles.tileText}>{label}</Text>
     </Pressable>
@@ -249,11 +265,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  container: {
+  screen: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+
+  container: {
     paddingHorizontal: 18,
     paddingTop: 14,
+    paddingBottom: 28, // ensures last tile is reachable on small screens
+    backgroundColor: "#fff",
   },
 
   pressed: {
@@ -274,6 +295,7 @@ const styles = StyleSheet.create({
     color: "#444",
   },
 
+  // Brand hero
   brandHero: {
     borderRadius: 16,
     overflow: "hidden",
@@ -322,6 +344,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
+  // Next event
   nextEventCard: {
     flexDirection: "row",
     alignItems: "stretch",
@@ -369,6 +392,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  // Grid
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",

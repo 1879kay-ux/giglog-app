@@ -1,5 +1,6 @@
 // app/band-documents/index.tsx
 
+import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { openDoc, shareDoc } from "@/lib/docs";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +24,10 @@ type BandDocRow = {
 
 export default function BandDocumentsScreen() {
   const router = useRouter();
+  const { currentMember } = useCurrentMember();
+
+  // Adjust this to your actual field name if different
+  const isAdminMode = !!(currentMember as any)?.admin_mode_enabled;
 
   const [loading, setLoading] = useState(true);
   const [docs, setDocs] = useState<BandDocRow[]>([]);
@@ -98,13 +103,17 @@ export default function BandDocumentsScreen() {
             <Text style={styles.sectionSub}>{docs.length}</Text>
           </View>
 
-          <Pressable
-            onPress={() => router.push("/band-documents/edit")}
-            style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
-          >
-            <Ionicons name="create-outline" size={16} color="#0F766E" />
-            <Text style={styles.editBtnText}>Edit</Text>
-          </Pressable>
+          {isAdminMode ? (
+            <Pressable
+              onPress={() => router.push("/band-documents/edit")}
+              style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
+            >
+              <Ionicons name="create-outline" size={16} color="#0F766E" />
+              <Text style={styles.editBtnText}>Edit</Text>
+            </Pressable>
+          ) : (
+            <View style={{ width: 72 }} />
+          )}
         </View>
 
         {loading ? (
@@ -135,17 +144,17 @@ export default function BandDocumentsScreen() {
                   </View>
 
                   <View style={styles.docRowRight}>
-  <Pressable
-    onPress={(e) => {
-      e.stopPropagation();
-      shareDoc("band", item.doc_id, item.title ?? "Document");
-    }}
-    hitSlop={10}
-    style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
-  >
-    <Ionicons name="share-outline" size={20} color="#0F766E" />
-  </Pressable>
-</View>
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        shareDoc("band", item.doc_id, item.title ?? "Document");
+                      }}
+                      hitSlop={10}
+                      style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                    >
+                      <Ionicons name="share-outline" size={20} color="#0F766E" />
+                    </Pressable>
+                  </View>
                 </Pressable>
               ))}
             </View>

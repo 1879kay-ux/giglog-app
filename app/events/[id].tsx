@@ -1,4 +1,5 @@
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
+import AccommodationSection, { type AccommodationRow } from "@/components/venue/AccommodationSection";
 import AvailabilitySection from "@/components/venue/AvailabilitySection";
 import DetailsSection from "@/components/venue/DetailsSection";
 import DocumentsSection from "@/components/venue/DocumentsSection";
@@ -96,7 +97,7 @@ type EventRow = {
   promo_material_url: string | null;
   doc_other_url: string | null;
 
-   // --- Income ---
+  // --- Income ---
   income_guarantee: number | null;
   income_door: number | null;
   income_fee?: number | null; // legacy field, keep optional during migration
@@ -136,7 +137,8 @@ type SectionKey =
   | "schedule"
   | "documents"
   | "travel"
-  | "finance";
+  | "finance"
+  | "accommodation";
 
 /* ---------------------------------------------------------
    MAIN SCREEN
@@ -154,6 +156,7 @@ export default function EventDetailsScreen() {
   const [event, setEvent] = useState<EventRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCustomLineup, setHasCustomLineup] = useState(false);
+  const [accommodation, setAccommodation] = useState<AccommodationRow | null>(null);
 
   // Mapped from auth.users.id -> band_members.member_id
   const [currentMemberId, setCurrentMemberId] = useState<string>("");
@@ -165,6 +168,7 @@ export default function EventDetailsScreen() {
     documents: false,
     travel: false,
     finance: false,
+    accommodation: false,
   });
 
   const toggleSection = (key: SectionKey) => {
@@ -241,15 +245,16 @@ export default function EventDetailsScreen() {
     if (!id) return;
 
     setLoading(true);
-    const { count, error: lineupErr } = await supabase
-  .from("event_members")
-  .select("*", { count: "exact", head: true })
-  .eq("event_id", id);
 
-if (!lineupErr) setHasCustomLineup((count ?? 0) > 0);
+    const { count, error: lineupErr } = await supabase
+      .from("event_members")
+      .select("*", { count: "exact", head: true })
+      .eq("event_id", id);
+
+    if (!lineupErr) setHasCustomLineup((count ?? 0) > 0);
 
     // ✅ IMPORTANT:
-    // We must select fee_notes and cost_notes explicitly (not random lines after .single()).
+    // We must select fee_notes and cost_notes explicitly.
     // Keep venues loaded separately as you already do.
     const { data, error } = await supabase
       .from("events")
@@ -280,7 +285,7 @@ if (!lineupErr) setHasCustomLineup((count ?? 0) > 0);
         promo_material_url,
         doc_other_url,
 
-                income_guarantee,
+        income_guarantee,
         income_door,
         income_fee,
         fee_type,
@@ -325,6 +330,20 @@ if (!lineupErr) setHasCustomLineup((count ?? 0) > 0);
       } else {
         setEvent(data as EventRow);
       }
+    }
+
+    // ✅ Fetch accommodation INSIDE async loadEvent (no top-level await)
+    const { data: accData, error: accErr } = await supabase
+      .from("accommodation")
+      .select("*")
+      .eq("event_id", id)
+      .maybeSingle();
+
+    if (accErr) {
+      console.log("accommodation fetch error", accErr);
+      setAccommodation(null);
+    } else {
+      setAccommodation((accData as AccommodationRow) ?? null);
     }
 
     setLoading(false);
@@ -447,21 +466,21 @@ if (!lineupErr) setHasCustomLineup((count ?? 0) > 0);
         </View>
 
         {/* ADMIN EDIT HUB (admin + admin mode) */}
-{canEdit ? (
-  <View style={styles.adminPillRow}>
-    <TouchableOpacity
-      style={styles.adminPill}
-      onPress={() => {
-        if (!id) return;
-        router.push(`/events/${id}/edit`);
-      }}
-      activeOpacity={0.8}
-    >
-      <Ionicons name="create-outline" size={16} color={colors.primary} />
-      <Text style={styles.adminPillText}>Edit Hub</Text>
-    </TouchableOpacity>
-  </View>
-) : null}
+        {canEdit ? (
+          <View style={styles.adminPillRow}>
+            <TouchableOpacity
+              style={styles.adminPill}
+              onPress={() => {
+                if (!id) return;
+                router.push(`/events/${id}/edit`);
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="create-outline" size={16} color={colors.primary} />
+              <Text style={styles.adminPillText}>Edit Hub</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         <ScrollView
           style={styles.scroll}
@@ -491,12 +510,12 @@ if (!lineupErr) setHasCustomLineup((count ?? 0) > 0);
             onPress={() => toggleSection("availability")}
           >
             <AvailabilitySection
-  key={openSections.availability ? `open-${event.event_id}` : `closed-${event.event_id}`}
-  eventId={event.event_id}
-  memberId={currentMemberId}
-  hasCustomLineup={hasCustomLineup}
-  canEdit={canEdit}
-/>
+              key={openSections.availability ? `open-${event.event_id}` : `closed-${event.event_id}`}
+              eventId={event.event_id}
+              memberId={currentMemberId}
+              hasCustomLineup={hasCustomLineup}
+              canEdit={canEdit}
+            />
           </Section>
 
           {/* SCHEDULE */}
@@ -553,32 +572,51 @@ if (!lineupErr) setHasCustomLineup((count ?? 0) > 0);
             />
           </Section>
 
+          {/* ACCOMMODATION (own section, not nested) */}
+          {accommodation || canEdit ? (
+            <Section
+              title="Accommodation"
+              icon="bed-outline"
+              open={openSections.accommodation}
+              onPress={() => toggleSection("accommodation")}
+            >
+              <AccommodationSection
+                accommodation={accommodation}
+                canEdit={canEdit}
+                onPressEdit={() => {
+                  if (!id) return;
+                  router.push(`/events/${id}/accommodation`);
+                }}
+              />
+            </Section>
+          ) : null}
+
           {/* FINANCE */}
-<Section
-  title="Finance"
-  icon="cash-outline"
-  open={openSections.finance}
-  onPress={() => toggleSection("finance")}
->
-  <FinanceSection
-    eventId={event.event_id}
-    isAdmin={canEdit}
-    shares={event.manual_playing_share_override}
-    incomeGuarantee={event.income_guarantee}
-    incomeDoor={event.income_door}
-    feeType={event.fee_type}
-    paidStatus={event.paid_status}
-    vanHire={event.van_hire}
-    fuel={event.fuel}
-    accommodationCost={event.accommodation_cost}
-    depCost={event.dep_cost}
-    driverCost={event.driver_cost}
-    fohEngCost={event.foh_eng_cost}
-    otherCosts={event.other_costs}
-    feeNotes={event.fee_notes}
-    costNotes={event.cost_notes}
-  />
-</Section>
+          <Section
+            title="Finance"
+            icon="cash-outline"
+            open={openSections.finance}
+            onPress={() => toggleSection("finance")}
+          >
+            <FinanceSection
+              eventId={event.event_id}
+              isAdmin={canEdit}
+              shares={event.manual_playing_share_override}
+              incomeGuarantee={event.income_guarantee}
+              incomeDoor={event.income_door}
+              feeType={event.fee_type}
+              paidStatus={event.paid_status}
+              vanHire={event.van_hire}
+              fuel={event.fuel}
+              accommodationCost={event.accommodation_cost}
+              depCost={event.dep_cost}
+              driverCost={event.driver_cost}
+              fohEngCost={event.foh_eng_cost}
+              otherCosts={event.other_costs}
+              feeNotes={event.fee_notes}
+              costNotes={event.cost_notes}
+            />
+          </Section>
         </ScrollView>
       </View>
     </>
@@ -604,17 +642,17 @@ function Section({
   return (
     <View style={styles.sectionWrapper} pointerEvents="box-none">
       <Pressable
-  style={[styles.sectionHeader, { minHeight: 60, paddingVertical: 20 }]}
-  onPress={onPress}
-  accessibilityRole="button"
-  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
->
-  <View style={styles.sectionHeaderLeft} pointerEvents="none">
-    <Ionicons name={icon} size={20} color="#fff" />
-    <Text style={styles.sectionHeaderText}>{title}</Text>
-  </View>
-  <Text style={styles.sectionHeaderChevron}>{open ? "▾" : "▸"}</Text>
-</Pressable>
+        style={[styles.sectionHeader, { minHeight: 60, paddingVertical: 20 }]}
+        onPress={onPress}
+        accessibilityRole="button"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <View style={styles.sectionHeaderLeft} pointerEvents="none">
+          <Ionicons name={icon} size={20} color="#fff" />
+          <Text style={styles.sectionHeaderText}>{title}</Text>
+        </View>
+        <Text style={styles.sectionHeaderChevron}>{open ? "▾" : "▸"}</Text>
+      </Pressable>
 
       {open && <View style={styles.sectionContent}>{children}</View>}
     </View>
@@ -697,27 +735,27 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
 
- adminPillRow: {
-  paddingHorizontal: 16,   // matches your eventSummary padding
-  marginBottom: 12,        // optional spacing before the big buttons
-  alignItems: "flex-end",  // pushes pill to the right edge of the padded row
-},
+  adminPillRow: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    alignItems: "flex-end",
+  },
 
-adminPill: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 8,
-  paddingHorizontal: 12,
-  paddingVertical: 8,
-  borderRadius: 12,
-  backgroundColor: "rgba(13,148,136,0.12)",
-},
+  adminPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(13,148,136,0.12)",
+  },
 
-adminPillText: {
-  fontSize: 13,
-  fontWeight: "800",
-  color: colors.primary,
-},
+  adminPillText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.primary,
+  },
 
   editButtonText: {
     color: "#fff",
@@ -736,36 +774,36 @@ adminPillText: {
 
   /* SECTION HEADERS */
   sectionWrapper: {
-  marginBottom: 16,   // more breathing room between sections
-},
+    marginBottom: 16,
+  },
 
-sectionHeader: {
-  backgroundColor: colors.primary,
-  paddingVertical: 18,     // larger tap area
-  paddingHorizontal: 18,
-  minHeight: 64,           // ensures proper touch target
-  borderRadius: 14,        // softer modern look
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-},
+  sectionHeader: {
+    backgroundColor: colors.primary,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    minHeight: 64,
+    borderRadius: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
 
-sectionHeaderLeft: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 10,
-},
+  sectionHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
 
-sectionHeaderText: {
-  color: "#fff",
-  fontSize: 16,
-  fontWeight: "700",
-},
+  sectionHeaderText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
 
-sectionHeaderChevron: {
-  color: "#fff",
-  fontSize: 16,
-},
+  sectionHeaderChevron: {
+    color: "#fff",
+    fontSize: 16,
+  },
 
   sectionContent: {
     marginTop: 6,
@@ -817,17 +855,17 @@ sectionHeaderChevron: {
     color: colors.textMuted,
   },
   editPill: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 8,
-  paddingHorizontal: 12,
-  paddingVertical: 8,
-  borderRadius: 12,
-  backgroundColor: "rgba(13,148,136,0.10)",
-},
-editPillText: {
-  fontSize: 13,
-  fontWeight: "900",
-  color: colors.primary,
-},
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(13,148,136,0.10)",
+  },
+  editPillText: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: colors.primary,
+  },
 });

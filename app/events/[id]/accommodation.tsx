@@ -1,22 +1,24 @@
+// app/events/accommodation.tsx
+
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    View,
-    unstable_createElement,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+  unstable_createElement,
 } from "react-native";
 
 function toLocalInputString(iso: string) {
@@ -105,6 +107,45 @@ function toMoneyOrNull(s: string) {
 }
 
 /* -----------------------------
+   ANDROID DATE+TIME (two-step)
+------------------------------*/
+function openAndroidDateTimePicker(valueIso: string, onChangeIso: (iso: string) => void) {
+  const initial = new Date(valueIso);
+
+  // Step 1: date
+  DateTimePickerAndroid.open({
+    value: initial,
+    mode: "date",
+    onChange: (event, dateSelected) => {
+      if (event.type === "dismissed" || !dateSelected) return;
+
+      // Carry across existing time from initial
+      const withDate = new Date(initial);
+      withDate.setFullYear(
+        dateSelected.getFullYear(),
+        dateSelected.getMonth(),
+        dateSelected.getDate()
+      );
+
+      // Step 2: time
+      DateTimePickerAndroid.open({
+        value: withDate,
+        mode: "time",
+        is24Hour: true,
+        onChange: (event2, timeSelected) => {
+          if (event2.type === "dismissed" || !timeSelected) return;
+
+          const finalDt = new Date(withDate);
+          finalDt.setHours(timeSelected.getHours(), timeSelected.getMinutes(), 0, 0);
+
+          onChangeIso(finalDt.toISOString());
+        },
+      });
+    },
+  });
+}
+
+/* -----------------------------
    WEB DATE + TIME (split inputs)
 ------------------------------*/
 function pad2(n: number) {
@@ -179,6 +220,7 @@ export default function EventAccommodationEditScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // iOS only (Android uses imperative picker)
   const [showCheckIn, setShowCheckIn] = useState(false);
   const [showCheckOut, setShowCheckOut] = useState(false);
 
@@ -221,7 +263,9 @@ export default function EventAccommodationEditScreen() {
       // RLS should already restrict rows to the user's band membership.
       const { data, error } = await supabase
         .from("accommodation")
-        .select("name,address_line,postcode,breakfast_included,parking_available,notes,updated_at,event_id")
+        .select(
+          "name,address_line,postcode,breakfast_included,parking_available,notes,updated_at,event_id"
+        )
         .ilike("name", `%${query}%`)
         .order("updated_at", { ascending: false })
         .limit(8);
@@ -349,12 +393,8 @@ export default function EventAccommodationEditScreen() {
       event_id: eventId,
       name: form.name.trim(),
 
-      booked_under_name: form.booked_under_name.trim()
-        ? form.booked_under_name.trim()
-        : null,
-      booking_reference: form.booking_reference.trim()
-        ? form.booking_reference.trim()
-        : null,
+      booked_under_name: form.booked_under_name.trim() ? form.booked_under_name.trim() : null,
+      booking_reference: form.booking_reference.trim() ? form.booking_reference.trim() : null,
 
       address_line: form.address_line.trim() ? form.address_line.trim() : null,
       postcode: form.postcode.trim() ? form.postcode.trim() : null,
@@ -546,21 +586,37 @@ export default function EventAccommodationEditScreen() {
             <>
               <Pressable
                 style={styles.dateBtn}
-                onPress={() => setShowCheckIn(true)}
+                onPress={() => {
+                  if (!canEdit || saving) return;
+
+                  if (Platform.OS === "android") {
+                    openAndroidDateTimePicker(form.check_in_at, (iso) =>
+                      setForm((p) => ({ ...p, check_in_at: iso }))
+                    );
+                    return;
+                  }
+
+                  // iOS
+                  setShowCheckIn(true);
+                }}
                 disabled={!canEdit || saving}
               >
                 <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
                 <Text style={styles.dateBtnText}>{toLocalInputString(form.check_in_at)}</Text>
               </Pressable>
 
-              {showCheckIn ? (
+              {/* iOS only */}
+              {Platform.OS === "ios" && showCheckIn ? (
                 <DateTimePicker
                   value={new Date(form.check_in_at)}
                   mode="datetime"
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
-                  onChange={(_, selected) => {
+                  display="spinner"
+                  onChange={(event, selected) => {
+                    if (event.type === "dismissed" || !selected) {
+                      setShowCheckIn(false);
+                      return;
+                    }
                     setShowCheckIn(false);
-                    if (!selected) return;
                     setForm((p) => ({ ...p, check_in_at: selected.toISOString() }));
                   }}
                 />
@@ -579,21 +635,37 @@ export default function EventAccommodationEditScreen() {
             <>
               <Pressable
                 style={styles.dateBtn}
-                onPress={() => setShowCheckOut(true)}
+                onPress={() => {
+                  if (!canEdit || saving) return;
+
+                  if (Platform.OS === "android") {
+                    openAndroidDateTimePicker(form.check_out_at, (iso) =>
+                      setForm((p) => ({ ...p, check_out_at: iso }))
+                    );
+                    return;
+                  }
+
+                  // iOS
+                  setShowCheckOut(true);
+                }}
                 disabled={!canEdit || saving}
               >
                 <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
                 <Text style={styles.dateBtnText}>{toLocalInputString(form.check_out_at)}</Text>
               </Pressable>
 
-              {showCheckOut ? (
+              {/* iOS only */}
+              {Platform.OS === "ios" && showCheckOut ? (
                 <DateTimePicker
                   value={new Date(form.check_out_at)}
                   mode="datetime"
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
-                  onChange={(_, selected) => {
+                  display="spinner"
+                  onChange={(event, selected) => {
+                    if (event.type === "dismissed" || !selected) {
+                      setShowCheckOut(false);
+                      return;
+                    }
                     setShowCheckOut(false);
-                    if (!selected) return;
                     setForm((p) => ({ ...p, check_out_at: selected.toISOString() }));
                   }}
                 />

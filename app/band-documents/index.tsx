@@ -1,6 +1,5 @@
 // app/band-documents/index.tsx
 
-import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { openDoc, shareDoc } from "@/lib/docs";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,13 +23,36 @@ type BandDocRow = {
 
 export default function BandDocumentsScreen() {
   const router = useRouter();
-  const { currentMember } = useCurrentMember();
 
-  // Adjust this to your actual field name if different
-  const isAdminMode = !!(currentMember as any)?.admin_mode_enabled;
-
+  const [isAdminMode, setIsAdminMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [docs, setDocs] = useState<BandDocRow[]>([]);
+
+  const loadAdminMode = useCallback(async () => {
+    try {
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr) throw userErr;
+
+      const userId = userData.user?.id;
+      if (!userId) {
+        setIsAdminMode(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("band_members")
+        .select("admin_mode_enabled")
+        .eq("auth_user_id", userId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      setIsAdminMode(!!(data as any)?.admin_mode_enabled);
+    } catch (e) {
+      console.log("admin mode load error", e);
+      setIsAdminMode(false);
+    }
+  }, []);
 
   const loadDocs = useCallback(async () => {
     setLoading(true);
@@ -54,8 +76,10 @@ export default function BandDocumentsScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      // IMPORTANT: refresh both docs + admin mode every time screen focuses
+      loadAdminMode();
       loadDocs();
-    }, [loadDocs])
+    }, [loadAdminMode, loadDocs])
   );
 
   const grouped = useMemo(() => {

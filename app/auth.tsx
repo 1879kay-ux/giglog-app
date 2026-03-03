@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -37,12 +38,25 @@ export default function AuthScreen() {
       return;
     }
 
+    // Only normalize email. Never trim/modify the password.
+    const emailClean = email.trim().toLowerCase();
+    const passwordRaw = password;
+
     setLoading(true);
     setStatus("Calling Supabase...");
-    console.log("SIGN IN:", { email });
+    console.log("SIGN IN:", { email: emailClean });
+
+    // Diagnostics for Android whitespace / invisible chars
+    console.log("EMAIL LEN:", email.length, "CLEAN:", emailClean.length);
+    console.log("PASS  LEN:", password.length);
+    console.log("PASS CODES:", Array.from(password).map((c) => c.charCodeAt(0)));
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailClean,
+        password: passwordRaw,
+      });
+
       console.log("SUPABASE RESULT:", { data, error });
 
       if (error) throw error;
@@ -67,20 +81,27 @@ export default function AuthScreen() {
       return;
     }
 
+    const emailClean = email.trim().toLowerCase();
+
     setLoading(true);
     setStatus("Sending reset email...");
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const redirectTo = Linking.createURL("auth/callback");
+      console.log("redirectTo:", redirectTo);
+
+      const { error } = await supabase.auth.resetPasswordForEmail(emailClean, {
+        redirectTo,
+      });
+
       if (error) throw error;
 
       setStatus("Reset email sent");
-      Alert.alert("Password reset sent", "Check your inbox for the reset link.");
+      Alert.alert("Password reset sent", "Check your inbox.");
     } catch (e: any) {
       console.log("RESET ERROR:", e);
       setErrorMsg(e?.message ?? "Unknown error");
       setStatus(null);
-      Alert.alert("Reset failed", e?.message ?? "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -110,7 +131,7 @@ export default function AuthScreen() {
             autoComplete="email"
             keyboardType="email-address"
             value={email}
-            onChangeText={(t) => setEmail(t.trim())}
+            onChangeText={setEmail}
             style={styles.input}
             placeholder="you@example.com"
             returnKeyType="next"

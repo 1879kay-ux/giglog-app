@@ -1,3 +1,5 @@
+// app/events/[id]/lineup.tsx
+
 import InfoCard from "@/components/InfoCard";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
@@ -27,6 +29,7 @@ type BandMemberRow = {
   band_positions_other: string[] | null;
   is_active: boolean | null;
   is_dep: boolean | null;
+  band_id?: string | null;
 };
 
 type EventRow = {
@@ -44,17 +47,13 @@ export default function EventLineupScreen() {
 
   const [event, setEvent] = useState<EventRow | null>(null);
   const [members, setMembers] = useState<BandMemberRow[]>([]);
-  // IMPORTANT: this is "who is currently on the event"
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
 
   const musicians = useMemo(
     () => members.filter((m) => m.member_type === "musician"),
     [members]
   );
-  const crew = useMemo(
-    () => members.filter((m) => m.member_type === "crew"),
-    [members]
-  );
+  const crew = useMemo(() => members.filter((m) => m.member_type === "crew"), [members]);
 
   const roleDisplay = (m: BandMemberRow) => {
     if ((m.band_role ?? "") === "Other") return m.band_role_other ?? "Other";
@@ -90,7 +89,8 @@ export default function EventLineupScreen() {
       return;
     }
 
-    setEvent(ev as EventRow);
+    const evRow = ev as EventRow;
+    setEvent(evRow);
 
     // 1) Who is on this event is defined by event_availability rows
     const { data: avRows, error: avErr } = await supabase
@@ -106,8 +106,9 @@ export default function EventLineupScreen() {
 
     setInvitedIds(new Set<string>((avRows ?? []).map((x: any) => x.member_id)));
 
-    // 2) List of members you can invite comes from band_members
-    // Keep it simple: show ACTIVE members (musicians + crew)
+    // 2) Inviteable list comes from band_members.
+    // IMPORTANT: include rows where band_id is NULL (common during build/dummy data),
+    // so newly added deps/crew still appear and can be “claimed” into this band on invite.
     const { data: bm, error: bmErr } = await supabase
       .from("band_members")
       .select(
@@ -120,11 +121,12 @@ export default function EventLineupScreen() {
         band_positions,
         band_positions_other,
         is_active,
-        is_dep
+        is_dep,
+        band_id
       `
       )
-      .eq("band_id", (ev as EventRow).band_id)
       .eq("is_active", true)
+      .or(`band_id.eq.${evRow.band_id},band_id.is.null`)
       .order("display_name", { ascending: true });
 
     if (bmErr) {
@@ -143,18 +145,26 @@ export default function EventLineupScreen() {
   }, [eventId]);
 
   async function invite(memberId: string) {
-    if (!eventId) return;
+    if (!eventId || !event) return;
 
     setSavingMemberId(memberId);
     try {
+      // If this member has no band_id yet, attach them to this band now.
+      const m = members.find((x) => x.member_id === memberId) ?? null;
+      if (m && (!m.band_id || m.band_id !== event.band_id)) {
+        const { error: updErr } = await supabase
+          .from("band_members")
+          .update({ band_id: event.band_id })
+          .eq("member_id", memberId);
+
+        if (updErr) throw updErr;
+      }
+
       // Source of truth: add them to the event by ensuring availability row exists.
       // status = null means "awaiting"
       const { error } = await supabase
         .from("event_availability")
-        .upsert(
-          { event_id: eventId, member_id: memberId, status: null },
-          { onConflict: "event_id,member_id" }
-        );
+        .upsert({ event_id: eventId, member_id: memberId, status: null }, { onConflict: "event_id,member_id" });
 
       if (error) throw error;
 
@@ -175,6 +185,7 @@ export default function EventLineupScreen() {
 
     let confirmed = false;
     if (Platform.OS === "web") {
+      // @ts-ignore web-only
       confirmed = window.confirm(
         `Remove from event?\n\n${memberName} will be removed from this event and their availability will be deleted.`
       );
@@ -195,7 +206,6 @@ export default function EventLineupScreen() {
 
     setSavingMemberId(memberId);
     try {
-      // Core members should not be removable here (optional hard guard)
       const bm = members.find((m) => m.member_id === memberId) ?? null;
       if (bm && isCore(bm)) {
         throw new Error("Core band members cannot be removed from the event.");
@@ -351,11 +361,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "colors.primary,0.35)",
-    backgroundColor: "colors.primary,0.10)",
+    borderColor: "rgba(13,148,136,0.35)",
+    backgroundColor: "rgba(13,148,136,0.10)",
   },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { fontSize: 12, fontWeight: "900",   color: colors.primary},
+  buttonText: { fontSize: 12, fontWeight: "900", color: colors.primary },
 
   removeButton: {
     borderColor: "rgba(198,40,40,0.40)",

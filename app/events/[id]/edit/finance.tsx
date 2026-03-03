@@ -18,6 +18,7 @@ import {
 type EventFinanceRow = {
   income_guarantee: number | null;
   income_door: number | null;
+  income_fee: number | null;
   manual_playing_share_override: number | null;
 
   fee_type: string | null;
@@ -25,6 +26,7 @@ type EventFinanceRow = {
 
   van_hire: number | null;
   fuel: number | null;
+
   accommodation_cost: number | null;
   dep_cost: number | null;
   driver_cost: number | null;
@@ -83,6 +85,7 @@ export default function EditEventFinanceScreen() {
 
   const [incomeGuarantee, setIncomeGuarantee] = useState("");
   const [incomeDoor, setIncomeDoor] = useState("");
+  const [incomeFee, setIncomeFee] = useState("");
   const [shares, setShares] = useState("");
 
   const [feeType, setFeeType] = useState("");
@@ -108,6 +111,7 @@ export default function EditEventFinanceScreen() {
         setValue: setIncomeGuarantee,
       },
       { key: "income_door", label: "Door", value: incomeDoor, setValue: setIncomeDoor },
+      { key: "income_fee", label: "Fee (legacy)", value: incomeFee, setValue: setIncomeFee },
       {
         key: "manual_playing_share_override",
         label: "Shares",
@@ -131,6 +135,7 @@ export default function EditEventFinanceScreen() {
     [
       incomeGuarantee,
       incomeDoor,
+      incomeFee,
       shares,
       vanHire,
       fuel,
@@ -153,17 +158,30 @@ export default function EditEventFinanceScreen() {
 
     setLoading(true);
 
-    const { data, error } = await supabase
+    // Load van/fuel from events (still lives there)
+    const { data: ev, error: evErr } = await supabase
       .from("events")
+      .select(["van_hire", "fuel"].join(","))
+      .eq("event_id", id)
+      .single();
+
+    if (evErr) {
+      setLoading(false);
+      Alert.alert("Error", evErr.message);
+      return;
+    }
+
+    // Load finance from event_finance
+    const { data: fin, error: finErr } = await supabase
+      .from("event_finance")
       .select(
         [
           "income_guarantee",
           "income_door",
+          "income_fee",
           "manual_playing_share_override",
           "fee_type",
           "paid_status",
-          "van_hire",
-          "fuel",
           "accommodation_cost",
           "dep_cost",
           "driver_cost",
@@ -174,25 +192,27 @@ export default function EditEventFinanceScreen() {
         ].join(",")
       )
       .eq("event_id", id)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (finErr) {
       setLoading(false);
-      Alert.alert("Error", error?.message ?? "Could not load finance.");
+      Alert.alert("Error", finErr.message);
       return;
     }
 
-    const row = data as unknown as EventFinanceRow;
+    const row = (fin ?? {}) as Partial<EventFinanceRow>;
 
     setIncomeGuarantee(numToStr(row.income_guarantee));
     setIncomeDoor(numToStr(row.income_door));
+    setIncomeFee(numToStr(row.income_fee));
     setShares(numToStr(row.manual_playing_share_override));
 
     setFeeType(row.fee_type ?? "");
     setPaidStatus(row.paid_status ?? "");
 
-    setVanHire(numToStr(row.van_hire));
-    setFuel(numToStr(row.fuel));
+    setVanHire(numToStr((ev as any)?.van_hire));
+    setFuel(numToStr((ev as any)?.fuel));
+
     setAccommodation(numToStr(row.accommodation_cost));
     setDepCost(numToStr(row.dep_cost));
     setDriverCost(numToStr(row.driver_cost));
@@ -222,16 +242,17 @@ export default function EditEventFinanceScreen() {
       }
     }
 
-    const payload = {
+    const financePayload = {
+      event_id: id,
+
       income_guarantee: (parsed["income_guarantee"] as any).value,
       income_door: (parsed["income_door"] as any).value,
+      income_fee: (parsed["income_fee"] as any).value,
       manual_playing_share_override: (parsed["manual_playing_share_override"] as any).value,
 
       fee_type: feeType.trim() ? feeType.trim() : null,
       paid_status: paidStatus.trim() ? paidStatus.trim() : null,
 
-      van_hire: (parsed["van_hire"] as any).value,
-      fuel: (parsed["fuel"] as any).value,
       accommodation_cost: (parsed["accommodation_cost"] as any).value,
       dep_cost: (parsed["dep_cost"] as any).value,
       driver_cost: (parsed["driver_cost"] as any).value,
@@ -242,19 +263,33 @@ export default function EditEventFinanceScreen() {
       cost_notes: cleanText(costNotes),
     };
 
+    const eventPayload = {
+      van_hire: (parsed["van_hire"] as any).value,
+      fuel: (parsed["fuel"] as any).value,
+    };
+
     setSaving(true);
 
-    const { data: saved, error } = await supabase
-      .from("events")
-      .update(payload)
-      .eq("event_id", id)
-      .select("income_guarantee,income_door,accommodation_cost,manual_playing_share_override")
+    // 1) Update events for van/fuel
+    const { error: evErr } = await supabase.from("events").update(eventPayload).eq("event_id", id);
+
+    if (evErr) {
+      setSaving(false);
+      Alert.alert("Save failed", evErr.message);
+      return;
+    }
+
+    // 2) Upsert finance into event_finance (admin-only by RLS)
+    const { data: saved, error: finErr } = await supabase
+      .from("event_finance")
+      .upsert(financePayload, { onConflict: "event_id" })
+      .select("event_id")
       .single();
 
     setSaving(false);
 
-    if (error) {
-      Alert.alert("Save failed", error.message);
+    if (finErr) {
+      Alert.alert("Save failed", finErr.message);
       return;
     }
 

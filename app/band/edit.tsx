@@ -1,3 +1,4 @@
+import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
@@ -11,7 +12,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput, TouchableOpacity, View
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const MEMBER_TYPES = ["musician", "crew"] as const;
@@ -63,12 +66,22 @@ type BandMemberRow = {
   is_active: boolean | null;
   is_admin: boolean | null;
   is_dep: boolean | null;
+
+  // per-member access controls
+  can_view_settings: boolean | null;
+  can_view_band_and_crew: boolean | null;
+  can_view_band_docs: boolean | null;
+  can_view_finance: boolean | null;
 };
 
 export default function EditBandMemberScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
+
+  // ✅ hooks must be inside component
+  const cm: any = useCurrentMember();
+  const currentUserIsAdmin = !!cm?.isAdmin;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -89,6 +102,12 @@ export default function EditBandMemberScreen() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isActive, setIsActive] = useState(true);
 
+  // access toggles
+  const [canViewSettings, setCanViewSettings] = useState(false);
+  const [canViewBandAndCrew, setCanViewBandAndCrew] = useState(false);
+  const [canViewBandDocs, setCanViewBandDocs] = useState(false);
+  const [canViewFinance, setCanViewFinance] = useState(false);
+
   const role = useMemo(() => {
     return memberType === "musician" ? musicianRole : crewRole;
   }, [memberType, musicianRole, crewRole]);
@@ -108,7 +127,23 @@ export default function EditBandMemberScreen() {
       const { data, error } = await supabase
         .from("band_members")
         .select(
-          "member_id, display_name, email, member_type, band_role, band_role_other, band_positions, band_positions_other, is_active, is_admin, is_dep"
+          [
+            "member_id",
+            "display_name",
+            "email",
+            "member_type",
+            "band_role",
+            "band_role_other",
+            "band_positions",
+            "band_positions_other",
+            "is_active",
+            "is_admin",
+            "is_dep",
+            "can_view_settings",
+            "can_view_band_and_crew",
+            "can_view_band_docs",
+            "can_view_finance",
+          ].join(",")
         )
         .eq("member_id", id)
         .single();
@@ -147,6 +182,12 @@ export default function EditBandMemberScreen() {
 
       setIsAdmin(!!row.is_admin);
       setIsActive(!!row.is_active);
+
+      // default false if null
+      setCanViewSettings(!!row.can_view_settings);
+      setCanViewBandAndCrew(!!row.can_view_band_and_crew);
+      setCanViewBandDocs(!!row.can_view_band_docs);
+      setCanViewFinance(!!row.can_view_finance);
 
       setLoading(false);
     };
@@ -189,6 +230,12 @@ export default function EditBandMemberScreen() {
       return;
     }
 
+    // only admins can change permissions/admin flag
+    if (!currentUserIsAdmin) {
+      Alert.alert("Not allowed", "Only admins can edit member settings.");
+      return;
+    }
+
     setSaving(true);
 
     const payload: any = {
@@ -205,7 +252,12 @@ export default function EditBandMemberScreen() {
 
       is_admin: isAdmin,
       is_dep: isDep,
-      // note: is_active is controlled by the Activate/Deactivate button now
+
+      // ✅ perms are independent from is_admin
+      can_view_settings: canViewSettings,
+      can_view_band_and_crew: canViewBandAndCrew,
+      can_view_band_docs: canViewBandDocs,
+      can_view_finance: canViewFinance,
     };
 
     const { error } = await supabase.from("band_members").update(payload).eq("member_id", id);
@@ -223,6 +275,7 @@ export default function EditBandMemberScreen() {
 
   const confirm = async (title: string, message: string) => {
     if (Platform.OS === "web") {
+      // @ts-ignore web only
       return window.confirm(`${title}\n\n${message}`);
     }
     return await new Promise<boolean>((resolve) => {
@@ -233,8 +286,13 @@ export default function EditBandMemberScreen() {
     });
   };
 
-  const setActive = async (nextActive: boolean) => {
+  const setActiveRow = async (nextActive: boolean) => {
     if (!id) return;
+
+    if (!currentUserIsAdmin) {
+      Alert.alert("Not allowed", "Only admins can activate/deactivate members.");
+      return;
+    }
 
     const ok = await confirm(
       nextActive ? "Reactivate member?" : "Deactivate member?",
@@ -273,22 +331,44 @@ export default function EditBandMemberScreen() {
     );
   }
 
+  const ToggleChip = (props: {
+    label: string;
+    value: boolean;
+    onPress: () => void;
+    disabled?: boolean;
+  }) => {
+    const on = !!props.value;
+    return (
+      <Pressable
+        onPress={props.onPress}
+        disabled={props.disabled}
+        style={[
+          styles.chip,
+          on && styles.chipSelected,
+          props.disabled ? { opacity: 0.5 } : null,
+        ]}
+      >
+        <Text style={[styles.chipText, on && styles.chipTextSelected]}>{props.label}</Text>
+      </Pressable>
+    );
+  };
+
   return (
     <>
       <Stack.Screen
-  options={{
-    title: "Add Member",
-    headerTitleAlign: "center",
-    headerStyle: { backgroundColor: colors.primary},
-    headerTitleStyle: { color: "#fff", fontWeight: "700" },
-    headerTintColor: "#fff",
-    headerLeft: () => (
-      <TouchableOpacity onPress={() => router.back()} style={{ paddingHorizontal: 12 }}>
-        <Ionicons name="arrow-back" size={22} color="#fff" />
-      </TouchableOpacity>
-    ),
-  }}
-/>
+        options={{
+          title: "Edit Member",
+          headerTitleAlign: "center",
+          headerStyle: { backgroundColor: colors.primary },
+          headerTitleStyle: { color: "#fff", fontWeight: "700" },
+          headerTintColor: "#fff",
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={{ paddingHorizontal: 12 }}>
+              <Ionicons name="arrow-back" size={22} color="#fff" />
+            </TouchableOpacity>
+          ),
+        }}
+      />
 
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={styles.label}>Name</Text>
@@ -417,8 +497,11 @@ export default function EditBandMemberScreen() {
 
         <View style={styles.toggleRow}>
           <Pressable
-            onPress={() => setIsAdmin((v) => !v)}
-            style={[styles.toggle, isAdmin && styles.toggleOn]}
+            onPress={() => {
+              if (!currentUserIsAdmin) return;
+              setIsAdmin((v) => !v);
+            }}
+            style={[styles.toggle, isAdmin && styles.toggleOn, !currentUserIsAdmin && { opacity: 0.5 }]}
           >
             <Text style={[styles.toggleText, isAdmin && styles.toggleTextOn]}>
               Admin: {isAdmin ? "Yes" : "No"}
@@ -430,27 +513,64 @@ export default function EditBandMemberScreen() {
           </View>
         </View>
 
+        {/* ACCESS CONTROLS */}
+        <Text style={[styles.label, { marginTop: 18 }]}>Access</Text>
+        <Text style={styles.hint}>These control which sections appear for this member.</Text>
+
+        <View style={[styles.chipWrap, { marginTop: 10 }]}>
+          <ToggleChip
+            label={`Settings: ${canViewSettings ? "On" : "Off"}`}
+            value={canViewSettings}
+            onPress={() => setCanViewSettings((v) => !v)}
+            disabled={!currentUserIsAdmin}
+          />
+          <ToggleChip
+            label={`Band & Crew: ${canViewBandAndCrew ? "On" : "Off"}`}
+            value={canViewBandAndCrew}
+            onPress={() => setCanViewBandAndCrew((v) => !v)}
+            disabled={!currentUserIsAdmin}
+          />
+          <ToggleChip
+            label={`Band Docs: ${canViewBandDocs ? "On" : "Off"}`}
+            value={canViewBandDocs}
+            onPress={() => setCanViewBandDocs((v) => !v)}
+            disabled={!currentUserIsAdmin}
+          />
+          <ToggleChip
+            label={`Finance: ${canViewFinance ? "On" : "Off"}`}
+            value={canViewFinance}
+            onPress={() => setCanViewFinance((v) => !v)}
+            disabled={!currentUserIsAdmin}
+          />
+        </View>
+
+        {!currentUserIsAdmin ? (
+          <Text style={[styles.hint, { marginTop: 8 }]}>Only admins can change access.</Text>
+        ) : null}
+
         <Pressable
           onPress={onSave}
-          disabled={saving}
-          style={[styles.saveButton, saving && { opacity: 0.7 }]}
+          disabled={saving || !currentUserIsAdmin}
+          style={[styles.saveButton, (saving || !currentUserIsAdmin) && { opacity: 0.7 }]}
         >
-          <Text style={styles.saveButtonText}>{saving ? "Saving…" : "Save Changes"}</Text>
+          <Text style={styles.saveButtonText}>
+            {saving ? "Saving…" : !currentUserIsAdmin ? "Admin only" : "Save Changes"}
+          </Text>
         </Pressable>
 
         {isActive ? (
           <Pressable
-            onPress={() => setActive(false)}
-            disabled={saving}
-            style={[styles.dangerButton, saving && { opacity: 0.7 }]}
+            onPress={() => setActiveRow(false)}
+            disabled={saving || !currentUserIsAdmin}
+            style={[styles.dangerButton, (saving || !currentUserIsAdmin) && { opacity: 0.7 }]}
           >
             <Text style={styles.dangerButtonText}>Deactivate Member</Text>
           </Pressable>
         ) : (
           <Pressable
-            onPress={() => setActive(true)}
-            disabled={saving}
-            style={[styles.activateButton, saving && { opacity: 0.7 }]}
+            onPress={() => setActiveRow(true)}
+            disabled={saving || !currentUserIsAdmin}
+            style={[styles.activateButton, (saving || !currentUserIsAdmin) && { opacity: 0.7 }]}
           >
             <Text style={styles.activateButtonText}>Reactivate Member</Text>
           </Pressable>
@@ -467,6 +587,8 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 32 },
 
   label: { fontSize: 13, fontWeight: "700", color: "#333", marginTop: 12, marginBottom: 6 },
+  hint: { fontSize: 12, fontWeight: "600", color: "#666" },
+
   input: {
     backgroundColor: "#fff",
     borderRadius: 12,

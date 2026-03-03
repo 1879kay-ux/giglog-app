@@ -3,15 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { pickAndUploadBandLogo } from "@/lib/uploadBandLogo";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 
 type AppSettingsRow = {
   id?: string;
@@ -25,8 +17,8 @@ function clean(v?: string | null) {
 }
 
 export default function SettingsScreen() {
-  const { loading, isAdmin, adminModeEnabled, setAdminModeEnabled } =
-    useCurrentMember() as any;
+  const { loading, isAdmin, adminModeEnabled, setAdminModeEnabled } = useCurrentMember() as any;
+  const canAdminEdit = !!isAdmin && !!adminModeEnabled;
 
   const [saving, setSaving] = useState(false);
   const [bandId, setBandId] = useState<string | null>(null);
@@ -132,6 +124,8 @@ export default function SettingsScreen() {
 
   const onSaveBandName = async () => {
     try {
+      if (!canAdminEdit) return;
+
       if (!bandId) {
         Alert.alert("No band", "bandId not found.");
         return;
@@ -145,10 +139,7 @@ export default function SettingsScreen() {
 
       setSavingBandName(true);
 
-      const { error } = await supabase
-        .from("bands")
-        .update({ band_name: nextName })
-        .eq("band_id", bandId);
+      const { error } = await supabase.from("bands").update({ band_name: nextName }).eq("band_id", bandId);
 
       if (error) throw error;
 
@@ -162,6 +153,8 @@ export default function SettingsScreen() {
 
   const onChangeLogo = async () => {
     try {
+      if (!canAdminEdit) return;
+
       if (!bandId) {
         Alert.alert("No band", "No band_id found.");
         return;
@@ -170,10 +163,7 @@ export default function SettingsScreen() {
       const result = await pickAndUploadBandLogo(bandId);
       if (result.canceled) return;
 
-      const { error } = await supabase
-        .from("bands")
-        .update({ logo_url: result.publicUrl })
-        .eq("band_id", bandId);
+      const { error } = await supabase.from("bands").update({ logo_url: result.publicUrl }).eq("band_id", bandId);
 
       if (error) throw error;
 
@@ -201,15 +191,12 @@ export default function SettingsScreen() {
             value={bandName}
             onChangeText={setBandName}
             placeholder="Enter band name"
-            style={[
-              styles.input,
-              !adminModeEnabled && { backgroundColor: "#f3f3f3" },
-            ]}
+            style={[styles.input, !canAdminEdit && { backgroundColor: "#f3f3f3" }]}
             autoCapitalize="words"
-            editable={!!adminModeEnabled}
+            editable={canAdminEdit}
           />
 
-          {adminModeEnabled ? (
+          {canAdminEdit ? (
             <>
               <Pressable
                 onPress={onSaveBandName}
@@ -220,24 +207,19 @@ export default function SettingsScreen() {
                 ]}
                 disabled={savingBandName}
               >
-                <Text style={styles.secondaryBtnText}>
-                  {savingBandName ? "Saving..." : "Save band name"}
-                </Text>
+                <Text style={styles.secondaryBtnText}>{savingBandName ? "Saving..." : "Save band name"}</Text>
               </Pressable>
 
               <Pressable
                 onPress={onChangeLogo}
-                style={({ pressed }) => [
-                  styles.primaryBtn,
-                  pressed && { opacity: 0.85 },
-                ]}
+                style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.85 }]}
               >
                 <Text style={styles.primaryBtnText}>Change band logo</Text>
               </Pressable>
             </>
           ) : (
             <Text style={[styles.hint, { marginTop: 10 }]}>
-              Turn on Admin Mode to edit band details.
+              Only band admins can edit band details.
             </Text>
           )}
         </View>
@@ -253,19 +235,16 @@ export default function SettingsScreen() {
             <Text style={styles.infoText}>{defaultPc ?? ""}</Text>
           </View>
 
-          {adminModeEnabled ? (
+          {canAdminEdit ? (
             <Pressable
               onPress={() => router.push("/settings/travel" as any)}
-              style={({ pressed }) => [
-                styles.linkBtn,
-                pressed && { opacity: 0.85 },
-              ]}
+              style={({ pressed }) => [styles.linkBtn, pressed && { opacity: 0.85 }]}
             >
               <Text style={styles.linkBtnText}>Edit default departure</Text>
             </Pressable>
           ) : (
             <Text style={[styles.hint, { marginTop: 10 }]}>
-              Turn on Admin Mode to edit travel defaults.
+              Only band admins can edit travel defaults.
             </Text>
           )}
         </View>
@@ -278,23 +257,15 @@ export default function SettingsScreen() {
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.label}>Admin Mode</Text>
-                <Text style={styles.hint}>
-                  Show or hide edit controls. Only affects your account.
-                </Text>
+                <Text style={styles.hint}>Show or hide edit controls. Only affects your account.</Text>
               </View>
 
-              <Switch
-                value={!!adminModeEnabled}
-                onValueChange={toggleAdminMode}
-                disabled={saving || loading}
-              />
+              <Switch value={!!adminModeEnabled} onValueChange={toggleAdminMode} disabled={saving || loading} />
             </View>
 
             {!adminModeEnabled ? (
               <View style={styles.warnBox}>
-                <Text style={styles.warnText}>
-                  Admin Mode is off. Edit buttons are hidden.
-                </Text>
+                <Text style={styles.warnText}>Admin Mode is off. Edit buttons are hidden.</Text>
               </View>
             ) : null}
           </View>

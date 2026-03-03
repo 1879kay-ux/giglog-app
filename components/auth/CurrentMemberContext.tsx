@@ -6,11 +6,19 @@ type CurrentMember = {
   loading: boolean;
   authUserId: string | null;
   memberId: string | null;
+  bandId: string | null;
+
   isAdmin: boolean;
 
-  // NEW: per-admin UI toggle (stored on band_members.admin_mode_enabled)
+  // per-admin UI toggle (stored on band_members.admin_mode_enabled)
   adminModeEnabled: boolean;
   setAdminModeEnabled: (next: boolean) => Promise<void>;
+
+  // NEW: per-member visibility flags (stored on band_members)
+  canViewFinance: boolean;
+  canViewBandDocs: boolean;
+  canViewBandAndCrew: boolean;
+  canViewSettings: boolean;
 
   refresh: () => Promise<void>;
 };
@@ -19,63 +27,120 @@ const CurrentMemberContext = createContext<CurrentMember>({
   loading: true,
   authUserId: null,
   memberId: null,
+  bandId: null,
+
   isAdmin: false,
 
   adminModeEnabled: true,
   setAdminModeEnabled: async () => {},
+
+  canViewFinance: false,
+  canViewBandDocs: false,
+  canViewBandAndCrew: false,
+  canViewSettings: false,
 
   refresh: async () => {},
 });
 
 export function CurrentMemberProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
+
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [memberId, setMemberId] = useState<string | null>(null);
+  const [bandId, setBandId] = useState<string | null>(null);
+
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // NEW
   const [adminModeEnabled, setAdminModeEnabledState] = useState(true);
+
+  const [canViewFinance, setCanViewFinance] = useState(false);
+  const [canViewBandDocs, setCanViewBandDocs] = useState(false);
+  const [canViewBandAndCrew, setCanViewBandAndCrew] = useState(false);
+  const [canViewSettings, setCanViewSettings] = useState(false);
 
   async function fetchMemberFor(authId: string | null) {
     if (!authId) {
       setMemberId(null);
+      setBandId(null);
       setIsAdmin(false);
+
       setAdminModeEnabledState(true);
+
+      setCanViewFinance(false);
+      setCanViewBandDocs(false);
+      setCanViewBandAndCrew(false);
+      setCanViewSettings(false);
+
       setLoading(false);
       return;
     }
 
     const { data: bm, error } = await supabase
       .from("band_members")
-      .select("member_id,is_admin,admin_mode_enabled")
+      .select(
+        [
+          "member_id",
+          "band_id",
+          "is_admin",
+          "admin_mode_enabled",
+          "can_view_finance",
+          "can_view_band_docs",
+          "can_view_band_and_crew",
+          "can_view_settings",
+        ].join(",")
+      )
       .eq("auth_user_id", authId)
       .maybeSingle();
 
     if (error) {
       console.log("CurrentMember lookup error", error);
+
       setMemberId(null);
+      setBandId(null);
       setIsAdmin(false);
+
       setAdminModeEnabledState(true);
+
+      setCanViewFinance(false);
+      setCanViewBandDocs(false);
+      setCanViewBandAndCrew(false);
+      setCanViewSettings(false);
+
       setLoading(false);
       return;
     }
 
-    setMemberId((bm?.member_id as string) ?? null);
-    setIsAdmin(!!bm?.is_admin);
+    const member_id = (bm as any)?.member_id ?? null;
+    const band_id = (bm as any)?.band_id ?? null;
+    const admin = !!(bm as any)?.is_admin;
 
-    // Default to true if column is null/undefined for any reason
-    setAdminModeEnabledState(bm?.admin_mode_enabled ?? true);
+    setMemberId(member_id);
+    setBandId(band_id);
+    setIsAdmin(admin);
+
+    // default to true if null (safety for older rows)
+    setAdminModeEnabledState((bm as any)?.admin_mode_enabled ?? true);
+
+    // If admin, treat all as true (simple rule; also matches the SQL update you ran)
+    if (admin) {
+      setCanViewFinance(true);
+      setCanViewBandDocs(true);
+      setCanViewBandAndCrew(true);
+      setCanViewSettings(true);
+    } else {
+      setCanViewFinance(!!(bm as any)?.can_view_finance);
+      setCanViewBandDocs(!!(bm as any)?.can_view_band_docs);
+      setCanViewBandAndCrew(!!(bm as any)?.can_view_band_and_crew);
+      setCanViewSettings(!!(bm as any)?.can_view_settings);
+    }
 
     setLoading(false);
   }
 
-  // NEW: persist toggle to band_members
   async function setAdminModeEnabled(next: boolean) {
-    // only admins should be able to change it
     if (!isAdmin) return;
     if (!memberId) return;
 
-    // optimistic update
     setAdminModeEnabledState(next);
 
     const { error } = await supabase
@@ -84,7 +149,6 @@ export function CurrentMemberProvider({ children }: { children: React.ReactNode 
       .eq("member_id", memberId);
 
     if (error) {
-      // revert if save fails
       setAdminModeEnabledState(!next);
       throw error;
     }
@@ -127,10 +191,17 @@ export function CurrentMemberProvider({ children }: { children: React.ReactNode 
         loading,
         authUserId,
         memberId,
+        bandId,
+
         isAdmin,
 
         adminModeEnabled,
         setAdminModeEnabled,
+
+        canViewFinance,
+        canViewBandDocs,
+        canViewBandAndCrew,
+        canViewSettings,
 
         refresh,
       }}

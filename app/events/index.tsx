@@ -25,8 +25,9 @@ import {
 const PRIMARY_TEAL = "#0D9488";
 
 type VenueRow = {
-  event_venue_name: string;
-  city: string;
+  venue_id: string;
+  event_venue_name: string | null;
+  city: string | null;
 };
 
 type EventRow = {
@@ -34,7 +35,8 @@ type EventRow = {
   event_date: string;
   event_status: string | null;
   event_type: string | null;
-  venues: VenueRow | null; // single object
+  venue_id: string | null;
+  venues?: { event_venue_name: string | null; city: string | null } | null; // hydrated client-side
 };
 
 type AvailabilityStatus = string | null;
@@ -65,17 +67,14 @@ function computeReadiness(
 
     if (status === "unavailable") hasUnavailable = true;
     else if (status === "awaiting" || status === "provisional") hasAwaitingOrProvisional = true;
-    // available => fine
   }
 
-  // Your revised rule: only unavailable is red
   if (hasUnavailable) return "red";
   if (hasAwaitingOrProvisional) return "amber";
   return "green";
 }
 
 function getTodayLondonYYYYMMDD() {
-  // en-CA returns YYYY-MM-DD
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/London",
     year: "numeric",
@@ -108,26 +107,27 @@ export default function EventsListScreen() {
   const [gridOpen, setGridOpen] = useState(false);
   const [readinessByEventId, setReadinessByEventId] = useState<Record<string, Readiness>>({});
 
-  // Dynamic band name (from bands table)
   const [bandName, setBandName] = useState<string>("");
 
-  // Step 1 state: map of event_id -> needsResponse
-  const [needsResponseByEventId, setNeedsResponseByEventId] = useState<Record<string, boolean>>({});
+  const [needsResponseByEventId, setNeedsResponseByEventId] = useState<Record<string, boolean>>(
+    {}
+  );
 
   const todayLondon = useMemo(() => getTodayLondonYYYYMMDD(), []);
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
 
+    const { data: s } = await supabase.auth.getSession();
+console.log("SESSION USER ID", s?.session?.user?.id, "EMAIL", s?.session?.user?.email);
+
+    // NOTE: do NOT embed venues here; if venues RLS blocks SELECT, PostgREST will error and return 0 events.
     let q = supabase.from("events").select(`
       event_id,
       event_date,
       event_status,
       event_type,
-      venues:venue_id (
-        event_venue_name,
-        city
-      )
+      venue_id
     `);
 
     if (eventsMode === "upcoming") {
@@ -138,7 +138,47 @@ export default function EventsListScreen() {
 
     const { data, error } = await q;
 
-    const nextEvents = !error && data ? (data as unknown as EventRow[]) : [];
+    if (error) {
+      console.log("events list load error", error);
+      setEvents([]);
+      setReadinessByEventId({});
+      setNeedsResponseByEventId({});
+      setLoading(false);
+      return;
+    }
+
+    const baseEvents = data ? (data as unknown as EventRow[]) : [];
+
+    // Hydrate venue name/city best-effort (ignore failures, still show events)
+    const venueIds = Array.from(
+      new Set(baseEvents.map((e) => e.venue_id).filter(Boolean) as string[])
+    );
+
+    let venuesById: Record<string, { event_venue_name: string | null; city: string | null }> = {};
+    if (venueIds.length > 0) {
+      const { data: vData, error: vErr } = await supabase
+        .from("venues")
+        .select("venue_id,event_venue_name,city")
+        .in("venue_id", venueIds);
+
+      if (vErr) {
+        console.log("venues hydrate error (ignored)", vErr);
+      } else {
+        for (const v of (vData ?? []) as any[]) {
+          if (!v?.venue_id) continue;
+          venuesById[v.venue_id] = {
+            event_venue_name: v.event_venue_name ?? null,
+            city: v.city ?? null,
+          };
+        }
+      }
+    }
+
+    const nextEvents = baseEvents.map((e) => ({
+      ...e,
+      venues: e.venue_id ? venuesById[e.venue_id] ?? null : null,
+    }));
+
     setEvents(nextEvents);
 
     // --- Readiness dots (expected lineup only) ---
@@ -147,7 +187,6 @@ export default function EventsListScreen() {
       if (eventIds.length === 0) {
         setReadinessByEventId({});
       } else {
-        // 1) Core lineup ids
         const { data: coreData } = await supabase
           .from("band_members")
           .select("member_id")
@@ -158,7 +197,6 @@ export default function EventsListScreen() {
 
         const coreMemberIds = (coreData ?? []).map((r: any) => r.member_id).filter(Boolean);
 
-        // 2) Custom lineup ids (if any) per event
         const { data: emData } = await supabase
           .from("event_members")
           .select("event_id, member_id")
@@ -173,7 +211,6 @@ export default function EventsListScreen() {
         const hasCustomByEventId: Record<string, boolean> = {};
         for (const id of eventIds) hasCustomByEventId[id] = (customByEventId[id]?.length ?? 0) > 0;
 
-        // 3) Fetch availability rows for all relevant members (core + all custom)
         const memberIdSet = new Set<string>(coreMemberIds);
         for (const id of eventIds) {
           for (const mid of customByEventId[id] ?? []) memberIdSet.add(mid);
@@ -192,7 +229,6 @@ export default function EventsListScreen() {
           (avByEventId[r.event_id] ??= []).push({ member_id: r.member_id, status: r.status });
         }
 
-        // 4) Compute readiness per event
         const nextReadiness: Record<string, Readiness> = {};
         for (const id of eventIds) {
           const expected = hasCustomByEventId[id] ? (customByEventId[id] ?? []) : coreMemberIds;
@@ -202,11 +238,11 @@ export default function EventsListScreen() {
 
         setReadinessByEventId(nextReadiness);
       }
-    } catch {
+    } catch (e) {
+      console.log("readiness compute error (ignored)", e);
       setReadinessByEventId({});
     }
 
-    // only compute response-needed flags for upcoming
     if (eventsMode === "upcoming" && currentMemberId && nextEvents.length > 0) {
       const eventIds = nextEvents.map((e) => e.event_id);
 
@@ -225,7 +261,6 @@ export default function EventsListScreen() {
           map[row.event_id] = needs;
         }
 
-        // if no row returned for a given event, treat as needs response
         for (const id of eventIds) {
           if (map[id] === undefined) map[id] = true;
         }
@@ -251,7 +286,6 @@ export default function EventsListScreen() {
     }, [loadEvents])
   );
 
-  // ✅ load band name once (no hardcoding)
   useEffect(() => {
     const loadBandName = async () => {
       const { data, error } = await supabase
@@ -291,7 +325,6 @@ export default function EventsListScreen() {
     return haystack.includes(search.toLowerCase());
   });
 
-  // IMPORTANT: avoid stale header closures by keeping latest list in a ref
   const filteredEventsRef = useRef<EventRow[]>([]);
   useEffect(() => {
     filteredEventsRef.current = filteredEvents ?? [];
@@ -384,7 +417,6 @@ export default function EventsListScreen() {
       />
 
       <View style={styles.container}>
-        {/* MODE TOGGLE */}
         <View style={styles.modeRow}>
           <View style={styles.modePill}>
             <Pressable
@@ -409,7 +441,6 @@ export default function EventsListScreen() {
           <View style={{ flex: 1 }} />
         </View>
 
-        {/* SEARCH BAR */}
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={20} color="#666" />
 
@@ -428,7 +459,6 @@ export default function EventsListScreen() {
           )}
         </View>
 
-        {/* COUNT + ADD EVENT */}
         <View style={styles.actionsRow}>
           {eventsMode === "upcoming" && responseRequiredCount > 0 ? (
             <View style={styles.countPill}>
@@ -439,7 +469,11 @@ export default function EventsListScreen() {
           )}
 
           {canEdit ? (
-            <ActionButton label="Add Event" icon="add-circle-outline" onPress={() => router.push("/events/add")} />
+            <ActionButton
+              label="Add Event"
+              icon="add-circle-outline"
+              onPress={() => router.push("/events/add")}
+            />
           ) : null}
         </View>
 
@@ -455,7 +489,6 @@ export default function EventsListScreen() {
 
             const needsResponse = eventsMode === "upcoming" && !!needsResponseByEventId[item.event_id];
 
-            // ✅ Cancelled shows no readiness dot (prevents the dot "coming back")
             const readiness: Readiness | null =
               statusNorm === "cancelled" ? null : readinessByEventId[item.event_id] ?? "amber";
 
@@ -465,7 +498,6 @@ export default function EventsListScreen() {
                 onPress={() => router.push({ pathname: "/events/[id]", params: { id: item.event_id } })}
               >
                 <View style={styles.eventRow}>
-                  {/* LEFT */}
                   <View style={{ flex: 1 }}>
                     <Text style={styles.eventDate}>{formatDisplayDate(item.event_date)}</Text>
 
@@ -492,7 +524,6 @@ export default function EventsListScreen() {
                     </Text>
                   </View>
 
-                  {/* RIGHT: pill is hard right-aligned here */}
                   <View style={styles.rightCol}>
                     {needsResponse ? <Text style={styles.responseBadgeSmall}>Confirm availability</Text> : null}
 
@@ -519,7 +550,11 @@ export default function EventsListScreen() {
           }}
         />
 
-        <AvailabilityGridModal visible={gridOpen} onClose={() => setGridOpen(false)} events={filteredEventsRef.current} />
+        <AvailabilityGridModal
+          visible={gridOpen}
+          onClose={() => setGridOpen(false)}
+          events={filteredEventsRef.current}
+        />
       </View>
     </>
   );
@@ -549,7 +584,6 @@ function parseEventDateLocal(dateVal: any): Date | null {
   const s = String(dateVal).trim();
   if (!s) return null;
 
-  // Treat YYYY-MM-DD as local date
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
     const [yyyyStr, mmStr, ddStr] = s.split("-");
     const yyyy = parseInt(yyyyStr, 10);
@@ -593,13 +627,9 @@ function buildUpcomingShareMessage(opts: { bandName?: string | null; events: Eve
       return { e, dt, statusNorm, typeNorm };
     })
     .filter(({ dt, statusNorm, typeNorm }) => {
-      // Only share gigs
       if (typeNorm !== "gig") return false;
-
-      // Must be within next 6 months
       if (!dt) return false;
       dt.setHours(0, 0, 0, 0);
-
       return dt >= today && dt <= until && allowedStatuses.has(statusNorm);
     })
     .sort((a, b) => a.dt!.getTime() - b.dt!.getTime())
@@ -625,7 +655,6 @@ function buildUpcomingShareMessage(opts: { bandName?: string | null; events: Eve
     const city = safeTrim(e?.venues?.city) || "Unknown city";
     const status = safeTrim(e?.event_status) || "Unknown";
 
-    // Subtle marker: only for exceptions
     const statusNorm = safeTrim(e?.event_status).toLowerCase();
     const mark = statusNorm === "provisional" ? "P" : statusNorm === "cancelled" ? "X" : "";
 
@@ -654,7 +683,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.pageBg,
   },
 
-  // MODE TOGGLE
   modeRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -685,7 +713,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // SEARCH
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -705,7 +732,6 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
 
-  // COUNT + ADD EVENT ROW
   actionsRow: {
     marginHorizontal: 12,
     marginTop: 10,
@@ -740,7 +766,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
 
-  // EVENT ROW
   eventItem: {
     padding: 16,
     backgroundColor: colors.cardBg,
@@ -762,7 +787,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // DATE
   eventDate: {
     fontSize: 13,
     fontWeight: "600",
@@ -771,7 +795,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
 
-  // VENUE + CITY
   eventVenue: {
     fontSize: 18,
     fontWeight: "700",
@@ -780,7 +803,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // TYPE + STATUS
   eventMeta: {
     fontSize: 14,
     color: colors.textMuted,
@@ -799,7 +821,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 
-  // RHS column that is always flush-right
   rightCol: {
     alignItems: "flex-end",
     justifyContent: "center",

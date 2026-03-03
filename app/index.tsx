@@ -1,5 +1,6 @@
 // app/index.tsx
 
+import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { supabase } from "@/lib/supabase";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { Link, Stack, useFocusEffect, useRouter } from "expo-router";
@@ -42,6 +43,11 @@ type BandBrandingQueryRow = {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const cm = useCurrentMember() as any;
+
+  const canViewBandAndCrew = !!cm?.canViewBandAndCrew;
+  const canViewBandDocs = !!cm?.canViewBandDocs;
+  const canViewSettings = !!cm?.canViewSettings;
 
   const [bandName, setBandName] = useState<string>("GigLog");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -56,12 +62,12 @@ export default function HomeScreen() {
       .from("band_members")
       .select(
         `
-      band_id,
-      bands:band_id (
-        band_name,
-        logo_url
-      )
-    `
+        band_id,
+        bands:band_id (
+          band_name,
+          logo_url
+        )
+      `
       )
       .eq("auth_user_id", userId)
       .maybeSingle();
@@ -155,13 +161,14 @@ export default function HomeScreen() {
       <Stack.Screen
         options={{
           title: "GigLog",
-          headerRight: () => (
-            <Link href="./settings" asChild>
-              <TouchableOpacity style={styles.headerIconWrapper} hitSlop={10}>
-                <Ionicons name="settings-outline" size={24} color="#fff" />
-              </TouchableOpacity>
-            </Link>
-          ),
+          headerRight: () =>
+            canViewSettings ? (
+              <Link href="./settings" asChild>
+                <TouchableOpacity style={styles.headerIconWrapper} hitSlop={10}>
+                  <Ionicons name="settings-outline" size={24} color="#fff" />
+                </TouchableOpacity>
+              </Link>
+            ) : null,
         }}
       />
 
@@ -178,7 +185,9 @@ export default function HomeScreen() {
             <Image source={{ uri: logoUrl }} style={styles.brandHeroImage} resizeMode="contain" />
           ) : (
             <View style={styles.brandHeroFallback}>
-              <Text style={styles.brandHeroFallbackText}>{bandName?.[0]?.toUpperCase() ?? "G"}</Text>
+              <Text style={styles.brandHeroFallbackText}>
+                {bandName?.[0]?.toUpperCase() ?? "G"}
+              </Text>
             </View>
           )}
 
@@ -228,9 +237,22 @@ export default function HomeScreen() {
 
         <View style={styles.grid}>
           <NavTile label="Events" icon="calendar" onPress={() => router.push("/events")} />
-          <NavTile label="Venues" icon="map-marker" onPress={() => router.push("/venue")} />
-          <NavTile label="Band & Crew" icon="users" onPress={() => router.push("/band")} />
-          <NavTile label="Band Docs" icon="file-text-o" onPress={() => router.push("/band-documents")} />
+
+          {canViewBandAndCrew ? (
+            <>
+              <NavTile label="Venues" icon="map-marker" onPress={() => router.push("/venue")} />
+              <NavTile label="Band & Crew" icon="users" onPress={() => router.push("/band")} />
+            </>
+          ) : null}
+
+          {canViewBandDocs ? (
+            <NavTile
+              label="Band Docs"
+              icon="file-text-o"
+              onPress={() => router.push("/band-documents")}
+            />
+          ) : null}
+
           <NavTile label="Profile" icon="user" onPress={() => router.push("/profile")} />
         </View>
       </ScrollView>
@@ -273,7 +295,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 18,
     paddingTop: 14,
-    paddingBottom: 28, // ensures last tile is reachable on small screens
+    paddingBottom: 28,
     backgroundColor: "#fff",
   },
 
@@ -295,7 +317,6 @@ const styles = StyleSheet.create({
     color: "#444",
   },
 
-  // Brand hero
   brandHero: {
     borderRadius: 16,
     overflow: "hidden",
@@ -344,7 +365,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  // Next event
   nextEventCard: {
     flexDirection: "row",
     alignItems: "stretch",
@@ -392,7 +412,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // Grid
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",

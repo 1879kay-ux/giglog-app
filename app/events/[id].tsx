@@ -71,6 +71,25 @@ type ProfileRow = {
   default_departure_postcode: string | null;
 };
 
+type EventFinanceRow = {
+  fee_type: string | null;
+  paid_status: string | null;
+  manual_playing_share_override: number | null;
+
+  income_guarantee: number | null;
+  income_fee: number | null;
+  income_door: number | null;
+
+  accommodation_cost: number | null;
+  dep_cost: number | null;
+  driver_cost: number | null;
+  foh_eng_cost: number | null;
+  other_costs: number | null;
+
+  fee_notes: string | null;
+  cost_notes: string | null;
+};
+
 type EventRow = {
   event_id: string;
   event_date: string;
@@ -97,29 +116,9 @@ type EventRow = {
   promo_material_url: string | null;
   doc_other_url: string | null;
 
-  // --- Income ---
-  income_guarantee: number | null;
-  income_door: number | null;
-  income_fee?: number | null; // legacy field, keep optional during migration
-  fee_type: string | null;
-  paid_status: string | null;
-
-  // --- Costs ---
+  // Costs that are not part of "Finance" (still on events)
   van_hire: number | null;
   fuel: number | null;
-  accommodation_cost: number | null;
-  dep_cost: number | null;
-  driver_cost: number | null;
-  foh_eng_cost: number | null;
-  other_costs: number | null;
-  
-
-  // --- Split ---
-  manual_playing_share_override: number | null;
-
-  // ✅ finance notes (needed for FinanceSection display)
-  fee_notes: string | null;
-  cost_notes: string | null;
 
   // per-event departure override (optional)
   departure_address: string | null;
@@ -155,6 +154,7 @@ export default function EventDetailsScreen() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [event, setEvent] = useState<EventRow | null>(null);
+  const [finance, setFinance] = useState<EventFinanceRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCustomLineup, setHasCustomLineup] = useState(false);
   const [accommodation, setAccommodation] = useState<AccommodationRow | null>(null);
@@ -254,9 +254,7 @@ export default function EventDetailsScreen() {
 
     if (!lineupErr) setHasCustomLineup((count ?? 0) > 0);
 
-    // ✅ IMPORTANT:
-    // We must select fee_notes and cost_notes explicitly.
-    // Keep venues loaded separately as you already do.
+    // Events (NON-finance fields only; finance is now in event_finance)
     const { data, error } = await supabase
       .from("events")
       .select(
@@ -286,23 +284,8 @@ export default function EventDetailsScreen() {
         promo_material_url,
         doc_other_url,
 
-        income_guarantee,
-        income_door,
-        income_fee,
-        fee_type,
-        paid_status,
-
         van_hire,
         fuel,
-        accommodation_cost,
-        dep_cost,
-        driver_cost,
-        foh_eng_cost,
-        other_costs,
-        manual_playing_share_override,
-
-        fee_notes,
-        cost_notes,
 
         departure_address,
         departure_postcode,
@@ -319,6 +302,7 @@ export default function EventDetailsScreen() {
       return;
     }
 
+    // Venue fetch
     if (data) {
       if (data.venue_id) {
         const { data: venueData } = await supabase
@@ -333,7 +317,37 @@ export default function EventDetailsScreen() {
       }
     }
 
-    // ✅ Fetch accommodation INSIDE async loadEvent (no top-level await)
+    // Finance fetch (RLS will block dep/crew, so treat errors as "no finance available")
+    const { data: fin, error: finErr } = await supabase
+      .from("event_finance")
+      .select(
+        `
+        fee_type,
+        paid_status,
+        manual_playing_share_override,
+        income_guarantee,
+        income_fee,
+        income_door,
+        accommodation_cost,
+        dep_cost,
+        driver_cost,
+        foh_eng_cost,
+        other_costs,
+        fee_notes,
+        cost_notes
+      `
+      )
+      .eq("event_id", id)
+      .maybeSingle();
+
+    if (finErr) {
+      console.log("event_finance fetch error", finErr);
+      setFinance(null);
+    } else {
+      setFinance((fin as any) ?? null);
+    }
+
+    // Accommodation fetch
     const { data: accData, error: accErr } = await supabase
       .from("accommodation")
       .select("*")
@@ -399,8 +413,8 @@ export default function EventDetailsScreen() {
       app === "apple"
         ? `http://maps.apple.com/?daddr=${d}&dirflg=d`
         : app === "google"
-          ? `https://www.google.com/maps/dir/?api=1&destination=${d}&travelmode=driving`
-          : `https://waze.com/ul?q=${d}&navigate=yes`;
+        ? `https://www.google.com/maps/dir/?api=1&destination=${d}&travelmode=driving`
+        : `https://waze.com/ul?q=${d}&navigate=yes`;
 
     openUrl(url);
   }
@@ -422,8 +436,8 @@ export default function EventDetailsScreen() {
       app === "apple"
         ? `http://maps.apple.com/?saddr=${o}&daddr=${d}&dirflg=d`
         : app === "google"
-          ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`
-          : `https://waze.com/ul?q=${d}&navigate=yes`;
+        ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`
+        : `https://waze.com/ul?q=${d}&navigate=yes`;
 
     openUrl(url);
   }
@@ -593,32 +607,34 @@ export default function EventDetailsScreen() {
           ) : null}
 
           {/* FINANCE */}
-<Section
-  title="Finance"
-  icon="cash-outline"
-  open={openSections.finance}
-  onPress={() => toggleSection("finance")}
->
-  <FinanceSection
-    eventId={event.event_id}
-    isAdmin={canEdit}
-    shares={event.manual_playing_share_override}
-    incomeGuarantee={event.income_guarantee}
-    incomeDoor={event.income_door}
-    feeType={event.fee_type}
-    paidStatus={event.paid_status}
-    vanHire={event.van_hire}
-    fuel={event.fuel}
-    accommodationCost={accommodation?.total_cost ?? event.accommodation_cost}
-    accommodationCostSource={accommodation?.total_cost != null ? "accommodation" : "event"}
-    depCost={event.dep_cost}
-    driverCost={event.driver_cost}
-    fohEngCost={event.foh_eng_cost}
-    otherCosts={event.other_costs}
-    feeNotes={event.fee_notes}
-    costNotes={event.cost_notes}
-  />
-</Section>
+          {canEdit ? (
+            <Section
+              title="Finance"
+              icon="cash-outline"
+              open={openSections.finance}
+              onPress={() => toggleSection("finance")}
+            >
+              <FinanceSection
+                eventId={event.event_id}
+                isAdmin={canEdit}
+                shares={finance?.manual_playing_share_override ?? null}
+                incomeGuarantee={finance?.income_guarantee ?? null}
+                incomeDoor={finance?.income_door ?? null}
+                feeType={finance?.fee_type ?? null}
+                paidStatus={finance?.paid_status ?? null}
+                vanHire={event.van_hire}
+                fuel={event.fuel}
+                accommodationCost={accommodation?.total_cost ?? finance?.accommodation_cost ?? null}
+                accommodationCostSource={accommodation?.total_cost != null ? "accommodation" : "event"}
+                depCost={finance?.dep_cost ?? null}
+                driverCost={finance?.driver_cost ?? null}
+                fohEngCost={finance?.foh_eng_cost ?? null}
+                otherCosts={finance?.other_costs ?? null}
+                feeNotes={finance?.fee_notes ?? null}
+                costNotes={finance?.cost_notes ?? null}
+              />
+            </Section>
+          ) : null}
         </ScrollView>
       </View>
     </>
@@ -714,29 +730,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  /* EDIT BUTTON */
-  editButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-
-    backgroundColor: colors.button,
-
-    alignSelf: "flex-start",
-    minWidth: 170,
-
-    marginHorizontal: 16,
-    marginTop: 6,
-    marginBottom: 16,
-
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-
   adminPillRow: {
     paddingHorizontal: 16,
     marginBottom: 12,
@@ -757,12 +750,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     color: colors.primary,
-  },
-
-  editButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
   },
 
   scroll: {
@@ -814,48 +801,6 @@ const styles = StyleSheet.create({
     padding: 12,
   },
 
-  /* TRAVEL */
-  travelRow: {
-    marginBottom: 16,
-  },
-  travelLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: 6,
-  },
-  travelButtonRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  travelButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    marginRight: 6,
-  },
-  travelButtonText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  travelLocationBox: {
-    marginTop: 8,
-    padding: 10,
-    backgroundColor: colors.pageBg,
-    borderRadius: 6,
-  },
-  travelLocationTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 4,
-    color: colors.text,
-  },
-  travelLocationText: {
-    fontSize: 13,
-    color: colors.textMuted,
-  },
   editPill: {
     flexDirection: "row",
     alignItems: "center",

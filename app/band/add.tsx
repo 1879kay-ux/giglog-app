@@ -55,6 +55,20 @@ const CREW_ROLE_SET = new Set<string>([
   "Tech",
 ]);
 
+type InviteResponse =
+  | {
+      ok: true;
+      member_id: string;
+      auth_user_id: string;
+      invite_sent: boolean;
+      note?: string;
+    }
+  | {
+      ok?: false;
+      error?: string;
+      details?: string;
+    };
+
 export default function AddBandMemberScreen() {
   const router = useRouter();
 
@@ -82,11 +96,6 @@ export default function AddBandMemberScreen() {
     return memberType === "musician" ? musicianRole : crewRole;
   }, [memberType, musicianRole, crewRole]);
 
-  const isDep = useMemo(
-    () => memberType === "musician" && musicianRole === "Dep Musician",
-    [memberType, musicianRole]
-  );
-
   const toggleInstrument = (p: Instrument) => {
     setInstruments((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
   };
@@ -102,7 +111,6 @@ export default function AddBandMemberScreen() {
     setCustomInstruments((prev) => prev.filter((x) => x !== p));
   };
 
-  // ✅ NEW: get band_id for the signed-in user
   async function getCurrentBandId(): Promise<string | null> {
     const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
     if (sessionErr) {
@@ -145,52 +153,93 @@ export default function AddBandMemberScreen() {
       return;
     }
 
-    // Safety rule: crew roles always force crew member_type
     const finalMemberType: MemberType = CREW_ROLE_SET.has(role) ? "crew" : memberType;
-
-    // If we forced crew, make sure we don’t save instruments by accident
     const finalPositions = finalMemberType === "musician" ? instruments : [];
     const finalPositionsOther = finalMemberType === "musician" ? customInstruments : [];
 
     setSaving(true);
 
-    const bandId = await getCurrentBandId();
-    if (!bandId) {
+    try {
+      const bandId = await getCurrentBandId();
+      if (!bandId) {
+        Alert.alert("Error", "No band_id found for current user. Cannot create member.");
+        return;
+      }
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) throw new Error("No session token - please sign in again.");
+
+      const apikey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+      if (!apikey) throw new Error("Missing EXPO_PUBLIC_SUPABASE_ANON_KEY in app runtime");
+
+      const url =
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/invite-band-member` +
+        `?apikey=${encodeURIComponent(apikey)}`;
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          band_id: bandId,
+          display_name: name,
+          email: emailClean,
+          member_type: finalMemberType,
+          is_active: isActive,
+          is_admin: isAdmin,
+          band_role: role,
+          band_role_other: role === "Other" ? roleOther.trim() : null,
+          is_dep: finalMemberType === "musician" && role === "Dep Musician",
+          band_positions: finalPositions,
+          band_positions_other: finalPositionsOther,
+        }),
+      });
+
+      const text = await res.text();
+      console.log("invite-band-member fetch status", res.status);
+      console.log("invite-band-member fetch body", text);
+
+      let data: InviteResponse;
+      try {
+        data = JSON.parse(text) as InviteResponse;
+      } catch {
+        throw new Error(text || "Edge Function returned non-JSON response");
+      }
+
+      if (!res.ok || !("ok" in data) || data.ok !== true) {
+        const msg = (data as any)?.details ?? (data as any)?.error ?? text ?? "Invite failed";
+        throw new Error(msg);
+      }
+
+      // Patch remaining UI-only fields if you still want (safe no-op updates)
+      const patch: any = {
+        band_role: role,
+        band_role_other: role === "Other" ? roleOther.trim() || null : null,
+        band_positions: finalPositions,
+        band_positions_other: finalPositionsOther,
+        is_active: isActive,
+        is_admin: isAdmin,
+        is_dep: finalMemberType === "musician" && role === "Dep Musician",
+      };
+
+      const { error: patchErr } = await supabase
+        .from("band_members")
+        .update(patch)
+        .eq("member_id", data.member_id);
+
+      if (patchErr) throw new Error(patchErr.message);
+
+      Alert.alert("Invite sent", data.note ?? (data.invite_sent ? "Invite email sent." : "Member created."));
+      router.back();
+    } catch (e: any) {
+      console.log("invite member error", e);
+      Alert.alert("Error", String(e?.message ?? e));
+    } finally {
       setSaving(false);
-      Alert.alert("Error", "No band_id found for current user. Cannot create member.");
-      return;
     }
-
-    const payload: any = {
-      band_id: bandId, // ✅ FIX: always set band_id
-
-      display_name: name,
-      email: emailClean,
-
-      member_type: finalMemberType,
-
-      band_role: role,
-      band_role_other: role === "Other" ? roleOther.trim() || null : null,
-
-      band_positions: finalPositions,
-      band_positions_other: finalPositionsOther,
-
-      is_active: isActive,
-      is_admin: isAdmin,
-      is_dep: finalMemberType === "musician" && role === "Dep Musician",
-    };
-
-    const { error } = await supabase.from("band_members").insert(payload);
-
-    setSaving(false);
-
-    if (error) {
-      console.log("insert member error", error);
-      Alert.alert("Error", error.message);
-      return;
-    }
-
-    router.back();
   };
 
   const rolesToRender = memberType === "musician" ? MUSICIAN_ROLES : CREW_ROLES;
@@ -228,8 +277,6 @@ export default function AddBandMemberScreen() {
                 key={t}
                 onPress={() => {
                   setMemberType(t);
-
-                  // reset some fields when switching type
                   setRoleOther("");
 
                   if (t === "musician") {

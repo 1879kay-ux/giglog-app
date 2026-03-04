@@ -113,7 +113,10 @@ export default function BandMembersScreen() {
     return (
       <Pressable
         style={[styles.row, !item.is_active && styles.rowInactive]}
-        onPress={() => router.push(`/band/edit?id=${item.member_id}` as any)}
+        onPress={() => {
+          if (!canEdit) return; // ✅ when admin mode is OFF, don't navigate (prevents bounce to home)
+          router.push(`/band/edit?id=${item.member_id}` as any);
+        }}
       >
         <View style={styles.left}>
           <View style={styles.nameRow}>

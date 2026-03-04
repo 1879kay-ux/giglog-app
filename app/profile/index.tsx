@@ -1,4 +1,9 @@
+// app/profile/index.tsx
+
 import { supabase } from "@/lib/supabase";
+import { colors } from "@/theme/colors";
+import { Ionicons } from "@expo/vector-icons";
+import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -11,6 +16,8 @@ import {
 } from "react-native";
 
 export default function ProfileScreen() {
+  const router = useRouter();
+
   const [email, setEmail] = useState<string>("");
 
   const [newPassword, setNewPassword] = useState("");
@@ -58,83 +65,110 @@ export default function ProfileScreen() {
       Alert.alert("Error", error.message);
       return;
     }
-    // No navigation needed: your auth gate should redirect to /auth
+    // auth gate should redirect to /auth
   }
 
   const mismatch =
     newPassword.length > 0 && confirmPassword.length > 0 && newPassword !== confirmPassword;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Profile</Text>
+    <>
+      <Stack.Screen
+        options={{
+          title: "Profile",
+          headerTitleAlign: "center",
+          headerStyle: { backgroundColor: colors.primary },
+          headerTitleStyle: { color: "#fff", fontWeight: "700", fontSize: 18 },
+          headerTintColor: "#fff",
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={{ paddingLeft: 12 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="arrow-back-outline" size={26} color="#fff" />
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => router.push("/")}
+              style={{ paddingRight: 12 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="home-outline" size={26} color="#fff" />
+            </TouchableOpacity>
+          ),
+        }}
+      />
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Signed in as</Text>
-        <Text style={styles.value}>{email || "—"}</Text>
-      </View>
+      <View style={styles.container}>
+        <View style={styles.card}>
+          <Text style={styles.label}>Signed in as</Text>
+          <Text style={styles.value}>{email || "—"}</Text>
+        </View>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Change password</Text>
+        <View style={styles.card}>
+          <Text style={styles.label}>Change password</Text>
 
-        <TextInput
-          value={newPassword}
-          onChangeText={setNewPassword}
-          placeholder="New password"
-          secureTextEntry={!showPassword}
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={styles.input}
-          returnKeyType="next"
-        />
+          <TextInput
+            value={newPassword}
+            onChangeText={setNewPassword}
+            placeholder="New password"
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={styles.input}
+            returnKeyType="next"
+          />
 
-        <TextInput
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          placeholder="Repeat new password"
-          secureTextEntry={!showPassword}
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={[styles.input, mismatch ? styles.inputError : null]}
-          returnKeyType="done"
-          onSubmitEditing={changePassword}
-        />
+          <TextInput
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            placeholder="Repeat new password"
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={[styles.input, mismatch ? styles.inputError : null]}
+            returnKeyType="done"
+            onSubmitEditing={changePassword}
+          />
 
-        {mismatch ? <Text style={styles.errorText}>Passwords do not match.</Text> : null}
+          {mismatch ? <Text style={styles.errorText}>Passwords do not match.</Text> : null}
 
-        <TouchableOpacity
-          onPress={() => setShowPassword((v) => !v)}
-          style={styles.showBtn}
-          accessibilityRole="button"
-          accessibilityLabel={showPassword ? "Hide password" : "Show password"}
-        >
-          <Text style={styles.showBtnText}>{showPassword ? "Hide" : "Show"}</Text>
+          <TouchableOpacity
+            onPress={() => setShowPassword((v) => !v)}
+            style={styles.showBtn}
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+          >
+            <Text style={styles.showBtnText}>{showPassword ? "Hide" : "Show"}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.primaryBtn, savingPassword ? styles.btnDisabled : null]}
+            onPress={changePassword}
+            disabled={savingPassword}
+          >
+            {savingPassword ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.primaryBtnText}>Update password</Text>
+            )}
+          </TouchableOpacity>
+
+          <Text style={styles.hint}>Tip: set this once and you can ignore email reset links.</Text>
+        </View>
+
+        <TouchableOpacity style={styles.signOutBtn} onPress={signOut}>
+          <Text style={styles.signOutText}>Sign out</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.primaryBtn, savingPassword ? styles.btnDisabled : null]}
-          onPress={changePassword}
-          disabled={savingPassword}
-        >
-          {savingPassword ? (
-            <ActivityIndicator />
-          ) : (
-            <Text style={styles.primaryBtnText}>Update password</Text>
-          )}
-        </TouchableOpacity>
-
-        <Text style={styles.hint}>Tip: set this once and you can ignore email reset links.</Text>
       </View>
-
-      <TouchableOpacity style={styles.signOutBtn} onPress={signOut}>
-        <Text style={styles.signOutText}>Sign out</Text>
-      </TouchableOpacity>
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#fff" },
-  title: { fontSize: 22, fontWeight: "800", color: "#111", marginBottom: 12 },
 
   card: {
     backgroundColor: "#f7f7f7",
@@ -179,12 +213,12 @@ const styles = StyleSheet.create({
   },
   showBtnText: {
     fontWeight: "900",
-    color: "#009999",
+    color: colors.primary,
   },
 
   primaryBtn: {
     marginTop: 12,
-    backgroundColor: "#009999",
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: "center",

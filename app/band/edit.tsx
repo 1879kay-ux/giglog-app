@@ -79,9 +79,23 @@ export default function EditBandMemberScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
-  // ✅ hooks must be inside component
   const cm: any = useCurrentMember();
   const currentUserIsAdmin = !!cm?.isAdmin;
+  const adminModeEnabled = cm?.adminModeEnabled !== false;
+
+  // 🔒 Hard gate: if Admin Mode is OFF, this screen should not be accessible.
+  const [gateChecked, setGateChecked] = useState(false);
+  useEffect(() => {
+    // wait for context to be ready (some setups expose cm.loading)
+    if (cm?.loading === true) return;
+
+    if (!currentUserIsAdmin || !adminModeEnabled) {
+      router.replace("/");
+      return;
+    }
+    setGateChecked(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cm?.loading, currentUserIsAdmin, adminModeEnabled]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -119,6 +133,8 @@ export default function EditBandMemberScreen() {
 
   useEffect(() => {
     const loadMember = async () => {
+      if (!gateChecked) return;
+
       if (!id) {
         setLoading(false);
         return;
@@ -193,7 +209,7 @@ export default function EditBandMemberScreen() {
     };
 
     loadMember();
-  }, [id]);
+  }, [id, gateChecked]);
 
   const toggleInstrument = (p: Instrument) => {
     setInstruments((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
@@ -230,9 +246,9 @@ export default function EditBandMemberScreen() {
       return;
     }
 
-    // only admins can change permissions/admin flag
-    if (!currentUserIsAdmin) {
-      Alert.alert("Not allowed", "Only admins can edit member settings.");
+    // only admins in admin mode can save here (screen is gated, but keep this safety)
+    if (!currentUserIsAdmin || !adminModeEnabled) {
+      Alert.alert("Not allowed", "Admin Mode must be enabled to edit members.");
       return;
     }
 
@@ -253,7 +269,7 @@ export default function EditBandMemberScreen() {
       is_admin: isAdmin,
       is_dep: isDep,
 
-      // ✅ perms are independent from is_admin
+      // perms are independent from is_admin
       can_view_settings: canViewSettings,
       can_view_band_and_crew: canViewBandAndCrew,
       can_view_band_docs: canViewBandDocs,
@@ -289,8 +305,8 @@ export default function EditBandMemberScreen() {
   const setActiveRow = async (nextActive: boolean) => {
     if (!id) return;
 
-    if (!currentUserIsAdmin) {
-      Alert.alert("Not allowed", "Only admins can activate/deactivate members.");
+    if (!currentUserIsAdmin || !adminModeEnabled) {
+      Alert.alert("Not allowed", "Admin Mode must be enabled to change status.");
       return;
     }
 
@@ -320,7 +336,7 @@ export default function EditBandMemberScreen() {
 
   const rolesToRender = memberType === "musician" ? MUSICIAN_ROLES : CREW_ROLES;
 
-  if (loading) {
+  if (!gateChecked || loading) {
     return (
       <>
         <Stack.Screen options={{ title: "Edit Member" }} />
@@ -498,10 +514,9 @@ export default function EditBandMemberScreen() {
         <View style={styles.toggleRow}>
           <Pressable
             onPress={() => {
-              if (!currentUserIsAdmin) return;
               setIsAdmin((v) => !v);
             }}
-            style={[styles.toggle, isAdmin && styles.toggleOn, !currentUserIsAdmin && { opacity: 0.5 }]}
+            style={[styles.toggle, isAdmin && styles.toggleOn]}
           >
             <Text style={[styles.toggleText, isAdmin && styles.toggleTextOn]}>
               Admin: {isAdmin ? "Yes" : "No"}
@@ -522,55 +537,45 @@ export default function EditBandMemberScreen() {
             label={`Settings: ${canViewSettings ? "On" : "Off"}`}
             value={canViewSettings}
             onPress={() => setCanViewSettings((v) => !v)}
-            disabled={!currentUserIsAdmin}
           />
           <ToggleChip
             label={`Band & Crew: ${canViewBandAndCrew ? "On" : "Off"}`}
             value={canViewBandAndCrew}
             onPress={() => setCanViewBandAndCrew((v) => !v)}
-            disabled={!currentUserIsAdmin}
           />
           <ToggleChip
             label={`Band Docs: ${canViewBandDocs ? "On" : "Off"}`}
             value={canViewBandDocs}
             onPress={() => setCanViewBandDocs((v) => !v)}
-            disabled={!currentUserIsAdmin}
           />
           <ToggleChip
             label={`Finance: ${canViewFinance ? "On" : "Off"}`}
             value={canViewFinance}
             onPress={() => setCanViewFinance((v) => !v)}
-            disabled={!currentUserIsAdmin}
           />
         </View>
 
-        {!currentUserIsAdmin ? (
-          <Text style={[styles.hint, { marginTop: 8 }]}>Only admins can change access.</Text>
-        ) : null}
-
         <Pressable
           onPress={onSave}
-          disabled={saving || !currentUserIsAdmin}
-          style={[styles.saveButton, (saving || !currentUserIsAdmin) && { opacity: 0.7 }]}
+          disabled={saving}
+          style={[styles.saveButton, saving && { opacity: 0.7 }]}
         >
-          <Text style={styles.saveButtonText}>
-            {saving ? "Saving…" : !currentUserIsAdmin ? "Admin only" : "Save Changes"}
-          </Text>
+          <Text style={styles.saveButtonText}>{saving ? "Saving…" : "Save Changes"}</Text>
         </Pressable>
 
         {isActive ? (
           <Pressable
             onPress={() => setActiveRow(false)}
-            disabled={saving || !currentUserIsAdmin}
-            style={[styles.dangerButton, (saving || !currentUserIsAdmin) && { opacity: 0.7 }]}
+            disabled={saving}
+            style={[styles.dangerButton, saving && { opacity: 0.7 }]}
           >
             <Text style={styles.dangerButtonText}>Deactivate Member</Text>
           </Pressable>
         ) : (
           <Pressable
             onPress={() => setActiveRow(true)}
-            disabled={saving || !currentUserIsAdmin}
-            style={[styles.activateButton, (saving || !currentUserIsAdmin) && { opacity: 0.7 }]}
+            disabled={saving}
+            style={[styles.activateButton, saving && { opacity: 0.7 }]}
           >
             <Text style={styles.activateButtonText}>Reactivate Member</Text>
           </Pressable>

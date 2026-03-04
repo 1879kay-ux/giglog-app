@@ -1,50 +1,34 @@
 // app/(tabs)/_layout.tsx
+
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
 
-function TabBarIcon(props: { name: keyof typeof Ionicons.glyphMap; color: string }) {
-  return <Ionicons size={24} style={{ marginBottom: -2 }} {...props} />;
-}
-
-export default function TabLayout() {
+export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.primary,
         headerStyle: { backgroundColor: colors.primary },
+        headerTitleStyle: { color: "#fff", fontWeight: "700" },
         headerTintColor: "#fff",
-        headerTitleStyle: { fontWeight: "700" },
+        tabBarActiveTintColor: colors.primary,
       }}
     >
-      {/* Make sure these match real files under app/(tabs)/ */}
+      {/* These MUST match files that exist in app/(tabs)/ */}
       <Tabs.Screen
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) => <TabBarIcon name="home-outline" color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" color={color} size={size} />,
         }}
       />
+
       <Tabs.Screen
-        name="events"
+        name="two"
         options={{
-          title: "Events",
-          tabBarIcon: ({ color }) => <TabBarIcon name="calendar-outline" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="band"
-        options={{
-          title: "Band",
-          tabBarIcon: ({ color }) => <TabBarIcon name="people-outline" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color }) => <TabBarIcon name="person-outline" color={color} />,
+          title: "More",
+          tabBarIcon: ({ color, size }) => <Ionicons name="ellipsis-horizontal" color={color} size={size} />,
         }}
       />
     </Tabs>

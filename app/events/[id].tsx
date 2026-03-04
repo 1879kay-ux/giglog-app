@@ -146,8 +146,13 @@ type SectionKey =
 export default function EventDetailsScreen() {
   const router = useRouter();
 
-  const { isAdmin, adminModeEnabled } = useCurrentMember();
+  const cm = useCurrentMember() as any;
+  const isAdmin = !!cm?.isAdmin;
+  const adminModeEnabled = !!cm?.adminModeEnabled;
+  const canViewFinance = !!cm?.canViewFinance;
+
   const canEdit = isAdmin && adminModeEnabled;
+  const canSeeFinance = isAdmin || canViewFinance;
 
   // Safer id handling
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -305,11 +310,7 @@ export default function EventDetailsScreen() {
     // Venue fetch
     if (data) {
       if (data.venue_id) {
-        const { data: venueData } = await supabase
-          .from("venues")
-          .select("*")
-          .eq("venue_id", data.venue_id)
-          .single();
+        const { data: venueData } = await supabase.from("venues").select("*").eq("venue_id", data.venue_id).single();
 
         setEvent({ ...(data as any), venues: venueData ? [venueData] : [] } as EventRow);
       } else {
@@ -317,7 +318,7 @@ export default function EventDetailsScreen() {
       }
     }
 
-    // Finance fetch (RLS will block dep/crew, so treat errors as "no finance available")
+    // Finance fetch (RLS may block, so treat errors as "no finance available")
     const { data: fin, error: finErr } = await supabase
       .from("event_finance")
       .select(
@@ -348,11 +349,7 @@ export default function EventDetailsScreen() {
     }
 
     // Accommodation fetch
-    const { data: accData, error: accErr } = await supabase
-      .from("accommodation")
-      .select("*")
-      .eq("event_id", id)
-      .maybeSingle();
+    const { data: accData, error: accErr } = await supabase.from("accommodation").select("*").eq("event_id", id).maybeSingle();
 
     if (accErr) {
       console.log("accommodation fetch error", accErr);
@@ -377,15 +374,10 @@ export default function EventDetailsScreen() {
   // ---------------------------------------------------------
   // TRAVEL HELPERS
   // ---------------------------------------------------------
-  const venueDest =
-    [venue?.address, venue?.city, venue?.postcode].filter(Boolean).join(", ") ||
-    venue?.postcode ||
-    "";
+  const venueDest = [venue?.address, venue?.city, venue?.postcode].filter(Boolean).join(", ") || venue?.postcode || "";
 
   const departureOrigin =
-    [event.departure_address, event.departure_postcode].filter(Boolean).join(", ") ||
-    event.departure_postcode ||
-    "";
+    [event.departure_address, event.departure_postcode].filter(Boolean).join(", ") || event.departure_postcode || "";
 
   function enc(s: string) {
     return encodeURIComponent(s.trim());
@@ -480,50 +472,16 @@ export default function EventDetailsScreen() {
           </Text>
         </View>
 
-        {/* ADMIN EDIT HUB (admin + admin mode) */}
-        {canEdit ? (
-          <View style={styles.adminPillRow}>
-            <TouchableOpacity
-              style={styles.adminPill}
-              onPress={() => {
-                if (!id) return;
-                router.push(`/events/${id}/edit`);
-              }}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="create-outline" size={16} color={colors.primary} />
-              <Text style={styles.adminPillText}>Edit Hub</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
+        {/* EDIT HUB REMOVED: keep section-level Edit buttons only */}
 
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* DETAILS */}
-          <Section
-            title="Details"
-            icon="information-circle-outline"
-            open={openSections.details}
-            onPress={() => toggleSection("details")}
-          >
-            <DetailsSection
-              eventId={event.event_id}
-              event={event}
-              venue={venue}
-              venueId={event.venue_id ?? null}
-            />
+          <Section title="Details" icon="information-circle-outline" open={openSections.details} onPress={() => toggleSection("details")}>
+            <DetailsSection eventId={event.event_id} event={event} venue={venue} venueId={event.venue_id ?? null} />
           </Section>
 
           {/* AVAILABILITY */}
-          <Section
-            title="Availability"
-            icon="checkmark-circle-outline"
-            open={openSections.availability}
-            onPress={() => toggleSection("availability")}
-          >
+          <Section title="Availability" icon="checkmark-circle-outline" open={openSections.availability} onPress={() => toggleSection("availability")}>
             <AvailabilitySection
               key={openSections.availability ? `open-${event.event_id}` : `closed-${event.event_id}`}
               eventId={event.event_id}
@@ -534,12 +492,7 @@ export default function EventDetailsScreen() {
           </Section>
 
           {/* SCHEDULE */}
-          <Section
-            title="Schedule"
-            icon="time-outline"
-            open={openSections.schedule}
-            onPress={() => toggleSection("schedule")}
-          >
+          <Section title="Schedule" icon="time-outline" open={openSections.schedule} onPress={() => toggleSection("schedule")}>
             <ScheduleSection
               eventId={event.event_id}
               travelVenue={event.travel_venue}
@@ -555,12 +508,7 @@ export default function EventDetailsScreen() {
           </Section>
 
           {/* DOCUMENTS */}
-          <Section
-            title="Documents"
-            icon="document-text-outline"
-            open={openSections.documents}
-            onPress={() => toggleSection("documents")}
-          >
+          <Section title="Documents" icon="document-text-outline" open={openSections.documents} onPress={() => toggleSection("documents")}>
             <DocumentsSection
               eventId={event.event_id}
               setlistUrl={event.setlist_url}
@@ -571,12 +519,7 @@ export default function EventDetailsScreen() {
           </Section>
 
           {/* TRAVEL */}
-          <Section
-            title="Travel"
-            icon="navigate-outline"
-            open={openSections.travel}
-            onPress={() => toggleSection("travel")}
-          >
+          <Section title="Travel" icon="navigate-outline" open={openSections.travel} onPress={() => toggleSection("travel")}>
             <TravelSection
               eventId={event.event_id}
               venueAddress={venue?.address}
@@ -589,12 +532,7 @@ export default function EventDetailsScreen() {
 
           {/* ACCOMMODATION (own section, not nested) */}
           {accommodation || canEdit ? (
-            <Section
-              title="Accommodation"
-              icon="bed-outline"
-              open={openSections.accommodation}
-              onPress={() => toggleSection("accommodation")}
-            >
+            <Section title="Accommodation" icon="bed-outline" open={openSections.accommodation} onPress={() => toggleSection("accommodation")}>
               <AccommodationSection
                 accommodation={accommodation}
                 canEdit={canEdit}
@@ -606,14 +544,9 @@ export default function EventDetailsScreen() {
             </Section>
           ) : null}
 
-          {/* FINANCE */}
-          {canEdit ? (
-            <Section
-              title="Finance"
-              icon="cash-outline"
-              open={openSections.finance}
-              onPress={() => toggleSection("finance")}
-            >
+          {/* FINANCE (visible in user mode if permitted; editable only in admin mode) */}
+          {canSeeFinance ? (
+            <Section title="Finance" icon="cash-outline" open={openSections.finance} onPress={() => toggleSection("finance")}>
               <FinanceSection
                 eventId={event.event_id}
                 isAdmin={canEdit}
@@ -730,28 +663,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  adminPillRow: {
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    alignItems: "flex-end",
-  },
-
-  adminPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: "rgba(13,148,136,0.12)",
-  },
-
-  adminPillText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: colors.primary,
-  },
-
   scroll: {
     flex: 1,
   },
@@ -799,20 +710,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardBg,
     borderRadius: 8,
     padding: 12,
-  },
-
-  editPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: "rgba(13,148,136,0.10)",
-  },
-  editPillText: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: colors.primary,
   },
 });

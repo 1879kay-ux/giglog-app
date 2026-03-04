@@ -1,5 +1,6 @@
+// app/auth.tsx
+
 import { supabase } from "@/lib/supabase";
-import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -23,85 +24,54 @@ export default function AuthScreen() {
   const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
-
-  // Debug UI that works on iOS + web (Alert can be unreliable on web)
   const [status, setStatus] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  async function signIn() {
+  async function signInWithPassword() {
     setErrorMsg(null);
-    setStatus("Sign in tapped");
+    setStatus(null);
 
-    if (!email || !password) {
+    const emailClean = email.trim().toLowerCase();
+    if (!emailClean || !password) {
       setErrorMsg("Enter email and password.");
-      setStatus(null);
       return;
     }
 
-    // Only normalize email. Never trim/modify the password.
-    const emailClean = email.trim().toLowerCase();
-    const passwordRaw = password;
-
     setLoading(true);
-    setStatus("Calling Supabase...");
-    console.log("SIGN IN:", { email: emailClean });
-
-    // Diagnostics for Android whitespace / invisible chars
-    console.log("EMAIL LEN:", email.length, "CLEAN:", emailClean.length);
-    console.log("PASS  LEN:", password.length);
-    console.log("PASS CODES:", Array.from(password).map((c) => c.charCodeAt(0)));
-
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: emailClean,
-        password: passwordRaw,
+        password,
       });
-
-      console.log("SUPABASE RESULT:", { data, error });
-
       if (error) throw error;
 
-      setStatus("Signed in, routing...");
-      router.replace("/"); // simple MVP behaviour
+      setStatus("Signed in.");
+      router.replace("/");
     } catch (e: any) {
-      console.log("SIGN IN ERROR:", e);
       setErrorMsg(e?.message ?? "Unknown error");
-      setStatus(null);
     } finally {
       setLoading(false);
     }
   }
 
-  async function resetPassword() {
+  async function sendPasswordReset() {
     setErrorMsg(null);
     setStatus(null);
 
-    if (!email) {
+    const emailClean = email.trim().toLowerCase();
+    if (!emailClean) {
       Alert.alert("Enter your email", "Type your email first, then tap reset.");
       return;
     }
 
-    const emailClean = email.trim().toLowerCase();
-
     setLoading(true);
-    setStatus("Sending reset email...");
-
     try {
-      const redirectTo = Linking.createURL("auth/callback");
-      console.log("redirectTo:", redirectTo);
-
-      const { error } = await supabase.auth.resetPasswordForEmail(emailClean, {
-        redirectTo,
-      });
-
+      const { error } = await supabase.auth.resetPasswordForEmail(emailClean);
       if (error) throw error;
 
-      setStatus("Reset email sent");
-      Alert.alert("Password reset sent", "Check your inbox.");
+      setStatus("Reset email sent. Check your inbox.");
     } catch (e: any) {
-      console.log("RESET ERROR:", e);
       setErrorMsg(e?.message ?? "Unknown error");
-      setStatus(null);
     } finally {
       setLoading(false);
     }
@@ -113,16 +83,9 @@ export default function AuthScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
     >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="always"
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="always">
         <View style={styles.card}>
           <Text style={styles.title}>Sign in</Text>
-          <Text style={styles.subtitle}>
-            Access is by invitation only. Ask the band admin for access.
-          </Text>
 
           <Text style={styles.label}>Email</Text>
           <TextInput
@@ -139,7 +102,6 @@ export default function AuthScreen() {
           />
 
           <Text style={styles.label}>Password</Text>
-
           <View style={styles.passwordRow}>
             <TextInput
               secureTextEntry={!showPassword}
@@ -152,9 +114,8 @@ export default function AuthScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="password"
-              onSubmitEditing={signIn}
+              onSubmitEditing={signInWithPassword}
             />
-
             <TouchableOpacity
               onPress={() => setShowPassword((v) => !v)}
               style={styles.showBtn}
@@ -168,11 +129,11 @@ export default function AuthScreen() {
           {status ? <Text style={styles.status}>{status}</Text> : null}
           {errorMsg ? <Text style={styles.error}>{errorMsg}</Text> : null}
 
-          <TouchableOpacity style={styles.button} onPress={signIn} disabled={loading}>
-            {loading ? <ActivityIndicator /> : <Text style={styles.buttonText}>Sign in</Text>}
+          <TouchableOpacity style={styles.button} onPress={signInWithPassword} disabled={loading}>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign in</Text>}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={resetPassword} disabled={loading} style={styles.linkBtn}>
+          <TouchableOpacity onPress={sendPasswordReset} disabled={loading} style={styles.linkBtn}>
             <Text style={styles.link}>Forgot password?</Text>
           </TouchableOpacity>
         </View>
@@ -183,21 +144,9 @@ export default function AuthScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: "#fff" },
-
-  container: {
-    flexGrow: 1,
-    padding: 20,
-    justifyContent: "center",
-    backgroundColor: "#fff",
-    paddingBottom: 40,
-  },
-
-  card: {
-    width: "100%",
-  },
-
-  title: { fontSize: 22, fontWeight: "800", marginBottom: 6, color: "#111" },
-  subtitle: { fontSize: 13, color: "#666", marginBottom: 18, lineHeight: 18 },
+  container: { flexGrow: 1, padding: 20, justifyContent: "center", paddingBottom: 40 },
+  card: { width: "100%" },
+  title: { fontSize: 22, fontWeight: "800", marginBottom: 12, color: "#111" },
 
   label: { fontSize: 13, fontWeight: "700", color: "#444", marginTop: 10, marginBottom: 6 },
   input: {
@@ -209,13 +158,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  passwordRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  passwordInput: {
-    flex: 1,
-  },
+  passwordRow: { flexDirection: "row", alignItems: "center" },
+  passwordInput: { flex: 1 },
   showBtn: {
     marginLeft: 10,
     paddingHorizontal: 12,
@@ -225,13 +169,10 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
     justifyContent: "center",
   },
-  showBtnText: {
-    fontWeight: "800",
-    color: "#009999",
-  },
+  showBtnText: { fontWeight: "800", color: "#009999" },
 
-  status: { marginTop: 10, color: "#666", textAlign: "center" },
-  error: { marginTop: 10, color: "#b00020", fontWeight: "800", textAlign: "center" },
+  status: { marginTop: 12, color: "#666", textAlign: "center", fontWeight: "700" },
+  error: { marginTop: 12, color: "#b00020", fontWeight: "800", textAlign: "center" },
 
   button: {
     marginTop: 14,

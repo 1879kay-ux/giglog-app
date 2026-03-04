@@ -11,13 +11,7 @@ type Props = {
   style?: ViewStyle | ViewStyle[];
 };
 
-export default function ActionButton({
-  label,
-  icon,
-  onPress,
-  disabled,
-  style,
-}: Props) {
+export default function ActionButton({ label, icon, onPress, disabled, style }: Props) {
   return (
     <Pressable
       onPress={onPress}
@@ -30,9 +24,7 @@ export default function ActionButton({
       ]}
     >
       <View style={styles.content}>
-        {icon ? (
-          <Ionicons name={icon} size={18} color="#fff" style={styles.icon} />
-        ) : null}
+        {icon ? <Ionicons name={icon} size={18} color="#fff" style={styles.icon} /> : null}
         <Text style={styles.text}>{label}</Text>
       </View>
     </Pressable>
@@ -41,14 +33,13 @@ export default function ActionButton({
 
 const styles = StyleSheet.create({
   button: {
+    alignSelf: "center",
     backgroundColor: colors.button,
     borderColor: colors.primary,
     borderWidth: 1,
     paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 18,
     borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
     minHeight: 44,
   },
   content: {

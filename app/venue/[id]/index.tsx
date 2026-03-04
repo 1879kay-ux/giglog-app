@@ -42,8 +42,8 @@ function Field({ label, value }: { label: string; value: string | null }) {
 
 export default function VenueDetailScreen() {
   const router = useRouter();
-  const { isAdmin, adminModeEnabled, loading: memberLoading } = useCurrentMember();
-  const canEdit = isAdmin && adminModeEnabled;
+  const { isAdmin, adminModeEnabled, loading: memberLoading } = useCurrentMember() as any;
+  const canEdit = !!isAdmin && !!adminModeEnabled;
 
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -68,20 +68,17 @@ export default function VenueDetailScreen() {
     setLoading(false);
   }, [id]);
 
-  // Initial load when id changes
   useEffect(() => {
     if (!id) return;
     loadVenue();
   }, [id, loadVenue]);
 
-  // Critical fix: re-load when screen regains focus (eg after Edit Venue -> back)
   useFocusEffect(
     useCallback(() => {
       loadVenue();
     }, [loadVenue])
   );
 
-  // optional: while member is loading, keep same loading UI
   if (loading || memberLoading) {
     return (
       <View style={styles.loading}>
@@ -132,12 +129,15 @@ export default function VenueDetailScreen() {
 
         {/* EDIT VENUE BUTTON (admin only) */}
         {canEdit ? (
-  <ActionButton
-    label="Edit Venue"
-    icon="create-outline"
-    onPress={() => router.push(`/venue/${venue.venue_id}/edit`)}
-  />
-) : null}
+          <View style={styles.editButtonWrap}>
+            <ActionButton
+              label="Edit Venue"
+              icon="create-outline"
+              onPress={() => router.push(`/venue/${venue.venue_id}/edit`)}
+              style={styles.editButton}
+            />
+          </View>
+        ) : null}
 
         <ScrollView contentContainerStyle={styles.content}>
           <Field label="Address" value={venue.address} />
@@ -145,18 +145,10 @@ export default function VenueDetailScreen() {
           <Field label="Contact" value={venue.venue_contact_name} />
           <Field label="Phone" value={venue.venue_contact_phone} />
           <Field label="Email" value={venue.venue_contact_email} />
-          <Field
-            label="Capacity"
-            value={venue.capacity != null ? String(venue.capacity) : null}
-          />
+          <Field label="Capacity" value={venue.capacity != null ? String(venue.capacity) : null} />
           <Field label="Capacity notes" value={venue.capacity_notes} />
           <Field label="Notes" value={venue.venue_notes} />
-          <Field
-            label="Active"
-            value={
-              venue.is_active == null ? null : venue.is_active ? "Yes" : "No"
-            }
-          />
+          <Field label="Active" value={venue.is_active == null ? null : venue.is_active ? "Yes" : "No"} />
         </ScrollView>
       </View>
     </>
@@ -202,6 +194,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#444",
+  },
+
+  editButtonWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    backgroundColor: "#f5f5f5",
+  },
+  editButton: {
+    alignSelf: "center",
   },
 
   content: {

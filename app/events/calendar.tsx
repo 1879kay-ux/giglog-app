@@ -78,8 +78,7 @@ function colorForEvent(e: EventLite) {
 
   if (status.includes("confirm")) return "#16a34a";
   if (status.includes("cancel")) return "#dc2626";
-  if (status.includes("tbc") || status.includes("tent") || status.includes("offer"))
-    return "#f59e0b";
+  if (status.includes("tbc") || status.includes("tent") || status.includes("offer")) return "#f59e0b";
 
   return "#16a34a";
 }
@@ -89,10 +88,7 @@ function pillLabel(e: EventLite) {
   const venue = (e.venues?.event_venue_name ?? "").trim();
   const type = (e.event_type ?? "").trim();
 
-  // Prefer City, else Venue, else Type
   const base = city || venue || type || "Event";
-
-  // Keep pills short so they fit in day cells
   return base.length > 10 ? `${base.slice(0, 10)}…` : base;
 }
 
@@ -197,9 +193,7 @@ export default function EventsCalendarScreen() {
     return (
       <View style={compact ? styles.monthCardCompact : styles.monthCard}>
         <View style={styles.monthHeaderRow}>
-          <Text style={compact ? styles.monthTitleCompact : styles.monthTitle}>
-            {monthTitle(monthStart).toUpperCase()}
-          </Text>
+          <Text style={compact ? styles.monthTitleCompact : styles.monthTitle}>{monthTitle(monthStart).toUpperCase()}</Text>
 
           {compact ? null : (
             <Pressable
@@ -247,30 +241,27 @@ export default function EventsCalendarScreen() {
               >
                 <Text style={compact ? styles.dayNumberCompact : styles.dayNumber}>{c.label}</Text>
 
-                {/* YEAR: dots only. MONTH: colored pills. */}
+                {/* YEAR: mini pill. MONTH: colored pills. */}
                 {compact ? (
                   hasEvents ? (
-                    <View style={styles.dotsRowCompact}>
-                      {dayEvents!.slice(0, 2).map((e) => (
-                        <View
-                          key={e.event_id}
-                          style={[styles.dotCompact, { backgroundColor: colorForEvent(e) }]}
-                        />
-                      ))}
-                      {dayEvents!.length > 2 ? (
-                        <Text style={styles.moreTextCompact}>+{dayEvents!.length - 2}</Text>
+                    <View style={styles.miniPillRow}>
+                      <View style={[styles.miniPill, { backgroundColor: colorForEvent(dayEvents![0]) }]}>
+                        <Text style={styles.miniPillText} numberOfLines={1}>
+                          {pillLabel(dayEvents![0])}
+                        </Text>
+                      </View>
+
+                      {dayEvents!.length > 1 ? (
+                        <Text style={styles.moreTextCompact}>+{dayEvents!.length - 1}</Text>
                       ) : null}
                     </View>
                   ) : (
-                    <View style={styles.dotsRowCompact} />
+                    <View style={styles.miniPillRow} />
                   )
                 ) : hasEvents ? (
                   <View style={styles.pillsWrap}>
                     {dayEvents!.slice(0, 2).map((e) => (
-                      <View
-                        key={e.event_id}
-                        style={[styles.pill, { backgroundColor: colorForEvent(e) }]}
-                      >
+                      <View key={e.event_id} style={[styles.pill, { backgroundColor: colorForEvent(e) }]}>
                         <Text style={styles.pillText} numberOfLines={1}>
                           {pillLabel(e)}
                         </Text>
@@ -303,7 +294,7 @@ export default function EventsCalendarScreen() {
         options={{
           title: "Calendar",
           headerTitleAlign: "center",
-          headerStyle: { backgroundColor: colors.primary},
+          headerStyle: { backgroundColor: colors.primary },
           headerTitleStyle: { color: "#fff", fontWeight: "700", fontSize: 18 },
           headerTintColor: "#fff",
           headerLeft: () => (
@@ -331,12 +322,7 @@ export default function EventsCalendarScreen() {
                 onPress={() => setViewMode("year")}
                 style={[styles.viewModeBtn, viewMode === "year" ? styles.viewModeBtnActive : null]}
               >
-                <Text
-                  style={[
-                    styles.viewModeText,
-                    viewMode === "year" ? styles.viewModeTextActive : null,
-                  ]}
-                >
+                <Text style={[styles.viewModeText, viewMode === "year" ? styles.viewModeTextActive : null]}>
                   Year
                 </Text>
               </Pressable>
@@ -345,12 +331,7 @@ export default function EventsCalendarScreen() {
                 onPress={() => setViewMode("month")}
                 style={[styles.viewModeBtn, viewMode === "month" ? styles.viewModeBtnActive : null]}
               >
-                <Text
-                  style={[
-                    styles.viewModeText,
-                    viewMode === "month" ? styles.viewModeTextActive : null,
-                  ]}
-                >
+                <Text style={[styles.viewModeText, viewMode === "month" ? styles.viewModeTextActive : null]}>
                   Months
                 </Text>
               </Pressable>
@@ -359,21 +340,13 @@ export default function EventsCalendarScreen() {
             <View style={{ flex: 1 }} />
 
             <View style={styles.yearNav}>
-              <Pressable
-                onPress={() => setAnchorYear((d) => addYears(d, -1))}
-                style={styles.navBtn}
-                hitSlop={10}
-              >
+              <Pressable onPress={() => setAnchorYear((d) => addYears(d, -1))} style={styles.navBtn} hitSlop={10}>
                 <Ionicons name="chevron-back-outline" size={20} color="#111" />
               </Pressable>
 
               <Text style={styles.yearText}>{String(year)}</Text>
 
-              <Pressable
-                onPress={() => setAnchorYear((d) => addYears(d, 1))}
-                style={styles.navBtn}
-                hitSlop={10}
-              >
+              <Pressable onPress={() => setAnchorYear((d) => addYears(d, 1))} style={styles.navBtn} hitSlop={10}>
                 <Ionicons name="chevron-forward-outline" size={20} color="#111" />
               </Pressable>
             </View>
@@ -383,13 +356,7 @@ export default function EventsCalendarScreen() {
           {viewMode === "year" ? (
             <View style={styles.yearGrid}>
               {monthsInYear.map((m) => (
-                <View
-                  key={m.toISOString()}
-                  style={[
-                    styles.yearCell,
-                    { width: `${100 / columnsForYearGrid}%` as any },
-                  ]}
-                >
+                <View key={m.toISOString()} style={[styles.yearCell, { width: `${100 / columnsForYearGrid}%` as any }]}>
                   {renderMonthGrid(m, true)}
                 </View>
               ))}
@@ -416,9 +383,7 @@ export default function EventsCalendarScreen() {
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setDayModalOpen(false)} />
 
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              {selectedDate ? `Events: ${selectedDate}` : "Events"}
-            </Text>
+            <Text style={styles.modalTitle}>{selectedDate ? `Events: ${selectedDate}` : "Events"}</Text>
 
             {selectedEvents.map((e) => {
               const venueName = e.venues?.event_venue_name ?? "Unknown venue";
@@ -538,7 +503,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "#E9F6F6",
   },
-  smallLinkText: {   color: colors.primary, fontWeight: "900", fontSize: 12 },
+  smallLinkText: { color: colors.primary, fontWeight: "900", fontSize: 12 },
 
   weekHeaderRow: { flexDirection: "row", marginTop: 6 },
   weekHeaderText: {
@@ -566,14 +531,32 @@ const styles = StyleSheet.create({
   },
 
   cellWeekend: { backgroundColor: "#f8fafc" },
-  cellToday: { borderWidth: 2, borderColor: colors.primary},
+  cellToday: { borderWidth: 2, borderColor: colors.primary },
 
   dayNumber: { fontSize: 13, fontWeight: "900", color: "#111" },
   dayNumberCompact: { fontSize: 11, fontWeight: "900", color: "#111" },
 
-  // YEAR dots
-  dotsRowCompact: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 4, height: 12 },
-  dotCompact: { width: 8, height: 8, borderRadius: 4 },
+  // YEAR mini pill
+  miniPillRow: {
+    marginTop: 4,
+    height: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  miniPill: {
+    maxWidth: "80%",
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  miniPillText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "900",
+    textAlign: "center",
+  },
   moreTextCompact: { fontSize: 10, color: "#666", marginLeft: 1, fontWeight: "900" },
 
   // MONTH pills
@@ -585,15 +568,15 @@ const styles = StyleSheet.create({
     minHeight: 30,
   },
   pill: {
-    width: "92%",
+    width: "94%",
     borderRadius: 8,
     paddingHorizontal: 6,
     paddingVertical: 3,
   },
   pillText: {
     color: "#fff",
-    fontSize: 10,
-    fontWeight: "900",
+    fontSize: 11,
+    fontWeight: "700",
     textAlign: "center",
   },
   morePillsText: {
@@ -634,5 +617,5 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
-  modalCloseText: {   color: colors.primary, fontWeight: "900" },
+  modalCloseText: { color: colors.primary, fontWeight: "900" },
 });

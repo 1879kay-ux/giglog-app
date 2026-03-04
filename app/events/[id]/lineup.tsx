@@ -49,10 +49,7 @@ export default function EventLineupScreen() {
   const [members, setMembers] = useState<BandMemberRow[]>([]);
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
 
-  const musicians = useMemo(
-    () => members.filter((m) => m.member_type === "musician"),
-    [members]
-  );
+  const musicians = useMemo(() => members.filter((m) => m.member_type === "musician"), [members]);
   const crew = useMemo(() => members.filter((m) => m.member_type === "crew"), [members]);
 
   const roleDisplay = (m: BandMemberRow) => {
@@ -68,10 +65,7 @@ export default function EventLineupScreen() {
 
   // Core band definition (your rule)
   const isCore = (m: BandMemberRow) =>
-    m.is_active === true &&
-    m.is_dep === false &&
-    m.member_type === "musician" &&
-    m.band_role === "Band";
+    m.is_active === true && m.is_dep === false && m.member_type === "musician" && m.band_role === "Band";
 
   async function load() {
     if (!eventId) return;
@@ -92,7 +86,6 @@ export default function EventLineupScreen() {
     const evRow = ev as EventRow;
     setEvent(evRow);
 
-    // 1) Who is on this event is defined by event_availability rows
     const { data: avRows, error: avErr } = await supabase
       .from("event_availability")
       .select("member_id")
@@ -106,9 +99,6 @@ export default function EventLineupScreen() {
 
     setInvitedIds(new Set<string>((avRows ?? []).map((x: any) => x.member_id)));
 
-    // 2) Inviteable list comes from band_members.
-    // IMPORTANT: include rows where band_id is NULL (common during build/dummy data),
-    // so newly added deps/crew still appear and can be “claimed” into this band on invite.
     const { data: bm, error: bmErr } = await supabase
       .from("band_members")
       .select(
@@ -149,7 +139,6 @@ export default function EventLineupScreen() {
 
     setSavingMemberId(memberId);
     try {
-      // If this member has no band_id yet, attach them to this band now.
       const m = members.find((x) => x.member_id === memberId) ?? null;
       if (m && (!m.band_id || m.band_id !== event.band_id)) {
         const { error: updErr } = await supabase
@@ -160,11 +149,12 @@ export default function EventLineupScreen() {
         if (updErr) throw updErr;
       }
 
-      // Source of truth: add them to the event by ensuring availability row exists.
-      // status = null means "awaiting"
       const { error } = await supabase
         .from("event_availability")
-        .upsert({ event_id: eventId, member_id: memberId, status: null }, { onConflict: "event_id,member_id" });
+        .upsert(
+          { event_id: eventId, member_id: memberId, status: null },
+          { onConflict: "event_id,member_id" }
+        );
 
       if (error) throw error;
 
@@ -180,8 +170,7 @@ export default function EventLineupScreen() {
   async function removeInvite(memberId: string) {
     if (!eventId) return;
 
-    const memberName =
-      members.find((m) => m.member_id === memberId)?.display_name ?? "this member";
+    const memberName = members.find((m) => m.member_id === memberId)?.display_name ?? "this member";
 
     let confirmed = false;
     if (Platform.OS === "web") {
@@ -268,9 +257,7 @@ export default function EventLineupScreen() {
           disabled={saving}
           style={[styles.button, styles.removeButton, saving ? styles.buttonDisabled : null]}
         >
-          <Text style={[styles.buttonText, styles.removeButtonText]}>
-            {saving ? "Removing..." : "Remove"}
-          </Text>
+          <Text style={[styles.buttonText, styles.removeButtonText]}>{saving ? "Removing..." : "Remove"}</Text>
         </Pressable>
       );
     }
@@ -300,37 +287,43 @@ export default function EventLineupScreen() {
       />
 
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <InfoCard title="Invite Members">
-          <Text style={styles.note}>
-            Invite adds them to this event and seeds availability as Awaiting. Remove reverses that.
-          </Text>
-        </InfoCard>
+        <View style={styles.cardWrap}>
+          <InfoCard title="Invite Members">
+            <Text style={styles.note}>
+              Invite adds them to this event and seeds availability as Awaiting. Remove reverses that.
+            </Text>
+          </InfoCard>
+        </View>
 
-        <InfoCard title="Musicians">
-          {musicians.map((m) => (
-            <View key={m.member_id} style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{m.display_name ?? "Unnamed"}</Text>
-                <Text style={styles.sub}>{instrumentsDisplay(m) || "No instruments set"}</Text>
+        <View style={styles.cardWrap}>
+          <InfoCard title="Musicians">
+            {musicians.map((m) => (
+              <View key={m.member_id} style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.name}>{m.display_name ?? "Unnamed"}</Text>
+                  <Text style={styles.sub}>{instrumentsDisplay(m) || "No instruments set"}</Text>
+                </View>
+                {actionButton(m)}
               </View>
-              {actionButton(m)}
-            </View>
-          ))}
-          {musicians.length === 0 ? <Text style={styles.empty}>No musicians found.</Text> : null}
-        </InfoCard>
+            ))}
+            {musicians.length === 0 ? <Text style={styles.empty}>No musicians found.</Text> : null}
+          </InfoCard>
+        </View>
 
-        <InfoCard title="Crew">
-          {crew.map((m) => (
-            <View key={m.member_id} style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{m.display_name ?? "Unnamed"}</Text>
-                <Text style={styles.sub}>{roleDisplay(m) || "No role set"}</Text>
+        <View style={styles.cardWrap}>
+          <InfoCard title="Crew">
+            {crew.map((m) => (
+              <View key={m.member_id} style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.name}>{m.display_name ?? "Unnamed"}</Text>
+                  <Text style={styles.sub}>{roleDisplay(m) || "No role set"}</Text>
+                </View>
+                {actionButton(m)}
               </View>
-              {actionButton(m)}
-            </View>
-          ))}
-          {crew.length === 0 ? <Text style={styles.empty}>No crew found.</Text> : null}
-        </InfoCard>
+            ))}
+            {crew.length === 0 ? <Text style={styles.empty}>No crew found.</Text> : null}
+          </InfoCard>
+        </View>
       </ScrollView>
     </>
   );
@@ -338,8 +331,16 @@ export default function EventLineupScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5" },
-  content: { padding: 16, paddingBottom: 32 },
+  content: { padding: 16, paddingBottom: 32, gap: 12 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
+
+  cardWrap: {
+    borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    backgroundColor: "#fff",
+  },
 
   note: { fontSize: 13, color: "#444", fontWeight: "600" },
   error: { fontSize: 13, color: "#C62828", fontWeight: "800" },

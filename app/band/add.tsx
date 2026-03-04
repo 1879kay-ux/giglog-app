@@ -1,3 +1,4 @@
+import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { supabase } from "@/lib/supabase";
 import { Stack, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
@@ -72,6 +73,9 @@ type InviteResponse =
 export default function AddBandMemberScreen() {
   const router = useRouter();
 
+  const cm: any = useCurrentMember();
+  const currentUserIsAdmin = !!cm?.isAdmin;
+
   const [saving, setSaving] = useState(false);
 
   const [displayName, setDisplayName] = useState("");
@@ -91,6 +95,12 @@ export default function AddBandMemberScreen() {
 
   const [isActive, setIsActive] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // access toggles
+  const [canViewSettings, setCanViewSettings] = useState(false);
+  const [canViewBandAndCrew, setCanViewBandAndCrew] = useState(false);
+  const [canViewBandDocs, setCanViewBandDocs] = useState(false);
+  const [canViewFinance, setCanViewFinance] = useState(false);
 
   const role = useMemo(() => {
     return memberType === "musician" ? musicianRole : crewRole;
@@ -136,6 +146,11 @@ export default function AddBandMemberScreen() {
   }
 
   const onSave = async () => {
+    if (!currentUserIsAdmin) {
+      Alert.alert("Not allowed", "Only admins can invite new members.");
+      return;
+    }
+
     const name = displayName.trim();
     if (!name) {
       Alert.alert("Missing name", "Please enter a display name.");
@@ -195,6 +210,12 @@ export default function AddBandMemberScreen() {
           is_dep: finalMemberType === "musician" && role === "Dep Musician",
           band_positions: finalPositions,
           band_positions_other: finalPositionsOther,
+
+          // access
+          can_view_settings: canViewSettings,
+          can_view_band_and_crew: canViewBandAndCrew,
+          can_view_band_docs: canViewBandDocs,
+          can_view_finance: canViewFinance,
         }),
       });
 
@@ -223,6 +244,12 @@ export default function AddBandMemberScreen() {
         is_active: isActive,
         is_admin: isAdmin,
         is_dep: finalMemberType === "musician" && role === "Dep Musician",
+
+        // access
+        can_view_settings: canViewSettings,
+        can_view_band_and_crew: canViewBandAndCrew,
+        can_view_band_docs: canViewBandDocs,
+        can_view_finance: canViewFinance,
       };
 
       const { error: patchErr } = await supabase
@@ -232,7 +259,10 @@ export default function AddBandMemberScreen() {
 
       if (patchErr) throw new Error(patchErr.message);
 
-      Alert.alert("Invite sent", data.note ?? (data.invite_sent ? "Invite email sent." : "Member created."));
+      Alert.alert(
+        "Invite sent",
+        data.note ?? (data.invite_sent ? "Invite email sent." : "Member created.")
+      );
       router.back();
     } catch (e: any) {
       console.log("invite member error", e);
@@ -244,6 +274,24 @@ export default function AddBandMemberScreen() {
 
   const rolesToRender = memberType === "musician" ? MUSICIAN_ROLES : CREW_ROLES;
   const selectedRole = role;
+
+  const ToggleChip = (props: {
+    label: string;
+    value: boolean;
+    onPress: () => void;
+    disabled?: boolean;
+  }) => {
+    const on = !!props.value;
+    return (
+      <Pressable
+        onPress={props.onPress}
+        disabled={props.disabled}
+        style={[styles.chip, on && styles.chipSelected, props.disabled ? { opacity: 0.5 } : null]}
+      >
+        <Text style={[styles.chipText, on && styles.chipTextSelected]}>{props.label}</Text>
+      </Pressable>
+    );
+  };
 
   return (
     <>
@@ -391,8 +439,11 @@ export default function AddBandMemberScreen() {
           </Pressable>
 
           <Pressable
-            onPress={() => setIsAdmin((v) => !v)}
-            style={[styles.toggle, isAdmin && styles.toggleOn]}
+            onPress={() => {
+              if (!currentUserIsAdmin) return;
+              setIsAdmin((v) => !v);
+            }}
+            style={[styles.toggle, isAdmin && styles.toggleOn, !currentUserIsAdmin && { opacity: 0.5 }]}
           >
             <Text style={[styles.toggleText, isAdmin && styles.toggleTextOn]}>
               Admin: {isAdmin ? "Yes" : "No"}
@@ -400,10 +451,45 @@ export default function AddBandMemberScreen() {
           </Pressable>
         </View>
 
+        {/* ACCESS CONTROLS */}
+        <Text style={[styles.label, { marginTop: 18 }]}>Access</Text>
+        <Text style={styles.hint}>These control which sections appear for this member.</Text>
+
+        <View style={[styles.chipWrap, { marginTop: 10 }]}>
+          <ToggleChip
+            label={`Settings: ${canViewSettings ? "On" : "Off"}`}
+            value={canViewSettings}
+            onPress={() => setCanViewSettings((v) => !v)}
+            disabled={!currentUserIsAdmin}
+          />
+          <ToggleChip
+            label={`Band & Crew: ${canViewBandAndCrew ? "On" : "Off"}`}
+            value={canViewBandAndCrew}
+            onPress={() => setCanViewBandAndCrew((v) => !v)}
+            disabled={!currentUserIsAdmin}
+          />
+          <ToggleChip
+            label={`Band Docs: ${canViewBandDocs ? "On" : "Off"}`}
+            value={canViewBandDocs}
+            onPress={() => setCanViewBandDocs((v) => !v)}
+            disabled={!currentUserIsAdmin}
+          />
+          <ToggleChip
+            label={`Finance: ${canViewFinance ? "On" : "Off"}`}
+            value={canViewFinance}
+            onPress={() => setCanViewFinance((v) => !v)}
+            disabled={!currentUserIsAdmin}
+          />
+        </View>
+
+        {!currentUserIsAdmin ? (
+          <Text style={[styles.hint, { marginTop: 8 }]}>Only admins can change access.</Text>
+        ) : null}
+
         <Pressable
           onPress={onSave}
-          disabled={saving}
-          style={[styles.saveButton, saving && { opacity: 0.7 }]}
+          disabled={saving || !currentUserIsAdmin}
+          style={[styles.saveButton, (saving || !currentUserIsAdmin) && { opacity: 0.7 }]}
         >
           {saving ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -411,9 +497,14 @@ export default function AddBandMemberScreen() {
               <Text style={styles.saveButtonText}>Saving…</Text>
             </View>
           ) : (
-            <Text style={styles.saveButtonText}>Save Member</Text>
+            <Text style={styles.saveButtonText}>Save & Invite</Text>
           )}
         </Pressable>
+
+        <Text style={styles.note}>
+          Saving will create the member and send them an email invitation to join GigLog. They will
+          receive a link to activate their account.
+        </Text>
       </ScrollView>
     </>
   );
@@ -424,6 +515,9 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 32 },
 
   label: { fontSize: 13, fontWeight: "700", color: "#333", marginTop: 12, marginBottom: 6 },
+  hint: { fontSize: 12, fontWeight: "600", color: "#666" },
+  note: { marginTop: 10, fontSize: 12, fontWeight: "600", color: "#666", lineHeight: 16 },
+
   input: {
     backgroundColor: "#fff",
     borderRadius: 12,

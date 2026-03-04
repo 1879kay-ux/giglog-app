@@ -797,7 +797,7 @@ const styles = StyleSheet.create({
 
   eventVenue: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "500",
     color: colors.text,
     marginBottom: 2,
     lineHeight: 22,
@@ -810,7 +810,7 @@ const styles = StyleSheet.create({
   },
 
   eventMetaStatus: {
-    fontWeight: "700",
+    fontWeight: "600",
   },
   statusProvisional: {
     color: "#F59E0B",

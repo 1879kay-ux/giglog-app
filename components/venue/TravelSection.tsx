@@ -131,14 +131,12 @@ export default function TravelSection({
   }, [effectiveDepartureAddress, effectiveDeparturePostcode]);
 
   async function openUrl(url: string) {
-    try {
-      const can = await Linking.canOpenURL(url);
-      if (!can) throw new Error("cannot open");
-      await Linking.openURL(url);
-    } catch {
-      Alert.alert("Can't open maps", "Check the address/postcode and try again.");
-    }
+  try {
+    await Linking.openURL(url);
+  } catch {
+    Alert.alert("Can't open maps", "Check the address/postcode and try again.");
   }
+}
 
   function openToVenue(app: "apple" | "google" | "waze") {
     if (!venueDest) {

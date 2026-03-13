@@ -29,7 +29,10 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.giglogtracker.app",
-      "versionCode": 2
+      "versionCode": 2,
+      "blockedPermissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -38,7 +41,13 @@
     },
     "plugins": [
       "expo-router",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -10,7 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -116,11 +116,9 @@ type EventRow = {
   promo_material_url: string | null;
   doc_other_url: string | null;
 
-  // Costs that are not part of "Finance" (still on events)
   van_hire: number | null;
   fuel: number | null;
 
-  // per-event departure override (optional)
   departure_address: string | null;
   departure_postcode: string | null;
 
@@ -154,7 +152,6 @@ export default function EventDetailsScreen() {
   const canEdit = isAdmin && adminModeEnabled;
   const canSeeFinance = isAdmin || canViewFinance;
 
-  // Safer id handling
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -163,8 +160,6 @@ export default function EventDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [hasCustomLineup, setHasCustomLineup] = useState(false);
   const [accommodation, setAccommodation] = useState<AccommodationRow | null>(null);
-
-  // Mapped from auth.users.id -> band_members.member_id
   const [currentMemberId, setCurrentMemberId] = useState<string>("");
 
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
@@ -177,10 +172,38 @@ export default function EventDetailsScreen() {
     accommodation: false,
   });
 
-  const toggleSection = (key: SectionKey) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  const scrollRef = useRef<ScrollView | null>(null);
+  const sectionPositions = useRef<Partial<Record<SectionKey, number>>>({});
+
+  const scrollToSection = useCallback((key: SectionKey) => {
+    const y = sectionPositions.current[key];
+    if (typeof y !== "number" || !scrollRef.current) return;
+    scrollRef.current.scrollTo({
+      y: Math.max(0, y - 8),
+      animated: true,
+    });
+  }, []);
+
+  const handleSectionLayout = useCallback((key: SectionKey, y: number) => {
+    sectionPositions.current[key] = y;
+  }, []);
+
+  const toggleSection = useCallback(
+    (key: SectionKey) => {
+      const willOpen = !openSections[key];
+
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
+      setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+
+      if (willOpen) {
+        requestAnimationFrame(() => {
+          setTimeout(() => scrollToSection(key), 60);
+        });
+      }
+    },
+    [openSections, scrollToSection]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -206,7 +229,6 @@ export default function EventDetailsScreen() {
     setCurrentMemberId((bm?.member_id as string) ?? "");
   }
 
-  // Auth gate: if not signed in, redirect to /auth (no sign-in buttons inside feature UI)
   useEffect(() => {
     let isMounted = true;
 
@@ -259,7 +281,6 @@ export default function EventDetailsScreen() {
 
     if (!lineupErr) setHasCustomLineup((count ?? 0) > 0);
 
-    // Events (NON-finance fields only; finance is now in event_finance)
     const { data, error } = await supabase
       .from("events")
       .select(
@@ -307,10 +328,13 @@ export default function EventDetailsScreen() {
       return;
     }
 
-    // Venue fetch
     if (data) {
       if (data.venue_id) {
-        const { data: venueData } = await supabase.from("venues").select("*").eq("venue_id", data.venue_id).single();
+        const { data: venueData } = await supabase
+          .from("venues")
+          .select("*")
+          .eq("venue_id", data.venue_id)
+          .single();
 
         setEvent({ ...(data as any), venues: venueData ? [venueData] : [] } as EventRow);
       } else {
@@ -318,7 +342,6 @@ export default function EventDetailsScreen() {
       }
     }
 
-    // Finance fetch (RLS may block, so treat errors as "no finance available")
     const { data: fin, error: finErr } = await supabase
       .from("event_finance")
       .select(
@@ -348,8 +371,11 @@ export default function EventDetailsScreen() {
       setFinance((fin as any) ?? null);
     }
 
-    // Accommodation fetch
-    const { data: accData, error: accErr } = await supabase.from("accommodation").select("*").eq("event_id", id).maybeSingle();
+    const { data: accData, error: accErr } = await supabase
+      .from("accommodation")
+      .select("*")
+      .eq("event_id", id)
+      .maybeSingle();
 
     if (accErr) {
       console.log("accommodation fetch error", accErr);
@@ -371,13 +397,15 @@ export default function EventDetailsScreen() {
 
   const venue = event.venues?.[0] || null;
 
-  // ---------------------------------------------------------
-  // TRAVEL HELPERS
-  // ---------------------------------------------------------
-  const venueDest = [venue?.address, venue?.city, venue?.postcode].filter(Boolean).join(", ") || venue?.postcode || "";
+  const venueDest =
+    [venue?.address, venue?.city, venue?.postcode].filter(Boolean).join(", ") ||
+    venue?.postcode ||
+    "";
 
   const departureOrigin =
-    [event.departure_address, event.departure_postcode].filter(Boolean).join(", ") || event.departure_postcode || "";
+    [event.departure_address, event.departure_postcode].filter(Boolean).join(", ") ||
+    event.departure_postcode ||
+    "";
 
   function enc(s: string) {
     return encodeURIComponent(s.trim());
@@ -457,7 +485,6 @@ export default function EventDetailsScreen() {
       />
 
       <View style={styles.container}>
-        {/* EVENT SUMMARY */}
         <View style={styles.eventSummary}>
           <Text style={styles.eventSummaryDate}>{formatEventDate(event.event_date)}</Text>
 
@@ -472,16 +499,36 @@ export default function EventDetailsScreen() {
           </Text>
         </View>
 
-        {/* EDIT HUB REMOVED: keep section-level Edit buttons only */}
-
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* DETAILS */}
-          <Section title="Details" icon="information-circle-outline" open={openSections.details} onPress={() => toggleSection("details")}>
-            <DetailsSection eventId={event.event_id} event={event} venue={venue} venueId={event.venue_id ?? null} />
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Section
+            sectionKey="details"
+            title="Details"
+            icon="information-circle-outline"
+            open={openSections.details}
+            onPress={() => toggleSection("details")}
+            onLayoutY={handleSectionLayout}
+          >
+            <DetailsSection
+              eventId={event.event_id}
+              event={event}
+              venue={venue}
+              venueId={event.venue_id ?? null}
+            />
           </Section>
 
-          {/* AVAILABILITY */}
-          <Section title="Availability" icon="checkmark-circle-outline" open={openSections.availability} onPress={() => toggleSection("availability")}>
+          <Section
+            sectionKey="availability"
+            title="Availability"
+            icon="checkmark-circle-outline"
+            open={openSections.availability}
+            onPress={() => toggleSection("availability")}
+            onLayoutY={handleSectionLayout}
+          >
             <AvailabilitySection
               key={openSections.availability ? `open-${event.event_id}` : `closed-${event.event_id}`}
               eventId={event.event_id}
@@ -491,8 +538,14 @@ export default function EventDetailsScreen() {
             />
           </Section>
 
-          {/* SCHEDULE */}
-          <Section title="Schedule" icon="time-outline" open={openSections.schedule} onPress={() => toggleSection("schedule")}>
+          <Section
+            sectionKey="schedule"
+            title="Schedule"
+            icon="time-outline"
+            open={openSections.schedule}
+            onPress={() => toggleSection("schedule")}
+            onLayoutY={handleSectionLayout}
+          >
             <ScheduleSection
               eventId={event.event_id}
               travelVenue={event.travel_venue}
@@ -507,8 +560,14 @@ export default function EventDetailsScreen() {
             />
           </Section>
 
-          {/* DOCUMENTS */}
-          <Section title="Documents" icon="document-text-outline" open={openSections.documents} onPress={() => toggleSection("documents")}>
+          <Section
+            sectionKey="documents"
+            title="Documents"
+            icon="document-text-outline"
+            open={openSections.documents}
+            onPress={() => toggleSection("documents")}
+            onLayoutY={handleSectionLayout}
+          >
             <DocumentsSection
               eventId={event.event_id}
               setlistUrl={event.setlist_url}
@@ -518,8 +577,14 @@ export default function EventDetailsScreen() {
             />
           </Section>
 
-          {/* TRAVEL */}
-          <Section title="Travel" icon="navigate-outline" open={openSections.travel} onPress={() => toggleSection("travel")}>
+          <Section
+            sectionKey="travel"
+            title="Travel"
+            icon="navigate-outline"
+            open={openSections.travel}
+            onPress={() => toggleSection("travel")}
+            onLayoutY={handleSectionLayout}
+          >
             <TravelSection
               eventId={event.event_id}
               venueAddress={venue?.address}
@@ -530,9 +595,15 @@ export default function EventDetailsScreen() {
             />
           </Section>
 
-          {/* ACCOMMODATION (own section, not nested) */}
           {accommodation || canEdit ? (
-            <Section title="Accommodation" icon="bed-outline" open={openSections.accommodation} onPress={() => toggleSection("accommodation")}>
+            <Section
+              sectionKey="accommodation"
+              title="Accommodation"
+              icon="bed-outline"
+              open={openSections.accommodation}
+              onPress={() => toggleSection("accommodation")}
+              onLayoutY={handleSectionLayout}
+            >
               <AccommodationSection
                 accommodation={accommodation}
                 canEdit={canEdit}
@@ -544,9 +615,15 @@ export default function EventDetailsScreen() {
             </Section>
           ) : null}
 
-          {/* FINANCE (visible in user mode if permitted; editable only in admin mode) */}
           {canSeeFinance ? (
-            <Section title="Finance" icon="cash-outline" open={openSections.finance} onPress={() => toggleSection("finance")}>
+            <Section
+              sectionKey="finance"
+              title="Finance"
+              icon="cash-outline"
+              open={openSections.finance}
+              onPress={() => toggleSection("finance")}
+              onLayoutY={handleSectionLayout}
+            >
               <FinanceSection
                 eventId={event.event_id}
                 isAdmin={canEdit}
@@ -578,20 +655,28 @@ export default function EventDetailsScreen() {
    SECTION WRAPPER COMPONENT
 --------------------------------------------------------- */
 function Section({
+  sectionKey,
   title,
   icon,
   open,
   onPress,
+  onLayoutY,
   children,
 }: {
+  sectionKey: SectionKey;
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
   open: boolean;
   onPress: () => void;
+  onLayoutY: (key: SectionKey, y: number) => void;
   children: React.ReactNode;
 }) {
   return (
-    <View style={styles.sectionWrapper} pointerEvents="box-none">
+    <View
+      style={styles.sectionWrapper}
+      pointerEvents="box-none"
+      onLayout={(e) => onLayoutY(sectionKey, e.nativeEvent.layout.y)}
+    >
       <Pressable
         style={[styles.sectionHeader, { minHeight: 60, paddingVertical: 20 }]}
         onPress={onPress}
@@ -633,7 +718,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  /* EVENT SUMMARY */
   eventSummary: {
     paddingHorizontal: 16,
     paddingTop: 10,
@@ -643,6 +727,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     marginBottom: 12,
   },
+
   eventSummaryDate: {
     fontSize: 12,
     fontWeight: "700",
@@ -651,12 +736,14 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 4,
   },
+
   eventSummaryVenue: {
     fontSize: 22,
     fontWeight: "800",
     color: colors.text,
     marginBottom: 2,
   },
+
   eventSummaryMeta: {
     fontSize: 14,
     color: colors.textMuted,
@@ -666,13 +753,13 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
   },
+
   scrollContent: {
     paddingHorizontal: 16,
     paddingVertical: 16,
     paddingBottom: 32,
   },
 
-  /* SECTION HEADERS */
   sectionWrapper: {
     marginBottom: 16,
   },

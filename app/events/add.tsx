@@ -59,9 +59,6 @@ export default function AddEventScreen() {
   const [eventDate, setEventDate] = useState<string>(todayIsoDate());
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [eventStatus, setEventStatus] = useState<string | null>(null);
-
-  // Debug + save errors shown on screen (works on web and native)
-  
   const [saveError, setSaveError] = useState<string>("");
 
   const [venueSearch, setVenueSearch] = useState("");
@@ -84,18 +81,10 @@ export default function AddEventScreen() {
     Cancelled: "#c62828",
   };
 
-  // RETURN FROM ADD VENUE
   const { newVenueName, newVenueCity } = useLocalSearchParams<{
     newVenueName?: string;
     newVenueCity?: string;
   }>();
-
-  useEffect(() => {
-    if (newVenueName && newVenueCity) {
-      const formatted = `${newVenueName} (${newVenueCity})`;
-      setVenueSearch(formatted);
-    }
-  }, [newVenueName, newVenueCity]);
 
   useEffect(() => {
     (async () => {
@@ -104,8 +93,35 @@ export default function AddEventScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!newVenueName || !newVenueCity || allVenues.length === 0) return;
+
+    const matchedVenue = allVenues.find(
+      (v) =>
+        v.event_venue_name.trim().toLowerCase() === newVenueName.trim().toLowerCase() &&
+        v.city.trim().toLowerCase() === newVenueCity.trim().toLowerCase()
+    );
+
+    const formatted = `${newVenueName} (${newVenueCity})`;
+    setVenueSearch(formatted);
+    setVenueResults(
+      allVenues.filter((v) =>
+        `${v.event_venue_name} (${v.city})`
+          .toLowerCase()
+          .includes(formatted.toLowerCase())
+      )
+    );
+    setNoMatch(false);
+
+    if (matchedVenue) {
+      setSelectedVenue(matchedVenue);
+      setSaveError("");
+    } else {
+      setSelectedVenue(null);
+    }
+  }, [newVenueName, newVenueCity, allVenues]);
+
   async function loadBandIdAndVenues() {
-    // 1) resolve current user
     const { data: userData, error: userErr } = await supabase.auth.getUser();
     console.log("AUTH user id:", userData?.user?.id);
 
@@ -113,13 +129,13 @@ export default function AddEventScreen() {
       Alert.alert("Error", userErr.message);
       return;
     }
+
     const user = userData.user;
     if (!user) {
       Alert.alert("Not signed in", "Please sign in.");
       return;
     }
 
-    // 2) resolve band_id from band_members
     const { data: bm, error: bmErr } = await supabase
       .from("band_members")
       .select("band_id")
@@ -139,7 +155,6 @@ export default function AddEventScreen() {
 
     setBandId(resolvedBandId);
 
-    // 3) load venues
     const { data, error } = await supabase
       .from("venues")
       .select("venue_id,event_venue_name,city")
@@ -151,13 +166,15 @@ export default function AddEventScreen() {
     }
 
     if (data) {
-      setAllVenues(data as VenueRow[]);
-      setVenueResults(data as VenueRow[]);
+      const venues = data as VenueRow[];
+      setAllVenues(venues);
+      setVenueResults(venues);
     }
   }
 
   function handleVenueSearch(text: string) {
     setVenueSearch(text);
+    setSaveError("");
 
     const q = text.trim().toLowerCase();
 
@@ -174,7 +191,6 @@ export default function AddEventScreen() {
 
     setVenueResults(filtered);
     setNoMatch(filtered.length === 0);
-
     setSelectedVenue(null);
   }
 
@@ -183,18 +199,15 @@ export default function AddEventScreen() {
     setVenueResults(allVenues);
     setSelectedVenue(null);
     setNoMatch(false);
+    setSaveError("");
   }
 
   async function saveEvent() {
     if (saving) return;
 
-    // clear and show debug on screen
     setSaveError("");
-    
-
     Keyboard.dismiss();
 
-    // Replace Alert validation with on-screen errors (Alert is unreliable on web)
     if (!selectedVenue) return setSaveError("Choose a venue.");
     if (!eventDate) return setSaveError("Choose a date.");
     if (!eventType) return setSaveError("Select an event type.");
@@ -202,8 +215,9 @@ export default function AddEventScreen() {
     if (!bandId) return setSaveError("Band ID not loaded. Try again.");
 
     setSaving(true);
+
     try {
-      const payload: any = {
+      const payload = {
         band_id: bandId,
         event_type: eventType,
         event_date: eventDate,
@@ -222,9 +236,8 @@ export default function AddEventScreen() {
         return;
       }
 
-      // success
       console.log("INSERT DATA:", data);
-      router.back();
+      router.replace("/events");
     } catch (e: any) {
       console.log("saveEvent error:", e);
       setSaveError(e?.message ?? String(e));
@@ -245,13 +258,13 @@ export default function AddEventScreen() {
     return (
       <>
         <Stack.Screen
-  options={{
-    title: "Add Event",
-    headerStyle: { backgroundColor: colors.primary },
-    headerTintColor: "#fff",
-    headerTitleStyle: { fontWeight: "700" },
-  }}
-/>
+          options={{
+            title: "Add Event",
+            headerStyle: { backgroundColor: colors.primary },
+            headerTintColor: "#fff",
+            headerTitleStyle: { fontWeight: "700" },
+          }}
+        />
 
         <View style={{ flex: 1, padding: 16 }}>
           <Text
@@ -291,7 +304,6 @@ export default function AddEventScreen() {
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
-      {/* VENUE FIRST */}
       <Text style={styles.label}>
         Venue <Text style={styles.required}>*</Text>
       </Text>
@@ -319,7 +331,10 @@ export default function AddEventScreen() {
             No venues match "{venueSearch}"
           </Text>
 
-          <TouchableOpacity style={styles.addVenueButton} onPress={() => router.push("/(modals)/add")}>
+          <TouchableOpacity
+            style={styles.addVenueButton}
+            onPress={() => router.push("/(modals)/add")}
+          >
             <Ionicons name="add-circle-outline" size={18} color="#fff" />
             <Text style={styles.addVenueButtonText}>Add New Venue</Text>
           </TouchableOpacity>
@@ -332,12 +347,16 @@ export default function AddEventScreen() {
             {(venueSearch.length === 0 ? allVenues : venueResults).map((item) => (
               <TouchableOpacity
                 key={item.venue_id}
-                style={styles.venueItem}
+                style={[
+                  styles.venueItem,
+                  selectedVenue?.venue_id === item.venue_id && styles.venueItemSelected,
+                ]}
                 onPress={() => {
                   Keyboard.dismiss();
                   setSelectedVenue(item);
                   setVenueSearch(`${item.event_venue_name} (${item.city})`);
                   setNoMatch(false);
+                  setSaveError("");
                 }}
               >
                 <Text style={styles.venueName}>{item.event_venue_name}</Text>
@@ -348,7 +367,6 @@ export default function AddEventScreen() {
         </View>
       )}
 
-      {/* DATE SECOND */}
       <Text style={styles.label}>
         Event Date <Text style={styles.required}>*</Text>
       </Text>
@@ -382,7 +400,7 @@ export default function AddEventScreen() {
               current={eventDate}
               enableSwipeMonths
               markedDates={{
-                [eventDate]: { selected: true, selectedColor: colors.primary},
+                [eventDate]: { selected: true, selectedColor: colors.primary },
               }}
               onDayPress={(day) => {
                 setEventDate(day.dateString);
@@ -393,7 +411,6 @@ export default function AddEventScreen() {
         </Pressable>
       </Modal>
 
-      {/* EVENT TYPE THIRD */}
       <Text style={styles.label}>
         Event Type <Text style={styles.required}>*</Text>
       </Text>
@@ -412,7 +429,6 @@ export default function AddEventScreen() {
         ))}
       </View>
 
-      {/* STATUS FOURTH */}
       <Text style={styles.label}>
         Status <Text style={styles.required}>*</Text>
       </Text>
@@ -432,15 +448,10 @@ export default function AddEventScreen() {
         })}
       </View>
 
-      {/* DEBUG / ERROR (on screen) */}
-      
-      
-
       {saveError ? (
         <Text style={{ marginTop: 8, color: "#c62828", fontWeight: "700" }}>{saveError}</Text>
       ) : null}
 
-      {/* SAVE */}
       <TouchableOpacity
         style={[styles.saveButton, saving && { opacity: 0.6 }]}
         onPress={saveEvent}
@@ -454,15 +465,15 @@ export default function AddEventScreen() {
 
   return (
     <>
-     <Stack.Screen
-  options={{
-    title: "Add Event",
-    headerTitleAlign: "center",
-    headerStyle: { backgroundColor: colors.primary },
-    headerTitleStyle: { color: "#fff", fontWeight: "700" },
-    headerTintColor: "#fff",
-  }}
-/>
+      <Stack.Screen
+        options={{
+          title: "Add Event",
+          headerTitleAlign: "center",
+          headerStyle: { backgroundColor: colors.primary },
+          headerTitleStyle: { color: "#fff", fontWeight: "700" },
+          headerTintColor: "#fff",
+        }}
+      />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -599,6 +610,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+
+  venueItemSelected: {
+    backgroundColor: "#E6F7F7",
   },
 
   venueName: {

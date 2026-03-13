@@ -9,10 +9,17 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "store"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "distribution": "store"
+    },
+    "play": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "distribution": "store"
     }
   },
   "submit": {

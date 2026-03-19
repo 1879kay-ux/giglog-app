@@ -48,10 +48,16 @@ export default function ProfileScreen() {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
 
-      Alert.alert("Done", "Password updated. Use it next time you sign in.");
       setNewPassword("");
       setConfirmPassword("");
       setShowPassword(false);
+
+      Alert.alert("Done", "Password updated. Use it next time you sign in.", [
+        {
+          text: "OK",
+          onPress: () => router.replace("/"),
+        },
+      ]);
     } catch (e: any) {
       Alert.alert("Failed", e?.message ?? "Unknown error");
     } finally {

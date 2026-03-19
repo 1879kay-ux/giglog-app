@@ -78,7 +78,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // JWT verified here; deploy with --no-verify-jwt
     const token = getAuthToken(req);
     const { payload } = await verifySupabaseJWT(token);
 
@@ -92,7 +91,6 @@ Deno.serve(async (req) => {
     const email = normalizeEmail(String(body.email ?? ""));
     const member_type = String(body.member_type ?? "musician").trim();
 
-    // Optional fields (all exist in your schema)
     const is_active = body.is_active === undefined ? true : Boolean(body.is_active);
     const is_admin = body.is_admin === undefined ? false : Boolean(body.is_admin);
     const band_role = body.band_role == null ? null : String(body.band_role);
@@ -101,7 +99,7 @@ Deno.serve(async (req) => {
 
     const band_positions = Array.isArray(body.band_positions)
       ? (body.band_positions.map(String) as string[])
-      : undefined; // leave default '{}' if not provided
+      : undefined;
     const band_positions_other = Array.isArray(body.band_positions_other)
       ? (body.band_positions_other.map(String) as string[])
       : undefined;
@@ -110,18 +108,15 @@ Deno.serve(async (req) => {
       return json(400, { error: "band_id, display_name, and email are required" });
     }
 
-    // userClient for permission check via RLS
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { authorization: `Bearer ${token}`, apikey: anonKey } },
       auth: { persistSession: false },
     });
 
-    // service role for auth admin + writes
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
 
-    // Permission: caller must be active admin in band
     const { data: callerMember, error: permErr } = await userClient
       .from("band_members")
       .select("is_admin, is_active")
@@ -134,7 +129,6 @@ Deno.serve(async (req) => {
       return json(403, { error: "Only active band admins can invite members" });
     }
 
-    // Idempotency: already exists in this band by email?
     const { data: existing, error: existErr } = await adminClient
       .from("band_members")
       .select("member_id, auth_user_id, email")
@@ -153,14 +147,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create or find auth user
     let auth_user_id: string | null = null;
     let invite_sent = false;
     let userWasNew = false;
 
     const { data: inviteData, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(
       email,
-      { data: { invited_to_band_id: band_id } }
+      {
+        data: { invited_to_band_id: band_id },
+        redirectTo: "giglog://auth/callback",
+      }
     );
 
     if (!inviteErr && inviteData?.user?.id) {
@@ -179,7 +175,6 @@ Deno.serve(async (req) => {
       userWasNew = false;
     }
 
-    // Build insert ONLY using columns that exist in your band_members table
     const insertRow: Record<string, unknown> = {
       band_id,
       display_name,
@@ -191,7 +186,6 @@ Deno.serve(async (req) => {
       band_role,
       band_role_other,
       is_dep,
-
       is_core: member_type === "musician" && band_role === "Band",
     };
 
@@ -216,7 +210,9 @@ Deno.serve(async (req) => {
       member_id: inserted.member_id,
       auth_user_id: inserted.auth_user_id,
       invite_sent,
-      note: invite_sent ? "Invite email sent (magic link)." : "User existed; membership created.",
+      note: invite_sent
+        ? "Invite email sent. User should install the app and use Forgot password to set their password."
+        : "User existed; membership created.",
     });
   } catch (e: any) {
     return json(401, { error: "Unauthorized", details: String(e?.message ?? e) });

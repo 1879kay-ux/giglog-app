@@ -13,6 +13,8 @@ export default function RootLayout() {
   useEffect(() => {
     let alive = true;
 
+    const isAuthRoute = pathname === "/auth" || pathname === "/auth/callback";
+
     async function check() {
       const { data, error } = await supabase.auth.getSession();
       if (error) console.log("auth getSession error", error);
@@ -21,8 +23,7 @@ export default function RootLayout() {
 
       if (!alive) return;
 
-      // Allow auth screen without redirect loops
-      if (!hasSession && pathname !== "/auth") router.replace("/auth");
+      if (!hasSession && !isAuthRoute) router.replace("/auth");
       if (hasSession && pathname === "/auth") router.replace("/");
 
       setBooting(false);
@@ -30,10 +31,12 @@ export default function RootLayout() {
 
     check();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       const hasSession = !!session;
 
-      if (!hasSession && pathname !== "/auth") router.replace("/auth");
+      if (!hasSession && !isAuthRoute) router.replace("/auth");
       if (hasSession && pathname === "/auth") router.replace("/");
 
       setBooting(false);
@@ -41,7 +44,7 @@ export default function RootLayout() {
 
     return () => {
       alive = false;
-      sub.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, [router, pathname]);
 
@@ -63,16 +66,9 @@ export default function RootLayout() {
           headerTitleAlign: "center",
         }}
       >
-        {/* Tabs app */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-
-        {/* Auth */}
         <Stack.Screen name="auth" options={{ title: "Sign in" }} />
-
-        {/* Modals group */}
         <Stack.Screen name="(modals)" options={{ headerShown: false }} />
-
-        {/* Not found */}
         <Stack.Screen name="+not-found" options={{ title: "Not found" }} />
       </Stack>
     </CurrentMemberProvider>

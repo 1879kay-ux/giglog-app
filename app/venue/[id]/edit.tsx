@@ -27,7 +27,7 @@ export default function EditVenueScreen() {
 
   useEffect(() => {
     if (memberLoading) return;
-    if (!isAdmin) return; // guard: don't load venue if not allowed
+    if (!isAdmin) return;
     if (!id) return;
 
     loadVenue();
@@ -39,7 +39,11 @@ export default function EditVenueScreen() {
 
     setLoading(true);
 
-    const { data, error } = await supabase.from("venues").select("*").eq("venue_id", id).single();
+    const { data, error } = await supabase
+      .from("venues")
+      .select("*")
+      .eq("venue_id", id)
+      .single();
 
     if (error) {
       Alert.alert("Error", error.message);
@@ -76,8 +80,7 @@ export default function EditVenueScreen() {
       return;
     }
 
-    Alert.alert("Saved", "Venue updated");
-    router.back();
+    router.replace(`/venue/${id}`);
   }
 
   if (memberLoading) {
@@ -88,7 +91,6 @@ export default function EditVenueScreen() {
     );
   }
 
-  // If not admin, we trigger router.back() above. Avoid rendering anything.
   if (!isAdmin) return null;
 
   if (loading || !initialValues) {

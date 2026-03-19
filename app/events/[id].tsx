@@ -205,15 +205,7 @@ export default function EventDetailsScreen() {
     [openSections, scrollToSection]
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!id) return;
-      loadEvent();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id])
-  );
-
-  async function resolveMemberId(authUserId: string) {
+  const resolveMemberId = useCallback(async (authUserId: string) => {
     const { data: bm, error: bmError } = await supabase
       .from("band_members")
       .select("member_id")
@@ -227,50 +219,17 @@ export default function EventDetailsScreen() {
     }
 
     setCurrentMemberId((bm?.member_id as string) ?? "");
-  }
+  }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function init() {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        console.log("auth getSession error", error);
-        return;
-      }
-
-      const session = data?.session;
-      if (!session?.user?.id) {
-        router.replace("/auth");
-        return;
-      }
-
-      if (!isMounted) return;
-      await resolveMemberId(session.user.id);
+  const loadEvent = useCallback(async () => {
+    if (!id) {
+      setEvent(null);
+      setFinance(null);
+      setAccommodation(null);
+      setHasCustomLineup(false);
+      setLoading(false);
+      return;
     }
-
-    init();
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      const authUserId = session?.user?.id;
-
-      if (!authUserId) {
-        setCurrentMemberId("");
-        router.replace("/auth");
-        return;
-      }
-
-      resolveMemberId(authUserId);
-    });
-
-    return () => {
-      isMounted = false;
-      sub.subscription.unsubscribe();
-    };
-  }, [router]);
-
-  async function loadEvent() {
-    if (!id) return;
 
     setLoading(true);
 
@@ -324,22 +283,17 @@ export default function EventDetailsScreen() {
 
     if (error) {
       setLoading(false);
+      setEvent(null);
       Alert.alert("Error", error.message);
       return;
     }
 
-    if (data) {
-      if (data.venue_id) {
-        const { data: venueData } = await supabase
-          .from("venues")
-          .select("*")
-          .eq("venue_id", data.venue_id)
-          .single();
+    if (data?.venue_id) {
+      const { data: venueData } = await supabase.from("venues").select("*").eq("venue_id", data.venue_id).single();
 
-        setEvent({ ...(data as any), venues: venueData ? [venueData] : [] } as EventRow);
-      } else {
-        setEvent(data as EventRow);
-      }
+      setEvent({ ...(data as any), venues: venueData ? [venueData] : [] } as EventRow);
+    } else {
+      setEvent((data as EventRow) ?? null);
     }
 
     const { data: fin, error: finErr } = await supabase
@@ -385,17 +339,60 @@ export default function EventDetailsScreen() {
     }
 
     setLoading(false);
-  }
+  }, [id]);
 
-  if (loading || !event) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#333" />
-      </View>
-    );
-  }
+  useFocusEffect(
+    useCallback(() => {
+      loadEvent();
+    }, [loadEvent])
+  );
 
-  const venue = event.venues?.[0] || null;
+  useEffect(() => {
+    let isMounted = true;
+
+    async function init() {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.log("auth getSession error", error);
+        return;
+      }
+
+      const session = data?.session;
+      if (!session?.user?.id) {
+        router.replace("/auth");
+        return;
+      }
+
+      if (!isMounted) return;
+      await resolveMemberId(session.user.id);
+    }
+
+    init();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      const authUserId = session?.user?.id;
+
+      if (!authUserId) {
+        setCurrentMemberId("");
+        setEvent(null);
+        setFinance(null);
+        setAccommodation(null);
+        setHasCustomLineup(false);
+        setLoading(true);
+        router.replace("/auth");
+        return;
+      }
+
+      resolveMemberId(authUserId);
+    });
+
+    return () => {
+      isMounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [resolveMemberId, router]);
+
+  const venue = event?.venues?.[0] || null;
 
   const venueDest =
     [venue?.address, venue?.city, venue?.postcode].filter(Boolean).join(", ") ||
@@ -403,8 +400,8 @@ export default function EventDetailsScreen() {
     "";
 
   const departureOrigin =
-    [event.departure_address, event.departure_postcode].filter(Boolean).join(", ") ||
-    event.departure_postcode ||
+    [event?.departure_address, event?.departure_postcode].filter(Boolean).join(", ") ||
+    event?.departure_postcode ||
     "";
 
   function enc(s: string) {
@@ -462,6 +459,9 @@ export default function EventDetailsScreen() {
     openUrl(url);
   }
 
+  const showLoading = loading;
+  const showMissingEvent = !loading && !event;
+
   return (
     <>
       <Stack.Screen
@@ -485,167 +485,179 @@ export default function EventDetailsScreen() {
       />
 
       <View style={styles.container}>
-        <View style={styles.eventSummary}>
-          <Text style={styles.eventSummaryDate}>{formatEventDate(event.event_date)}</Text>
+        {showLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#333" />
+          </View>
+        ) : showMissingEvent ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.emptyText}>Event not found.</Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.eventSummary}>
+              <Text style={styles.eventSummaryDate}>{formatEventDate(event.event_date)}</Text>
 
-          <Text style={styles.eventSummaryVenue}>
-            {venue?.event_venue_name}
-            {venue?.city ? `, ${venue.city}` : ""}
-          </Text>
+              <Text style={styles.eventSummaryVenue}>
+                {venue?.event_venue_name}
+                {venue?.city ? `, ${venue.city}` : ""}
+              </Text>
 
-          <Text style={styles.eventSummaryMeta}>
-            {event.event_type || "Event"}
-            {event.event_status ? `, ${event.event_status}` : ""}
-          </Text>
-        </View>
+              <Text style={styles.eventSummaryMeta}>
+                {event.event_type || "Event"}
+                {event.event_status ? `, ${event.event_status}` : ""}
+              </Text>
+            </View>
 
-        <ScrollView
-          ref={scrollRef}
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <Section
-            sectionKey="details"
-            title="Details"
-            icon="information-circle-outline"
-            open={openSections.details}
-            onPress={() => toggleSection("details")}
-            onLayoutY={handleSectionLayout}
-          >
-            <DetailsSection
-              eventId={event.event_id}
-              event={event}
-              venue={venue}
-              venueId={event.venue_id ?? null}
-            />
-          </Section>
-
-          <Section
-            sectionKey="availability"
-            title="Availability"
-            icon="checkmark-circle-outline"
-            open={openSections.availability}
-            onPress={() => toggleSection("availability")}
-            onLayoutY={handleSectionLayout}
-          >
-            <AvailabilitySection
-              key={openSections.availability ? `open-${event.event_id}` : `closed-${event.event_id}`}
-              eventId={event.event_id}
-              memberId={currentMemberId}
-              hasCustomLineup={hasCustomLineup}
-              canEdit={canEdit}
-            />
-          </Section>
-
-          <Section
-            sectionKey="schedule"
-            title="Schedule"
-            icon="time-outline"
-            open={openSections.schedule}
-            onPress={() => toggleSection("schedule")}
-            onLayoutY={handleSectionLayout}
-          >
-            <ScheduleSection
-              eventId={event.event_id}
-              travelVenue={event.travel_venue}
-              loadin={event.loadin}
-              soundcheck={event.soundcheck}
-              doors={event.doors}
-              onstage={event.onstage}
-              offstage={event.offstage}
-              venueCurfew={event.venue_curfew}
-              departVenue={event.depart_venue}
-              scheduleNotes={event.schedule_notes}
-            />
-          </Section>
-
-          <Section
-            sectionKey="documents"
-            title="Documents"
-            icon="document-text-outline"
-            open={openSections.documents}
-            onPress={() => toggleSection("documents")}
-            onLayoutY={handleSectionLayout}
-          >
-            <DocumentsSection
-              eventId={event.event_id}
-              setlistUrl={event.setlist_url}
-              eventinfoUrl={event.eventinfo_url}
-              promoMaterialUrl={event.promo_material_url}
-              docOtherUrl={event.doc_other_url}
-            />
-          </Section>
-
-          <Section
-            sectionKey="travel"
-            title="Travel"
-            icon="navigate-outline"
-            open={openSections.travel}
-            onPress={() => toggleSection("travel")}
-            onLayoutY={handleSectionLayout}
-          >
-            <TravelSection
-              eventId={event.event_id}
-              venueAddress={venue?.address}
-              venueCity={venue?.city}
-              venuePostcode={venue?.postcode}
-              departureAddress={event.departure_address}
-              departurePostcode={event.departure_postcode}
-            />
-          </Section>
-
-          {accommodation || canEdit ? (
-            <Section
-              sectionKey="accommodation"
-              title="Accommodation"
-              icon="bed-outline"
-              open={openSections.accommodation}
-              onPress={() => toggleSection("accommodation")}
-              onLayoutY={handleSectionLayout}
+            <ScrollView
+              ref={scrollRef}
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
             >
-              <AccommodationSection
-                accommodation={accommodation}
-                canEdit={canEdit}
-                onPressEdit={() => {
-                  if (!id) return;
-                  router.push(`/events/${id}/accommodation`);
-                }}
-              />
-            </Section>
-          ) : null}
+              <Section
+                sectionKey="details"
+                title="Details"
+                icon="information-circle-outline"
+                open={openSections.details}
+                onPress={() => toggleSection("details")}
+                onLayoutY={handleSectionLayout}
+              >
+                <DetailsSection
+                  eventId={event.event_id}
+                  event={event}
+                  venue={venue}
+                  venueId={event.venue_id ?? null}
+                />
+              </Section>
 
-          {canSeeFinance ? (
-            <Section
-              sectionKey="finance"
-              title="Finance"
-              icon="cash-outline"
-              open={openSections.finance}
-              onPress={() => toggleSection("finance")}
-              onLayoutY={handleSectionLayout}
-            >
-              <FinanceSection
-                eventId={event.event_id}
-                isAdmin={canEdit}
-                shares={finance?.manual_playing_share_override ?? null}
-                incomeGuarantee={finance?.income_guarantee ?? null}
-                incomeDoor={finance?.income_door ?? null}
-                feeType={finance?.fee_type ?? null}
-                paidStatus={finance?.paid_status ?? null}
-                vanHire={event.van_hire}
-                fuel={event.fuel}
-                accommodationCost={accommodation?.total_cost ?? finance?.accommodation_cost ?? null}
-                accommodationCostSource={accommodation?.total_cost != null ? "accommodation" : "event"}
-                depCost={finance?.dep_cost ?? null}
-                driverCost={finance?.driver_cost ?? null}
-                fohEngCost={finance?.foh_eng_cost ?? null}
-                otherCosts={finance?.other_costs ?? null}
-                feeNotes={finance?.fee_notes ?? null}
-                costNotes={finance?.cost_notes ?? null}
-              />
-            </Section>
-          ) : null}
-        </ScrollView>
+              <Section
+                sectionKey="availability"
+                title="Availability"
+                icon="checkmark-circle-outline"
+                open={openSections.availability}
+                onPress={() => toggleSection("availability")}
+                onLayoutY={handleSectionLayout}
+              >
+                <AvailabilitySection
+                  key={openSections.availability ? `open-${event.event_id}` : `closed-${event.event_id}`}
+                  eventId={event.event_id}
+                  memberId={currentMemberId}
+                  hasCustomLineup={hasCustomLineup}
+                  canEdit={canEdit}
+                />
+              </Section>
+
+              <Section
+                sectionKey="schedule"
+                title="Schedule"
+                icon="time-outline"
+                open={openSections.schedule}
+                onPress={() => toggleSection("schedule")}
+                onLayoutY={handleSectionLayout}
+              >
+                <ScheduleSection
+                  eventId={event.event_id}
+                  travelVenue={event.travel_venue}
+                  loadin={event.loadin}
+                  soundcheck={event.soundcheck}
+                  doors={event.doors}
+                  onstage={event.onstage}
+                  offstage={event.offstage}
+                  venueCurfew={event.venue_curfew}
+                  departVenue={event.depart_venue}
+                  scheduleNotes={event.schedule_notes}
+                />
+              </Section>
+
+              <Section
+                sectionKey="documents"
+                title="Documents"
+                icon="document-text-outline"
+                open={openSections.documents}
+                onPress={() => toggleSection("documents")}
+                onLayoutY={handleSectionLayout}
+              >
+                <DocumentsSection
+                  eventId={event.event_id}
+                  setlistUrl={event.setlist_url}
+                  eventinfoUrl={event.eventinfo_url}
+                  promoMaterialUrl={event.promo_material_url}
+                  docOtherUrl={event.doc_other_url}
+                />
+              </Section>
+
+              <Section
+                sectionKey="travel"
+                title="Travel"
+                icon="navigate-outline"
+                open={openSections.travel}
+                onPress={() => toggleSection("travel")}
+                onLayoutY={handleSectionLayout}
+              >
+                <TravelSection
+                  eventId={event.event_id}
+                  venueAddress={venue?.address}
+                  venueCity={venue?.city}
+                  venuePostcode={venue?.postcode}
+                  departureAddress={event.departure_address}
+                  departurePostcode={event.departure_postcode}
+                />
+              </Section>
+
+              {accommodation || canEdit ? (
+                <Section
+                  sectionKey="accommodation"
+                  title="Accommodation"
+                  icon="bed-outline"
+                  open={openSections.accommodation}
+                  onPress={() => toggleSection("accommodation")}
+                  onLayoutY={handleSectionLayout}
+                >
+                  <AccommodationSection
+                    accommodation={accommodation}
+                    canEdit={canEdit}
+                    onPressEdit={() => {
+                      if (!id) return;
+                      router.push(`/events/${id}/accommodation`);
+                    }}
+                  />
+                </Section>
+              ) : null}
+
+              {canSeeFinance ? (
+                <Section
+                  sectionKey="finance"
+                  title="Finance"
+                  icon="cash-outline"
+                  open={openSections.finance}
+                  onPress={() => toggleSection("finance")}
+                  onLayoutY={handleSectionLayout}
+                >
+                  <FinanceSection
+                    eventId={event.event_id}
+                    isAdmin={canEdit}
+                    shares={finance?.manual_playing_share_override ?? null}
+                    incomeGuarantee={finance?.income_guarantee ?? null}
+                    incomeDoor={finance?.income_door ?? null}
+                    feeType={finance?.fee_type ?? null}
+                    paidStatus={finance?.paid_status ?? null}
+                    vanHire={event.van_hire}
+                    fuel={event.fuel}
+                    accommodationCost={accommodation?.total_cost ?? finance?.accommodation_cost ?? null}
+                    accommodationCostSource={accommodation?.total_cost != null ? "accommodation" : "event"}
+                    depCost={finance?.dep_cost ?? null}
+                    driverCost={finance?.driver_cost ?? null}
+                    fohEngCost={finance?.foh_eng_cost ?? null}
+                    otherCosts={finance?.other_costs ?? null}
+                    feeNotes={finance?.fee_notes ?? null}
+                    costNotes={finance?.cost_notes ?? null}
+                  />
+                </Section>
+              ) : null}
+            </ScrollView>
+          </>
+        )}
       </View>
     </>
   );
@@ -703,6 +715,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+
+  emptyText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.text,
   },
 
   container: {

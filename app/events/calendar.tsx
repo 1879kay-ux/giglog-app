@@ -137,7 +137,8 @@ export default function EventsCalendarScreen() {
       )
       .gte("event_date", start)
       .lte("event_date", end)
-      .order("event_date", { ascending: true });
+.neq("event_status", "Deleted")
+.order("event_date", { ascending: true });
 
     if (!error && data) setEvents(data as unknown as EventLite[]);
     else setEvents([]);

@@ -8,14 +8,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 
 type FormState = {
@@ -185,140 +187,145 @@ export default function EventAccommodationScreen() {
         }}
       />
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        {/* Read-only preview for everyone */}
-        <View style={styles.preview}>
-          <AccommodationSection
-            accommodation={accommodation}
-            canEdit={false}
-            onPressEdit={() => {}}
-          />
-        </View>
-
-        {!canEdit ? (
-          <Text style={styles.readOnlyNote}>Read only. Admins can edit accommodation.</Text>
-        ) : (
-          <View style={styles.form}>
-            <Text style={styles.h2}>Edit</Text>
-
-            <Label>Accommodation name</Label>
-            <TextInput
-              value={form.name}
-              onChangeText={(t) => setForm((p) => ({ ...p, name: t }))}
-              placeholder="Premier Inn, Travelodge, etc."
-              style={styles.input}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+          {/* Read-only preview for everyone */}
+          <View style={styles.preview}>
+            <AccommodationSection
+              accommodation={accommodation}
+              canEdit={false}
+              onPressEdit={() => {}}
             />
-
-            <Label>Booked under</Label>
-            <TextInput
-              value={form.booked_under_name}
-              onChangeText={(t) => setForm((p) => ({ ...p, booked_under_name: t }))}
-              placeholder="Name on booking"
-              style={styles.input}
-            />
-
-            <Label>Booking reference</Label>
-            <TextInput
-              value={form.booking_reference}
-              onChangeText={(t) => setForm((p) => ({ ...p, booking_reference: t }))}
-              placeholder="Ref"
-              style={styles.input}
-              autoCapitalize="characters"
-            />
-
-            <Label>Address line</Label>
-            <TextInput
-              value={form.address_line}
-              onChangeText={(t) => setForm((p) => ({ ...p, address_line: t }))}
-              placeholder="Optional"
-              style={styles.input}
-            />
-
-            <Label>Postcode</Label>
-            <TextInput
-              value={form.postcode}
-              onChangeText={(t) => setForm((p) => ({ ...p, postcode: t }))}
-              placeholder="Optional"
-              style={styles.input}
-              autoCapitalize="characters"
-            />
-
-            <Label>Check-in (ISO datetime)</Label>
-            <TextInput
-              value={form.check_in_at}
-              onChangeText={(t) => setForm((p) => ({ ...p, check_in_at: t }))}
-              placeholder="2026-03-10T15:00:00.000Z"
-              style={styles.input}
-            />
-
-            <Label>Check-out (ISO datetime)</Label>
-            <TextInput
-              value={form.check_out_at}
-              onChangeText={(t) => setForm((p) => ({ ...p, check_out_at: t }))}
-              placeholder="2026-03-11T11:00:00.000Z"
-              style={styles.input}
-            />
-
-            <View style={styles.twoCol}>
-              <View style={{ flex: 1 }}>
-                <Label>Rooms</Label>
-                <TextInput
-                  value={form.rooms_count}
-                  onChangeText={(t) => setForm((p) => ({ ...p, rooms_count: t }))}
-                  placeholder="1"
-                  style={styles.input}
-                  keyboardType="number-pad"
-                />
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <Label>Total cost</Label>
-                <TextInput
-                  value={form.total_cost}
-                  onChangeText={(t) => setForm((p) => ({ ...p, total_cost: t }))}
-                  placeholder="120"
-                  style={styles.input}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            </View>
-
-            <ToggleRow
-              label="Breakfast included"
-              value={form.breakfast_included}
-              onPress={() => setForm((p) => ({ ...p, breakfast_included: !p.breakfast_included }))}
-            />
-
-            <ToggleRow
-              label="Parking available"
-              value={form.parking_available}
-              onPress={() => setForm((p) => ({ ...p, parking_available: !p.parking_available }))}
-            />
-
-            <Label>Notes</Label>
-            <TextInput
-              value={form.notes}
-              onChangeText={(t) => setForm((p) => ({ ...p, notes: t }))}
-              placeholder="Late check-in code, parking instructions, etc."
-              style={[styles.input, { height: 110, textAlignVertical: "top" }]}
-              multiline
-            />
-
-            <Pressable
-              style={[styles.saveBtn, !canSave || saving ? styles.saveBtnDisabled : null]}
-              onPress={save}
-              disabled={!canSave || saving}
-            >
-              <Text style={styles.saveBtnText}>{saving ? "Saving..." : "Save"}</Text>
-            </Pressable>
-
-            <Text style={styles.help}>
-              Tip: for v1 we are using ISO datetime input. If you want, next step is a proper
-              date-time picker.
-            </Text>
           </View>
-        )}
-      </ScrollView>
+
+          {!canEdit ? (
+            <Text style={styles.readOnlyNote}>Read only. Admins can edit accommodation.</Text>
+          ) : (
+            <View style={styles.form}>
+              <Text style={styles.h2}>Edit</Text>
+
+              <Label>Accommodation name</Label>
+              <TextInput
+                value={form.name}
+                onChangeText={(t) => setForm((p) => ({ ...p, name: t }))}
+                placeholder="Premier Inn, Travelodge, etc."
+                style={styles.input}
+              />
+
+              <Label>Booked under</Label>
+              <TextInput
+                value={form.booked_under_name}
+                onChangeText={(t) => setForm((p) => ({ ...p, booked_under_name: t }))}
+                placeholder="Name on booking"
+                style={styles.input}
+              />
+
+              <Label>Booking reference</Label>
+              <TextInput
+                value={form.booking_reference}
+                onChangeText={(t) => setForm((p) => ({ ...p, booking_reference: t }))}
+                placeholder="Ref"
+                style={styles.input}
+                autoCapitalize="characters"
+              />
+
+              <Label>Address line</Label>
+              <TextInput
+                value={form.address_line}
+                onChangeText={(t) => setForm((p) => ({ ...p, address_line: t }))}
+                placeholder="Optional"
+                style={styles.input}
+              />
+
+              <Label>Postcode</Label>
+              <TextInput
+                value={form.postcode}
+                onChangeText={(t) => setForm((p) => ({ ...p, postcode: t }))}
+                placeholder="Optional"
+                style={styles.input}
+                autoCapitalize="characters"
+              />
+
+              <Label>Check-in (ISO datetime)</Label>
+              <TextInput
+                value={form.check_in_at}
+                onChangeText={(t) => setForm((p) => ({ ...p, check_in_at: t }))}
+                placeholder="2026-03-10T15:00:00.000Z"
+                style={styles.input}
+              />
+
+              <Label>Check-out (ISO datetime)</Label>
+              <TextInput
+                value={form.check_out_at}
+                onChangeText={(t) => setForm((p) => ({ ...p, check_out_at: t }))}
+                placeholder="2026-03-11T11:00:00.000Z"
+                style={styles.input}
+              />
+
+              <View style={styles.twoCol}>
+                <View style={{ flex: 1 }}>
+                  <Label>Rooms</Label>
+                  <TextInput
+                    value={form.rooms_count}
+                    onChangeText={(t) => setForm((p) => ({ ...p, rooms_count: t }))}
+                    placeholder="1"
+                    style={styles.input}
+                    keyboardType="number-pad"
+                  />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Label>Total cost</Label>
+                  <TextInput
+                    value={form.total_cost}
+                    onChangeText={(t) => setForm((p) => ({ ...p, total_cost: t }))}
+                    placeholder="120"
+                    style={styles.input}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+
+              <ToggleRow
+                label="Breakfast included"
+                value={form.breakfast_included}
+                onPress={() => setForm((p) => ({ ...p, breakfast_included: !p.breakfast_included }))}
+              />
+
+              <ToggleRow
+                label="Parking available"
+                value={form.parking_available}
+                onPress={() => setForm((p) => ({ ...p, parking_available: !p.parking_available }))}
+              />
+
+              <Label>Notes</Label>
+              <TextInput
+                value={form.notes}
+                onChangeText={(t) => setForm((p) => ({ ...p, notes: t }))}
+                placeholder="Late check-in code, parking instructions, etc."
+                style={[styles.input, { height: 110, textAlignVertical: "top" }]}
+                multiline
+              />
+
+              <Pressable
+                style={[styles.saveBtn, !canSave || saving ? styles.saveBtnDisabled : null]}
+                onPress={save}
+                disabled={!canSave || saving}
+              >
+                <Text style={styles.saveBtnText}>{saving ? "Saving..." : "Save"}</Text>
+              </Pressable>
+
+              <Text style={styles.help}>
+                Tip: for v1 we are using ISO datetime input. If you want, next step is a proper
+                date-time picker.
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </>
   );
 }
@@ -358,7 +365,7 @@ const styles = StyleSheet.create({
   },
 
   container: { flex: 1, backgroundColor: colors.pageBg },
-  content: { padding: 16, paddingBottom: 32 },
+  content: { padding: 16, paddingBottom: Platform.OS === "ios" ? 180 : 140 },
 
   preview: {
     backgroundColor: colors.cardBg,

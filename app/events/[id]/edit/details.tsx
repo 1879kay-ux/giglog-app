@@ -216,6 +216,48 @@ export default function EditEventDetailsScreen() {
     if (!eventDate) return Alert.alert("Missing", "Please choose a Date.");
     if (!eventType) return Alert.alert("Missing", "Please choose an Event Type.");
     if (!eventStatus) return Alert.alert("Missing", "Please choose a Status.");
+    if (eventStatus === "Deleted") {
+  Alert.alert(
+    "Delete Event",
+    "Do you wish to delete this event? This action cannot be undone.",
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete Event",
+        style: "destructive",
+        onPress: async () => {
+          setSaving(true);
+
+          const payload = {
+            event_date: eventDate,
+            event_type: eventType,
+            event_status: "Deleted",
+            promoter_contact_name: promoterName.trim() || null,
+            promoter_contact_phone: promoterPhone.trim() || null,
+            promoter_contact_email: promoterEmail.trim() || null,
+            event_notes: notes.trim() || null,
+          };
+
+          const { data, error } = await supabase
+            .from("events")
+            .update(payload)
+            .eq("event_id", id)
+            .select("event_id");
+
+          setSaving(false);
+
+          if (error) {
+            Alert.alert("Save failed", error.message);
+            return;
+          }
+
+          router.back();
+        },
+      },
+    ]
+  );
+  return;
+}
 
     setSaving(true);
 
@@ -313,7 +355,39 @@ export default function EditEventDetailsScreen() {
 
         <ChipGroup label="Event Type" value={eventType} options={typeOptions} onChange={setEventType} />
 
-        <ChipGroup label="Status" value={eventStatus} options={statusOptions} onChange={setEventStatus} />
+<ChipGroup label="Status" value={eventStatus} options={statusOptions} onChange={setEventStatus} />
+
+<View style={{ marginTop: 16 }}>
+  <Text style={styles.sectionTitle}>Delete Event</Text>
+
+  <Text style={styles.helper}>
+    Selecting this will remove the event from all views. This action cannot be undone.
+  </Text>
+
+  <View style={{ marginTop: 10 }}>
+    <TouchableOpacity
+  onPress={() => setEventStatus("Deleted")}
+  style={[
+    styles.chip,
+    {
+      alignSelf: "flex-start",
+      backgroundColor: eventStatus === "Deleted" ? "#E74C3C" : colors.border,
+      borderColor: "#E74C3C",
+    },
+  ]}
+>
+      <Text
+        style={[
+          styles.chipText,
+          { color: eventStatus === "Deleted" ? "#fff" : "#E74C3C" },
+        ]}
+      >
+        Delete
+      </Text>
+    </TouchableOpacity>
+  </View>
+</View>
+        
       </View>
 
       {/* VENUE DETAILS */}

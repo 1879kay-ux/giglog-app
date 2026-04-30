@@ -53,7 +53,7 @@ function normStatus(s: any): "available" | "provisional" | "unavailable" | "awai
 
 function computeReadiness(
   expectedMemberIds: string[],
-  availabilityRows: { member_id: string; status: AvailabilityStatus }[]
+  availabilityRows: { member_id: string; status: AvailabilityStatus; is_dep?: boolean }[]
 ): Readiness {
   if (expectedMemberIds.length === 0) return "amber";
 
@@ -69,9 +69,15 @@ function computeReadiness(
     else if (status === "awaiting" || status === "provisional") hasAwaitingOrProvisional = true;
   }
 
-  if (hasUnavailable) return "red";
-  if (hasAwaitingOrProvisional) return "amber";
-  return "green";
+  const hasAvailableDep = availabilityRows.some(
+    (r) => r.is_dep && normStatus(r.status) === "available"
+  );
+
+  if (hasUnavailable && hasAvailableDep && !hasAwaitingOrProvisional) return "green";
+if (hasUnavailable && hasAvailableDep && hasAwaitingOrProvisional) return "amber";
+if (hasUnavailable) return "red";
+if (hasAwaitingOrProvisional) return "amber";
+return "green";
 }
 
 function getTodayLondonYYYYMMDD() {
@@ -82,6 +88,8 @@ function getTodayLondonYYYYMMDD() {
     day: "2-digit",
   }).format(new Date());
 }
+
+let savedEventsReturnEventId: string | null = null;
 
 export default function EventsListScreen() {
   const router = useRouter();
@@ -106,6 +114,7 @@ export default function EventsListScreen() {
   const [eventsMode, setEventsMode] = useState<"upcoming" | "archived">("upcoming");
   const [gridOpen, setGridOpen] = useState(false);
   const [readinessByEventId, setReadinessByEventId] = useState<Record<string, Readiness>>({});
+const listRef = useRef<FlatList<EventRow>>(null);
 
   const [bandName, setBandName] = useState<string>("");
 
@@ -115,20 +124,23 @@ export default function EventsListScreen() {
 
   const todayLondon = useMemo(() => getTodayLondonYYYYMMDD(), []);
 
-  const loadEvents = useCallback(async () => {
-    setLoading(true);
+  const loadEvents = useCallback(async (showLoading = true) => {
+  if (showLoading) setLoading(true);
 
     const { data: s } = await supabase.auth.getSession();
 console.log("SESSION USER ID", s?.session?.user?.id, "EMAIL", s?.session?.user?.email);
 
     // NOTE: do NOT embed venues here; if venues RLS blocks SELECT, PostgREST will error and return 0 events.
-    let q = supabase.from("events").select(`
-      event_id,
-      event_date,
-      event_status,
-      event_type,
-      venue_id
-    `);
+    let q = supabase
+  .from("events")
+  .select(`
+    event_id,
+    event_date,
+    event_status,
+    event_type,
+    venue_id
+  `)
+  .neq("event_status", "Deleted");
 
     if (eventsMode === "upcoming") {
       q = q.gte("event_date", todayLondon).order("event_date", { ascending: true });
@@ -188,14 +200,26 @@ console.log("SESSION USER ID", s?.session?.user?.id, "EMAIL", s?.session?.user?.
         setReadinessByEventId({});
       } else {
         const { data: coreData } = await supabase
-          .from("band_members")
-          .select("member_id")
-          .eq("is_active", true)
-          .eq("is_dep", false)
-          .eq("band_role", "Band")
-          .eq("member_type", "musician");
+  .from("band_members")
+  .select("member_id")
+  .eq("is_active", true)
+  .eq("is_dep", false)
+  .eq("band_role", "Band")
+  .eq("member_type", "musician");
 
-        const coreMemberIds = (coreData ?? []).map((r: any) => r.member_id).filter(Boolean);
+const { data: depData } = await supabase
+  .from("band_members")
+  .select("member_id")
+  .eq("is_active", true)
+  .eq("is_dep", true);
+
+const coreMemberIds = (coreData ?? [])
+  .map((r: any) => r.member_id)
+  .filter(Boolean);
+
+const depMemberIds = (depData ?? [])
+  .map((r: any) => r.member_id)
+  .filter(Boolean);
 
         const { data: emData } = await supabase
           .from("event_members")
@@ -211,7 +235,7 @@ console.log("SESSION USER ID", s?.session?.user?.id, "EMAIL", s?.session?.user?.
         const hasCustomByEventId: Record<string, boolean> = {};
         for (const id of eventIds) hasCustomByEventId[id] = (customByEventId[id]?.length ?? 0) > 0;
 
-        const memberIdSet = new Set<string>(coreMemberIds);
+        const memberIdSet = new Set<string>([...coreMemberIds, ...depMemberIds]);
         for (const id of eventIds) {
           for (const mid of customByEventId[id] ?? []) memberIdSet.add(mid);
         }
@@ -223,10 +247,14 @@ console.log("SESSION USER ID", s?.session?.user?.id, "EMAIL", s?.session?.user?.
           .in("event_id", eventIds)
           .in("member_id", memberIds);
 
-        const avByEventId: Record<string, { member_id: string; status: AvailabilityStatus }[]> = {};
+        const avByEventId: Record<string, { member_id: string; status: AvailabilityStatus; is_dep?: boolean }[]> = {};
         for (const r of (avAllData ?? []) as any[]) {
           if (!r?.event_id || !r?.member_id) continue;
-          (avByEventId[r.event_id] ??= []).push({ member_id: r.member_id, status: r.status });
+          (avByEventId[r.event_id] ??= []).push({
+  member_id: r.member_id,
+  status: r.status,
+  is_dep: depMemberIds.includes(r.member_id),
+});
         }
 
         const nextReadiness: Record<string, Readiness> = {};
@@ -281,10 +309,10 @@ console.log("SESSION USER ID", s?.session?.user?.id, "EMAIL", s?.session?.user?.
   }, [loadEvents]);
 
   useFocusEffect(
-    useCallback(() => {
-      loadEvents();
-    }, [loadEvents])
-  );
+  useCallback(() => {
+    loadEvents(false);
+  }, [loadEvents])
+);
 
   useEffect(() => {
     const loadBandName = async () => {
@@ -327,8 +355,23 @@ console.log("SESSION USER ID", s?.session?.user?.id, "EMAIL", s?.session?.user?.
 
   const filteredEventsRef = useRef<EventRow[]>([]);
   useEffect(() => {
-    filteredEventsRef.current = filteredEvents ?? [];
-  }, [filteredEvents]);
+  filteredEventsRef.current = filteredEvents ?? [];
+}, [filteredEvents]);
+
+useEffect(() => {
+  if (loading || !savedEventsReturnEventId) return;
+
+  const index = filteredEvents.findIndex((e) => e.event_id === savedEventsReturnEventId);
+  if (index < 0) return;
+
+  setTimeout(() => {
+    listRef.current?.scrollToIndex({
+      index,
+      animated: false,
+      viewPosition: 0,
+    });
+  }, 100);
+}, [loading, filteredEvents]);
 
   const responseRequiredCount = useMemo(() => {
     if (eventsMode !== "upcoming") return 0;
@@ -478,8 +521,10 @@ console.log("SESSION USER ID", s?.session?.user?.id, "EMAIL", s?.session?.user?.
         </View>
 
         <FlatList
-          data={filteredEvents}
-          keyExtractor={(item) => item.event_id}
+  ref={listRef}
+  data={filteredEvents}
+  onScrollToIndexFailed={() => {}}
+  keyExtractor={(item) => item.event_id}
           renderItem={({ item }) => {
             const venueName = item.venues?.event_venue_name ?? "—";
             const city = item.venues?.city ?? "—";
@@ -494,9 +539,12 @@ console.log("SESSION USER ID", s?.session?.user?.id, "EMAIL", s?.session?.user?.
 
             return (
               <TouchableOpacity
-                style={styles.eventItem}
-                onPress={() => router.push({ pathname: "/events/[id]", params: { id: item.event_id } })}
-              >
+  style={styles.eventItem}
+  onPress={() => {
+  savedEventsReturnEventId = item.event_id;
+  router.push({ pathname: "/events/[id]", params: { id: item.event_id } });
+}}
+>
                 <View style={styles.eventRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.eventDate}>{formatDisplayDate(item.event_date)}</Text>
@@ -696,7 +744,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     borderRadius: 10,
     overflow: "hidden",
-    backgroundColor: colors.cardBg,
+    backgroundColor: "#FFFFFF",
   },
   modeBtn: {
     paddingVertical: 8,
@@ -767,21 +815,23 @@ const styles = StyleSheet.create({
   },
 
   eventItem: {
-    padding: 16,
-    backgroundColor: colors.cardBg,
-    borderRadius: 10,
-    marginHorizontal: 12,
-    marginVertical: 8,
+  padding: 16,
+  backgroundColor: colors.cardBg,
+  borderRadius: 12,
+  marginHorizontal: 12,
+  marginVertical: 10,
 
-    borderLeftWidth: 3,
-    borderLeftColor: colors.accent,
+  borderWidth: 1,
+  borderColor: "#E5E7EB",
+  borderLeftWidth: 5,
+  borderLeftColor: "#0D9488",
 
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
+  shadowColor: "#000",
+  shadowOpacity: 0.06,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 3,
+},
   eventRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -796,12 +846,12 @@ const styles = StyleSheet.create({
   },
 
   eventVenue: {
-    fontSize: 18,
-    fontWeight: "500",
-    color: colors.text,
-    marginBottom: 2,
-    lineHeight: 22,
-  },
+  fontSize: 18,
+  fontWeight: "800",
+  color: colors.text,
+  marginBottom: 2,
+  lineHeight: 22,
+},
 
   eventMeta: {
     fontSize: 14,

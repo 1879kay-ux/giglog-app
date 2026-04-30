@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -17,8 +18,8 @@ import {
   Switch,
   Text,
   TextInput,
-  View,
   unstable_createElement,
+  View,
 } from "react-native";
 
 function toLocalInputString(iso: string) {
@@ -473,279 +474,284 @@ export default function EventAccommodationEditScreen() {
         }}
       />
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        {!canEdit ? (
-          <View style={styles.readOnlyCard}>
-            <Text style={styles.readOnlyTitle}>Read only</Text>
-            <Text style={styles.readOnlyText}>Admins can add or edit accommodation.</Text>
-          </View>
-        ) : null}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+          {!canEdit ? (
+            <View style={styles.readOnlyCard}>
+              <Text style={styles.readOnlyTitle}>Read only</Text>
+              <Text style={styles.readOnlyText}>Admins can add or edit accommodation.</Text>
+            </View>
+          ) : null}
 
-        <View style={styles.card}>
-          <Label>Accommodation name</Label>
-          <TextInput
-            value={form.name}
-            onChangeText={(t) => {
-              setForm((p) => ({ ...p, name: t }));
-              setNameQuery(t);
-              if (canEdit && !saving) setShowSuggestions(true);
-            }}
-            onFocus={() => {
-              if (blurHideTimer.current) clearTimeout(blurHideTimer.current);
-              if (canEdit && !saving) setShowSuggestions(true);
-              setNameQuery(form.name);
-            }}
-            onBlur={() => {
-              // delay so taps on suggestion register
-              blurHideTimer.current = setTimeout(() => setShowSuggestions(false), 160);
-            }}
-            placeholder="Premier Inn"
-            style={styles.input}
-            editable={canEdit && !saving}
-          />
+          <View style={styles.card}>
+            <Label>Accommodation name</Label>
+            <TextInput
+              value={form.name}
+              onChangeText={(t) => {
+                setForm((p) => ({ ...p, name: t }));
+                setNameQuery(t);
+                if (canEdit && !saving) setShowSuggestions(true);
+              }}
+              onFocus={() => {
+                if (blurHideTimer.current) clearTimeout(blurHideTimer.current);
+                if (canEdit && !saving) setShowSuggestions(true);
+                setNameQuery(form.name);
+              }}
+              onBlur={() => {
+                // delay so taps on suggestion register
+                blurHideTimer.current = setTimeout(() => setShowSuggestions(false), 160);
+              }}
+              placeholder="Premier Inn"
+              style={styles.input}
+              editable={canEdit && !saving}
+            />
 
-          {canEdit && showSuggestions && suggestions.length > 0 ? (
-            <View style={styles.suggestBox}>
-              {suggestions.map((s, idx) => (
+            {canEdit && showSuggestions && suggestions.length > 0 ? (
+              <View style={styles.suggestBox}>
+                {suggestions.map((s, idx) => (
+                  <Pressable
+                    key={`${s.name}-${idx}`}
+                    style={[styles.suggestRow, idx === 0 ? { borderTopWidth: 0 } : null]}
+                    onPress={() => {
+                      if (blurHideTimer.current) clearTimeout(blurHideTimer.current);
+
+                      setForm((p) => ({
+                        ...p,
+                        name: s.name,
+                        address_line: s.address_line ?? "",
+                        postcode: s.postcode ?? "",
+                        breakfast_included: !!s.breakfast_included,
+                        parking_available: !!s.parking_available,
+                        notes: p.notes.trim() ? p.notes : s.notes ?? "",
+                      }));
+
+                      setNameQuery(s.name);
+                      setShowSuggestions(false);
+                      setSuggestions([]);
+                    }}
+                  >
+                    <Text style={styles.suggestTitle}>{s.name}</Text>
+                    <Text style={styles.suggestMeta}>
+                      {[s.postcode, s.address_line].filter(Boolean).join(" • ") || "No saved details"}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+
+            <Label>Booked under</Label>
+            <TextInput
+              value={form.booked_under_name}
+              onChangeText={(t) => setForm((p) => ({ ...p, booked_under_name: t }))}
+              placeholder="Name on booking"
+              style={styles.input}
+              editable={canEdit && !saving}
+            />
+
+            <Label>Booking reference</Label>
+            <TextInput
+              value={form.booking_reference}
+              onChangeText={(t) => setForm((p) => ({ ...p, booking_reference: t }))}
+              placeholder="Ref"
+              style={styles.input}
+              autoCapitalize="characters"
+              editable={canEdit && !saving}
+            />
+
+            <Label>Address line</Label>
+            <TextInput
+              value={form.address_line}
+              onChangeText={(t) => setForm((p) => ({ ...p, address_line: t }))}
+              placeholder="Optional"
+              style={styles.input}
+              editable={canEdit && !saving}
+            />
+
+            <Label>Postcode</Label>
+            <TextInput
+              value={form.postcode}
+              onChangeText={(t) => setForm((p) => ({ ...p, postcode: t }))}
+              placeholder="Optional"
+              style={styles.input}
+              autoCapitalize="characters"
+              editable={canEdit && !saving}
+            />
+
+            <Label>Check-in</Label>
+            {Platform.OS === "web" ? (
+              <WebDateTimeSplit
+                valueIso={form.check_in_at}
+                disabled={!canEdit || saving}
+                onChangeIso={(iso) => setForm((p) => ({ ...p, check_in_at: iso }))}
+              />
+            ) : (
+              <>
                 <Pressable
-                  key={`${s.name}-${idx}`}
-                  style={[styles.suggestRow, idx === 0 ? { borderTopWidth: 0 } : null]}
+                  style={styles.dateBtn}
                   onPress={() => {
-                    if (blurHideTimer.current) clearTimeout(blurHideTimer.current);
+                    if (!canEdit || saving) return;
 
-                    setForm((p) => ({
-                      ...p,
-                      name: s.name,
-                      address_line: s.address_line ?? "",
-                      postcode: s.postcode ?? "",
-                      breakfast_included: !!s.breakfast_included,
-                      parking_available: !!s.parking_available,
-                      notes: p.notes.trim() ? p.notes : s.notes ?? "",
-                    }));
+                    if (Platform.OS === "android") {
+                      openAndroidDateTimePicker(form.check_in_at, (iso) =>
+                        setForm((p) => ({ ...p, check_in_at: iso }))
+                      );
+                      return;
+                    }
 
-                    setNameQuery(s.name);
-                    setShowSuggestions(false);
-                    setSuggestions([]);
+                    // iOS
+                    setShowCheckIn(true);
                   }}
+                  disabled={!canEdit || saving}
                 >
-                  <Text style={styles.suggestTitle}>{s.name}</Text>
-                  <Text style={styles.suggestMeta}>
-                    {[s.postcode, s.address_line].filter(Boolean).join(" • ") || "No saved details"}
-                  </Text>
+                  <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
+                  <Text style={styles.dateBtnText}>{toLocalInputString(form.check_in_at)}</Text>
                 </Pressable>
-              ))}
-            </View>
-          ) : null}
 
-          <Label>Booked under</Label>
-          <TextInput
-            value={form.booked_under_name}
-            onChangeText={(t) => setForm((p) => ({ ...p, booked_under_name: t }))}
-            placeholder="Name on booking"
-            style={styles.input}
-            editable={canEdit && !saving}
-          />
-
-          <Label>Booking reference</Label>
-          <TextInput
-            value={form.booking_reference}
-            onChangeText={(t) => setForm((p) => ({ ...p, booking_reference: t }))}
-            placeholder="Ref"
-            style={styles.input}
-            autoCapitalize="characters"
-            editable={canEdit && !saving}
-          />
-
-          <Label>Address line</Label>
-          <TextInput
-            value={form.address_line}
-            onChangeText={(t) => setForm((p) => ({ ...p, address_line: t }))}
-            placeholder="Optional"
-            style={styles.input}
-            editable={canEdit && !saving}
-          />
-
-          <Label>Postcode</Label>
-          <TextInput
-            value={form.postcode}
-            onChangeText={(t) => setForm((p) => ({ ...p, postcode: t }))}
-            placeholder="Optional"
-            style={styles.input}
-            autoCapitalize="characters"
-            editable={canEdit && !saving}
-          />
-
-          <Label>Check-in</Label>
-          {Platform.OS === "web" ? (
-            <WebDateTimeSplit
-              valueIso={form.check_in_at}
-              disabled={!canEdit || saving}
-              onChangeIso={(iso) => setForm((p) => ({ ...p, check_in_at: iso }))}
-            />
-          ) : (
-            <>
-              <Pressable
-                style={styles.dateBtn}
-                onPress={() => {
-                  if (!canEdit || saving) return;
-
-                  if (Platform.OS === "android") {
-                    openAndroidDateTimePicker(form.check_in_at, (iso) =>
-                      setForm((p) => ({ ...p, check_in_at: iso }))
-                    );
-                    return;
-                  }
-
-                  // iOS
-                  setShowCheckIn(true);
-                }}
-                disabled={!canEdit || saving}
-              >
-                <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
-                <Text style={styles.dateBtnText}>{toLocalInputString(form.check_in_at)}</Text>
-              </Pressable>
-
-              {/* iOS only */}
-              {Platform.OS === "ios" && showCheckIn ? (
-                <DateTimePicker
-                  value={new Date(form.check_in_at)}
-                  mode="datetime"
-                  display="spinner"
-                  onChange={(event, selected) => {
-                    if (event.type === "dismissed" || !selected) {
+                {/* iOS only */}
+                {Platform.OS === "ios" && showCheckIn ? (
+                  <DateTimePicker
+                    value={new Date(form.check_in_at)}
+                    mode="datetime"
+                    display="spinner"
+                    onChange={(event, selected) => {
+                      if (event.type === "dismissed" || !selected) {
+                        setShowCheckIn(false);
+                        return;
+                      }
                       setShowCheckIn(false);
-                      return;
-                    }
-                    setShowCheckIn(false);
-                    setForm((p) => ({ ...p, check_in_at: selected.toISOString() }));
-                  }}
-                />
-              ) : null}
-            </>
-          )}
+                      setForm((p) => ({ ...p, check_in_at: selected.toISOString() }));
+                    }}
+                  />
+                ) : null}
+              </>
+            )}
 
-          <Label>Check-out</Label>
-          {Platform.OS === "web" ? (
-            <WebDateTimeSplit
-              valueIso={form.check_out_at}
-              disabled={!canEdit || saving}
-              onChangeIso={(iso) => setForm((p) => ({ ...p, check_out_at: iso }))}
-            />
-          ) : (
-            <>
-              <Pressable
-                style={styles.dateBtn}
-                onPress={() => {
-                  if (!canEdit || saving) return;
-
-                  if (Platform.OS === "android") {
-                    openAndroidDateTimePicker(form.check_out_at, (iso) =>
-                      setForm((p) => ({ ...p, check_out_at: iso }))
-                    );
-                    return;
-                  }
-
-                  // iOS
-                  setShowCheckOut(true);
-                }}
+            <Label>Check-out</Label>
+            {Platform.OS === "web" ? (
+              <WebDateTimeSplit
+                valueIso={form.check_out_at}
                 disabled={!canEdit || saving}
-              >
-                <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
-                <Text style={styles.dateBtnText}>{toLocalInputString(form.check_out_at)}</Text>
-              </Pressable>
+                onChangeIso={(iso) => setForm((p) => ({ ...p, check_out_at: iso }))}
+              />
+            ) : (
+              <>
+                <Pressable
+                  style={styles.dateBtn}
+                  onPress={() => {
+                    if (!canEdit || saving) return;
 
-              {/* iOS only */}
-              {Platform.OS === "ios" && showCheckOut ? (
-                <DateTimePicker
-                  value={new Date(form.check_out_at)}
-                  mode="datetime"
-                  display="spinner"
-                  onChange={(event, selected) => {
-                    if (event.type === "dismissed" || !selected) {
-                      setShowCheckOut(false);
+                    if (Platform.OS === "android") {
+                      openAndroidDateTimePicker(form.check_out_at, (iso) =>
+                        setForm((p) => ({ ...p, check_out_at: iso }))
+                      );
                       return;
                     }
-                    setShowCheckOut(false);
-                    setForm((p) => ({ ...p, check_out_at: selected.toISOString() }));
+
+                    // iOS
+                    setShowCheckOut(true);
                   }}
-                />
-              ) : null}
-            </>
-          )}
-
-          <View style={styles.twoCol}>
-            <View style={{ flex: 1 }}>
-              <Label>Rooms</Label>
-              <TextInput
-                value={form.rooms_count}
-                onChangeText={(t) => setForm((p) => ({ ...p, rooms_count: t }))}
-                placeholder="1"
-                style={styles.input}
-                keyboardType="number-pad"
-                editable={canEdit && !saving}
-              />
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <Label>Total cost</Label>
-              <TextInput
-                value={form.total_cost}
-                onChangeText={(t) => setForm((p) => ({ ...p, total_cost: t }))}
-                placeholder="120"
-                style={styles.input}
-                keyboardType="decimal-pad"
-                editable={canEdit && !saving}
-              />
-            </View>
-          </View>
-
-          <ToggleRow
-            label="Breakfast included"
-            value={form.breakfast_included}
-            disabled={!canEdit || saving}
-            onChange={(v) => setForm((p) => ({ ...p, breakfast_included: v }))}
-          />
-
-          <ToggleRow
-            label="Parking available"
-            value={form.parking_available}
-            disabled={!canEdit || saving}
-            onChange={(v) => setForm((p) => ({ ...p, parking_available: v }))}
-          />
-
-          <Label>Notes</Label>
-          <TextInput
-            value={form.notes}
-            onChangeText={(t) => setForm((p) => ({ ...p, notes: t }))}
-            placeholder="Late check-in code, parking instructions, etc."
-            style={[styles.input, { height: 110, textAlignVertical: "top" }]}
-            multiline
-            editable={canEdit && !saving}
-          />
-
-          {canEdit ? (
-            <>
-              <Pressable
-                style={[styles.saveBtn, !canSave || saving ? styles.saveBtnDisabled : null]}
-                onPress={save}
-                disabled={!canSave || saving}
-              >
-                <Text style={styles.saveBtnText}>{saving ? "Saving..." : "Save"}</Text>
-              </Pressable>
-
-              {row ? (
-                <Pressable
-                  style={[styles.deleteBtn, saving ? styles.saveBtnDisabled : null]}
-                  onPress={deleteAccommodation}
-                  disabled={saving}
+                  disabled={!canEdit || saving}
                 >
-                  <Text style={styles.deleteBtnText}>Delete</Text>
+                  <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
+                  <Text style={styles.dateBtnText}>{toLocalInputString(form.check_out_at)}</Text>
                 </Pressable>
-              ) : null}
-            </>
-          ) : null}
-        </View>
-      </ScrollView>
+
+                {/* iOS only */}
+                {Platform.OS === "ios" && showCheckOut ? (
+                  <DateTimePicker
+                    value={new Date(form.check_out_at)}
+                    mode="datetime"
+                    display="spinner"
+                    onChange={(event, selected) => {
+                      if (event.type === "dismissed" || !selected) {
+                        setShowCheckOut(false);
+                        return;
+                      }
+                      setShowCheckOut(false);
+                      setForm((p) => ({ ...p, check_out_at: selected.toISOString() }));
+                    }}
+                  />
+                ) : null}
+              </>
+            )}
+
+            <View style={styles.twoCol}>
+              <View style={{ flex: 1 }}>
+                <Label>Rooms</Label>
+                <TextInput
+                  value={form.rooms_count}
+                  onChangeText={(t) => setForm((p) => ({ ...p, rooms_count: t }))}
+                  placeholder="1"
+                  style={styles.input}
+                  keyboardType="number-pad"
+                  editable={canEdit && !saving}
+                />
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Label>Total cost</Label>
+                <TextInput
+                  value={form.total_cost}
+                  onChangeText={(t) => setForm((p) => ({ ...p, total_cost: t }))}
+                  placeholder="120"
+                  style={styles.input}
+                  keyboardType="decimal-pad"
+                  editable={canEdit && !saving}
+                />
+              </View>
+            </View>
+
+            <ToggleRow
+              label="Breakfast included"
+              value={form.breakfast_included}
+              disabled={!canEdit || saving}
+              onChange={(v) => setForm((p) => ({ ...p, breakfast_included: v }))}
+            />
+
+            <ToggleRow
+              label="Parking available"
+              value={form.parking_available}
+              disabled={!canEdit || saving}
+              onChange={(v) => setForm((p) => ({ ...p, parking_available: v }))}
+            />
+
+            <Label>Notes</Label>
+            <TextInput
+              value={form.notes}
+              onChangeText={(t) => setForm((p) => ({ ...p, notes: t }))}
+              placeholder="Late check-in code, parking instructions, etc."
+              style={[styles.input, { height: 110, textAlignVertical: "top" }]}
+              multiline
+              editable={canEdit && !saving}
+            />
+
+            {canEdit ? (
+              <>
+                <Pressable
+                  style={[styles.saveBtn, !canSave || saving ? styles.saveBtnDisabled : null]}
+                  onPress={save}
+                  disabled={!canSave || saving}
+                >
+                  <Text style={styles.saveBtnText}>{saving ? "Saving..." : "Save"}</Text>
+                </Pressable>
+
+                {row ? (
+                  <Pressable
+                    style={[styles.deleteBtn, saving ? styles.saveBtnDisabled : null]}
+                    onPress={deleteAccommodation}
+                    disabled={saving}
+                  >
+                    <Text style={styles.deleteBtnText}>Delete</Text>
+                  </Pressable>
+                ) : null}
+              </>
+            ) : null}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </>
   );
 }
@@ -785,7 +791,7 @@ const styles = StyleSheet.create({
   },
 
   container: { flex: 1, backgroundColor: colors.pageBg },
-  content: { padding: 16, paddingBottom: 32 },
+  content: { padding: 16, paddingBottom: Platform.OS === "ios" ? 180 : 140 },
 
   readOnlyCard: {
     borderWidth: 1,

@@ -222,11 +222,12 @@ export default function AvailabilityGridModal({
             <Text style={{ color: colors.textMuted, marginTop: 6 }}>{err}</Text>
           </View>
         ) : (
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1 }}
-            showsVerticalScrollIndicator
-          >
+<ScrollView
+  style={{ flex: 1 }}
+  contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}
+  showsVerticalScrollIndicator
+  nestedScrollEnabled
+>
             <View style={styles.gridWrap}>
               <View style={[styles.leftCol, { width: LEFT_W }]}>
                 <View style={[styles.corner, { height: HEADER_H }]}>
@@ -252,41 +253,41 @@ export default function AvailabilityGridModal({
               </View>
 
               <View style={{ flex: 1 }}>
-                <ScrollView horizontal showsHorizontalScrollIndicator>
-                  <View>
-                    <View style={[styles.headerRow, { height: HEADER_H }]}>
-                      {members.map((m) => (
-                        <View
-                          key={m.member_id}
-                          style={[styles.headerCell, { width: COL_W, height: HEADER_H }]}
-                        >
-                          <View style={styles.rotWrapOnly}>
-                            <Text style={styles.rotNameOnly} numberOfLines={1}>
-                              {String(m.display_name ?? "").trim() || "?"}
-                            </Text>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
+  <ScrollView horizontal showsHorizontalScrollIndicator>
+    <View>
+      <View style={[styles.headerRow, { height: HEADER_H }]}>
+        {members.map((m) => (
+          <View
+            key={m.member_id}
+            style={[styles.headerCell, { width: COL_W, height: HEADER_H }]}
+          >
+            <View style={styles.rotWrapOnly}>
+              <Text style={styles.rotNameOnly} numberOfLines={1}>
+                {String(m.display_name ?? "").trim() || "?"}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </View>
 
-                    {events.map((e) => {
-                      const row = cellByEventMember[e.event_id] || {};
-                      return (
-                        <View key={e.event_id} style={[styles.dotRow, { height: ROW_H }]}>
-                          {members.map((m) => (
-                            <View
-                              key={m.member_id}
-                              style={[styles.dotCell, { width: COL_W, height: ROW_H }]}
-                            >
-                              <Dot kind={kindFor(row[m.member_id])} />
-                            </View>
-                          ))}
-                        </View>
-                      );
-                    })}
-                  </View>
-                </ScrollView>
+      {events.map((e) => {
+        const row = cellByEventMember[e.event_id] || {};
+        return (
+          <View key={e.event_id} style={[styles.dotRow, { height: ROW_H }]}>
+            {members.map((m) => (
+              <View
+                key={m.member_id}
+                style={[styles.dotCell, { width: COL_W, height: ROW_H }]}
+              >
+                <Dot kind={kindFor(row[m.member_id])} />
               </View>
+            ))}
+          </View>
+        );
+      })}
+    </View>
+  </ScrollView>
+</View>
             </View>
           </ScrollView>
         )}

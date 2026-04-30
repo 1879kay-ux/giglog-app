@@ -194,7 +194,16 @@ export default function EventDetailsScreen() {
 
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
-      setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+setOpenSections((prev) => ({
+  details: false,
+  availability: false,
+  schedule: false,
+  documents: false,
+  travel: false,
+  finance: false,
+  accommodation: false,
+  [key]: !prev[key],
+}));
 
       if (willOpen) {
         requestAnimationFrame(() => {
@@ -341,11 +350,11 @@ export default function EventDetailsScreen() {
     setLoading(false);
   }, [id]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadEvent();
-    }, [loadEvent])
-  );
+ useFocusEffect(
+  useCallback(() => {
+    loadEvent();
+  }, [loadEvent])
+);
 
   useEffect(() => {
     let isMounted = true;

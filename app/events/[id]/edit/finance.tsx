@@ -475,10 +475,10 @@ const styles = StyleSheet.create({
   },
 
   container: {
-    padding: 16,
-    paddingBottom: 28,
-    backgroundColor: colors.pageBg,
-  },
+  padding: 16,
+  paddingBottom: Platform.OS === "ios" ? 180 : 140,
+  backgroundColor: colors.pageBg,
+},
 
   card: {
     backgroundColor: colors.cardBg,

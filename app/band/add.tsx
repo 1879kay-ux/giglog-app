@@ -5,6 +5,8 @@ import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -297,7 +299,11 @@ export default function AddBandMemberScreen() {
     <>
       <Stack.Screen options={{ title: "Add Member" }} />
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+<KeyboardAvoidingView
+  style={{ flex: 1 }}
+  behavior={Platform.OS === "ios" ? "padding" : undefined}
+>
+  <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={styles.label}>Name</Text>
         <TextInput
           value={displayName}
@@ -505,14 +511,15 @@ export default function AddBandMemberScreen() {
           Saving will create the member and send them an email invitation to join GigLog. They will
           receive a link to activate their account.
         </Text>
-      </ScrollView>
+  </ScrollView>
+</KeyboardAvoidingView>
     </>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5" },
-  content: { padding: 16, paddingBottom: 32 },
+  content: { padding: 16, paddingBottom: Platform.OS === "ios" ? 180 : 140 },
 
   label: { fontSize: 13, fontWeight: "700", color: "#333", marginTop: 12, marginBottom: 6 },
   hint: { fontSize: 12, fontWeight: "600", color: "#666" },

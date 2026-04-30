@@ -45,8 +45,6 @@ function formatBytes(n?: number | null) {
 
 async function confirmDelete(message: string) {
   if (Platform.OS === "web") {
-    // Alert.alert is unreliable on web
-    // eslint-disable-next-line no-restricted-globals
     return window.confirm(message);
   }
   return new Promise<boolean>((resolve) => {
@@ -117,10 +115,14 @@ export default function EditEventDocumentsScreen() {
       const bucket = "event-docs";
       const storagePath = `events/${id}/${Date.now()}-${filename}`;
 
-      const resp = await fetch(file.uri);
-      const blob = await resp.blob();
+      const fileResponse = await fetch(file.uri);
+      const arrayBuffer = await fileResponse.arrayBuffer();
 
-      const { error: uploadErr } = await supabase.storage.from(bucket).upload(storagePath, blob, {
+      if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+        throw new Error("Selected file is empty");
+      }
+
+      const { error: uploadErr } = await supabase.storage.from(bucket).upload(storagePath, arrayBuffer, {
         contentType: file.mimeType ?? undefined,
         upsert: false,
       });
@@ -133,7 +135,7 @@ export default function EditEventDocumentsScreen() {
         storage_bucket: bucket,
         storage_path: storagePath,
         mime_type: file.mimeType ?? null,
-        size_bytes: file.size ?? null,
+        size_bytes: arrayBuffer.byteLength,
         uploaded_by_member_id: null,
       });
       if (insertErr) throw insertErr;
@@ -155,14 +157,12 @@ export default function EditEventDocumentsScreen() {
     try {
       setDeletingId(doc.doc_id);
 
-      // 1) delete storage object
       const { error: storageErr } = await supabase.storage
         .from(doc.storage_bucket)
         .remove([doc.storage_path]);
 
       if (storageErr) throw storageErr;
 
-      // 2) delete DB row
       const { error: dbErr } = await supabase.from("event_documents").delete().eq("doc_id", doc.doc_id);
       if (dbErr) throw dbErr;
 

@@ -6,14 +6,14 @@ import * as DocumentPicker from "expo-document-picker";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 type DocType = "tech" | "rider" | "setlist" | "contracts" | "other";
@@ -211,14 +211,13 @@ export default function BandDocumentsEditScreen() {
 
     const title = niceTitleFromFilename(filename);
 
-    const { error: insErr } = await supabase.from("band_documents").insert({
-      doc_id: docId,
-      band_id: bandId,
-      title,
-      doc_type: "other",
-      storage_bucket: BUCKET,
-      storage_path: path,
-    });
+const { error: insErr } = await supabase.from("band_documents").insert({
+  band_id: bandId,
+  title,
+  doc_type: "other",
+  storage_bucket: BUCKET,
+  storage_path: path,
+});
 
     if (insErr) {
       console.log("INSERT ERROR:", insErr);
@@ -226,10 +225,8 @@ export default function BandDocumentsEditScreen() {
       return;
     }
 
-    Alert.alert("Uploaded", filename);
-
-    // 4) Reload list so you see it immediately
-    await load();
+    router.back();
+Alert.alert("Uploaded", filename);
   } catch (e: any) {
     console.log("upload doc error", e);
     Alert.alert("Upload failed", e?.message ?? "Could not upload document");

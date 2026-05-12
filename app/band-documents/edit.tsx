@@ -286,7 +286,9 @@ try {
   await supabase.functions.invoke("send-push-notification", {
     body: {
       title: "GigLog band document added",
-      body: `${filename} has been added to Band Docs.`,
+      body: `${selectedDocType.charAt(0).toUpperCase() + selectedDocType.slice(1)}: ${
+  file.name ?? "A document"
+} has been added to band documents.`,
       data: {
         type: "band_document_added",
       },

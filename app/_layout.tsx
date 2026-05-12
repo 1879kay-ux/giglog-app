@@ -8,7 +8,8 @@ import { ActivityIndicator, View } from "react-native";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
@@ -18,6 +19,24 @@ export default function RootLayout() {
   const router = useRouter();
   const pathname = usePathname();
   const [booting, setBooting] = useState(true);
+
+    useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+console.log("Notification tapped data:", data);
+
+const eventId = data?.event_id;
+
+if (typeof eventId === "string" && eventId.length > 0) {
+  router.push({
+  pathname: `/events/${eventId}`,
+  params: { open: "availability" },
+});
+}
+    });
+
+    return () => sub.remove();
+  }, [router]);
 
   useEffect(() => {
     let alive = true;

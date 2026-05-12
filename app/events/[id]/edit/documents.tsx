@@ -16,10 +16,12 @@ import {
   View,
 } from "react-native";
 
+type EventDocType = "tech" | "rider" | "setlist" | "contracts" | "other";
+
 type EventDocRow = {
   doc_id: string;
   title: string;
-  doc_type: string | null;
+  doc_type: EventDocType | null;
   storage_bucket: string;
   storage_path: string;
   mime_type: string | null;
@@ -47,10 +49,39 @@ async function confirmDelete(message: string) {
   if (Platform.OS === "web") {
     return window.confirm(message);
   }
+  
   return new Promise<boolean>((resolve) => {
     Alert.alert("Confirm delete", message, [
       { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
       { text: "Delete", style: "destructive", onPress: () => resolve(true) },
+    ]);
+  });
+}
+
+async function pickDocType(): Promise<EventDocType | null> {
+  if (Platform.OS === "web") {
+    const selected = window.prompt(
+      "Document type: tech, rider, setlist, contracts, other",
+      "other"
+    );
+
+    if (!selected) return null;
+
+    if (["tech", "rider", "setlist", "contracts", "other"].includes(selected)) {
+      return selected as EventDocType;
+    }
+
+    return "other";
+  }
+
+  return new Promise((resolve) => {
+    Alert.alert("Document type", "Choose document type", [
+      { text: "Tech", onPress: () => resolve("tech") },
+      { text: "Rider", onPress: () => resolve("rider") },
+      { text: "Set list", onPress: () => resolve("setlist") },
+      { text: "Contracts", onPress: () => resolve("contracts") },
+      { text: "Other", onPress: () => resolve("other") },
+      { text: "Cancel", style: "cancel", onPress: () => resolve(null) },
     ]);
   });
 }
@@ -112,8 +143,16 @@ export default function EditEventDocumentsScreen() {
       if (!file?.uri) throw new Error("No file selected");
 
       const filename = sanitizeFilename(file.name ?? "document");
-      const bucket = "event-docs";
-      const storagePath = `events/${id}/${Date.now()}-${filename}`;
+
+const selectedDocType = await pickDocType();
+
+if (!selectedDocType) {
+  setUploading(false);
+  return;
+}
+
+const bucket = "event-docs";
+const storagePath = `events/${id}/${Date.now()}-${filename}`;
 
       const fileResponse = await fetch(file.uri);
       const arrayBuffer = await fileResponse.arrayBuffer();
@@ -131,7 +170,7 @@ export default function EditEventDocumentsScreen() {
       const { error: insertErr } = await supabase.from("event_documents").insert({
   event_id: id,
   title: file.name ?? "Document",
-  doc_type: null,
+  doc_type: selectedDocType,
   storage_bucket: bucket,
   storage_path: storagePath,
   mime_type: file.mimeType ?? null,
@@ -158,7 +197,9 @@ try {
   await supabase.functions.invoke("send-push-notification", {
     body: {
       title: "GigLog document added",
-      body: `${file.name ?? "A document"} has been added to ${eventLabel}.`,
+      body: `${selectedDocType.charAt(0).toUpperCase() + selectedDocType.slice(1)}: ${
+  file.name ?? "A document"
+} has been added to ${eventLabel}.`,
       data: {
         type: "event_document_added",
         event_id: id,
@@ -256,9 +297,17 @@ await loadDocs();
                         <Text style={styles.docTitle} numberOfLines={2}>
                           {d.title}
                         </Text>
-                        <Text style={styles.docMeta}>
-                          {[d.doc_type, size].filter(Boolean).join(" · ") || " "}
-                        </Text>
+                        <View style={styles.metaRow}>
+  {d.doc_type ? (
+    <View style={styles.docTypePill}>
+      <Text style={styles.docTypePillText}>
+        {d.doc_type.charAt(0).toUpperCase() + d.doc_type.slice(1)}
+      </Text>
+    </View>
+  ) : null}
+
+  {size ? <Text style={styles.docMeta}>{size}</Text> : null}
+</View>
                       </View>
                     </View>
 
@@ -375,11 +424,33 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#111",
   },
-  docMeta: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 2,
-  },
+  metaRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6,
+  marginTop: 2,
+},
+
+docTypePill: {
+  backgroundColor: "#E6F7F7",
+  borderWidth: 1,
+  borderColor: "#0F766E",
+  paddingHorizontal: 6,
+  paddingVertical: Platform.OS === "android" ? 1 : 2,
+  borderRadius: 999,
+},
+
+docTypePillText: {
+  fontSize: 10,
+  fontWeight: "800",
+  color: "#0F766E",
+  textTransform: "capitalize",
+},
+
+docMeta: {
+  fontSize: 12,
+  color: "#666",
+},
   deleteBtn: {
     paddingHorizontal: 6,
     paddingVertical: 6,

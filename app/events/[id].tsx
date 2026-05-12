@@ -152,8 +152,16 @@ export default function EventDetailsScreen() {
   const canEdit = isAdmin && adminModeEnabled;
   const canSeeFinance = isAdmin || canViewFinance;
 
-  const params = useLocalSearchParams<{ id?: string | string[] }>();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const params = useLocalSearchParams<{
+  id?: string | string[];
+  open?: string | string[];
+}>();
+
+const id = Array.isArray(params.id) ? params.id[0] : params.id;
+
+const openParam = Array.isArray(params.open)
+  ? params.open[0]
+  : params.open;
 
   const [event, setEvent] = useState<EventRow | null>(null);
   const [finance, setFinance] = useState<EventFinanceRow | null>(null);
@@ -172,6 +180,15 @@ export default function EventDetailsScreen() {
     finance: false,
     accommodation: false,
   });
+
+useEffect(() => {
+  if (openParam === "availability") {
+    setOpenSections((prev) => ({
+      ...prev,
+      availability: true,
+    }));
+  }
+}, [openParam]);
 
   const scrollRef = useRef<ScrollView | null>(null);
   const sectionPositions = useRef<Partial<Record<SectionKey, number>>>({});

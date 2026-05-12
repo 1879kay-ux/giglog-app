@@ -262,6 +262,14 @@ export default function AvailabilitySection({
       }
 
       await load();
+
+if (label === "available") {
+  Alert.alert("Availability updated", "You are marked as Available.");
+} else if (label === "provisional") {
+  Alert.alert("Availability updated", "You are marked as Provisional.");
+} else if (label === "unavailable") {
+  Alert.alert("Availability updated", "You are marked as Unavailable.");
+}
     } catch (e: any) {
       console.log("setAvailability error", e);
       Alert.alert("Error", e?.message ?? "Failed to update availability");
@@ -307,7 +315,16 @@ export default function AvailabilitySection({
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <InfoCard title="Your Availability">
-        <View style={styles.badgeRow}>
+  {currentLabel === "awaiting" ? (
+    <View style={styles.confirmPrompt}>
+      <Text style={styles.confirmPromptTitle}>Please confirm your availability</Text>
+      <Text style={styles.confirmPromptText}>
+        Choose Available, Provisional or Unavailable for this event.
+      </Text>
+    </View>
+  ) : null}
+
+  <View style={styles.badgeRow}>
           <View style={styles.lineupBadge}>
             <Text style={styles.lineupBadgeText}>
               {hasCustomLineup ? "Custom Lineup" : "Core Band"}
@@ -328,9 +345,9 @@ export default function AvailabilitySection({
         </View>
 
         <View style={styles.chipRow}>
-          {chip("available", "Available")}
-          {chip("provisional", "Provisional")}
-          {chip("unavailable", "Unavailable")}
+          {chip("available", "✓ Available")}
+{chip("provisional", "• Provisional")}
+{chip("unavailable", "✕ Unavailable")}
         </View>
 
         {saving ? <Text style={styles.saving}>Saving…</Text> : null}
@@ -483,6 +500,28 @@ const styles = StyleSheet.create({
   loading: { paddingVertical: 16, alignItems: "center" },
 
   smallNote: { fontSize: 12, color: "#666", marginBottom: 10 },
+
+confirmPrompt: {
+  borderWidth: 1,
+  borderColor: "rgba(13,148,136,0.35)",
+  backgroundColor: "rgba(13,148,136,0.08)",
+  borderRadius: 12,
+  padding: 10,
+  marginBottom: 12,
+},
+
+confirmPromptTitle: {
+  fontSize: 14,
+  fontWeight: "900",
+  color: colors.primary,
+  marginBottom: 3,
+},
+
+confirmPromptText: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#555",
+},
 
   badgeRow: {
     flexDirection: "row",

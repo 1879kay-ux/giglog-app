@@ -6,8 +6,9 @@ import { Platform } from "react-native";
 
 export async function registerForPushNotificationsAsync() {
   if (!Device.isDevice) {
-    return null;
-  }
+  console.log("Push notifications skipped: not a physical device");
+  return null;
+}
 
   const { status: existingStatus } =
     await Notifications.getPermissionsAsync();

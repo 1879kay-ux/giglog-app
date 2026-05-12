@@ -6,7 +6,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Alert, Linking, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import { Alert, Linking, Platform, Pressable, Share, StyleSheet, Text, View } from "react-native";
 
 type DocumentsSectionProps = {
   eventId: string;
@@ -154,7 +154,13 @@ export default function DocumentsSection({ eventId }: DocumentsSectionProps) {
 
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>{d.label}</Text>
-                    {!!d.sub && <Text style={styles.sub}>{d.sub}</Text>}
+                    {!!d.sub && (
+  <View style={styles.docTypePill}>
+    <Text style={styles.docTypePillText}>
+      {d.sub.charAt(0).toUpperCase() + d.sub.slice(1)}
+    </Text>
+  </View>
+)}
                   </View>
                 </View>
 
@@ -255,11 +261,23 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#111",
   },
-  sub: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 2,
-  },
+  docTypePill: {
+  alignSelf: "flex-start",
+  backgroundColor: "#E6F7F7",
+  borderWidth: 1,
+  borderColor: "#0F766E",
+  paddingHorizontal: 6,
+  paddingVertical: Platform.OS === "android" ? 1 : 2,
+  borderRadius: 999,
+  marginTop: 3,
+},
+
+docTypePillText: {
+  fontSize: 10,
+  fontWeight: "800",
+  color: "#0F766E",
+  textTransform: "capitalize",
+},
   loadingText: {
     marginTop: 8,
     fontSize: 12,

@@ -9,9 +9,10 @@ import { ActivityIndicator, View } from "react-native";
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
+shouldShowList: true,
+shouldPlaySound: true,
+shouldSetBadge: false,
+shouldShowAlert: true,
   }),
 });
 

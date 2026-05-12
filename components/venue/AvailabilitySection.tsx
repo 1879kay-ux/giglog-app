@@ -54,6 +54,8 @@ type Props = {
   memberId: string;
   hasCustomLineup?: boolean;
   canEdit?: boolean;
+  eventDate?: string | null;
+  venueName?: string | null;
 };
 
 type EventAvailabilityDbRow = {
@@ -80,6 +82,8 @@ export default function AvailabilitySection({
   memberId,
   hasCustomLineup,
   canEdit,
+  eventDate,
+  venueName,
 }: Props) {
   const router = useRouter();
 
@@ -217,6 +221,49 @@ export default function AvailabilitySection({
 
   const currentLabel: AvailabilityLabel = currentRow?.availability_label ?? "awaiting";
 
+async function sendAvailabilityReminder() {
+  try {
+    const awaitingIds = rows
+      .filter((r) => r.availability_label === "awaiting")
+      .map((r) => r.member_id);
+
+    if (awaitingIds.length === 0) {
+      Alert.alert("No reminders needed", "Everyone has responded.");
+      return;
+    }
+
+    const title = "Availability reminder";
+
+    const body = `Please confirm availability for ${venueName ?? "this event"}${
+  eventDate ? ` on ${eventDate}` : ""
+}.`;
+
+    const { error } = await supabase.functions.invoke("send-push-notification", {
+      body: {
+        user_ids: awaitingIds,
+        title,
+        body,
+        data: {
+          type: "availability_reminder",
+          event_id: eventId,
+          open: "availability",
+        },
+      },
+    });
+
+    if (error) throw error;
+
+    Alert.alert(
+      "Reminder sent",
+      `Sent to ${awaitingIds.length} awaiting member${
+        awaitingIds.length === 1 ? "" : "s"
+      }.`
+    );
+  } catch (e: any) {
+    Alert.alert("Reminder failed", e?.message ?? "Please try again.");
+  }
+}
+
   const roleDisplay = (r: AvailabilityRow) => {
     if ((r.band_role ?? "") === "Other") return r.band_role_other ?? "Other";
     return r.band_role ?? "";
@@ -332,16 +379,26 @@ if (label === "available") {
           </View>
 
           {canEdit ? (
-            <Pressable
-              onPress={() => router.push(`/events/${eventId}/lineup`)}
-              hitSlop={10}
-              style={styles.editLineupPill}
-            >
-              <Text style={styles.editLineupPillText}>Edit Lineup</Text>
-            </Pressable>
-          ) : (
-            <View />
-          )}
+  <View style={styles.adminActions}>
+    <Pressable
+      onPress={() => router.push(`/events/${eventId}/lineup`)}
+      hitSlop={10}
+      style={styles.editLineupPill}
+    >
+      <Text style={styles.editLineupPillText}>Edit Lineup</Text>
+    </Pressable>
+
+    <Pressable
+      onPress={sendAvailabilityReminder}
+      hitSlop={10}
+      style={styles.reminderPill}
+    >
+      <Text style={styles.reminderPillText}>Remind Awaiting</Text>
+    </Pressable>
+  </View>
+) : (
+  <View />
+)}
         </View>
 
         <View style={styles.chipRow}>
@@ -542,19 +599,47 @@ confirmPromptText: {
     color: colors.primary,
   },
 
+adminActions: {
+  flexDirection: "row",
+  gap: 8,
+  alignItems: "center",
+},
+
   editLineupPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(13,148,136,0.35)",
-    backgroundColor: "rgba(13,148,136,0.08)",
-  },
-  editLineupPillText: {
-    fontSize: 11,
-    fontWeight: "900",
-    color: colors.primary,
-  },
+  height: 34,
+  paddingHorizontal: 12,
+  borderRadius: 10,
+  borderWidth: 1,
+  borderColor: "rgba(13,148,136,0.35)",
+  backgroundColor: "rgba(13,148,136,0.08)",
+  justifyContent: "center",
+  alignItems: "center",
+},
+
+editLineupPillText: {
+  fontSize: 11,
+  fontWeight: "900",
+  color: colors.primary,
+  lineHeight: 14,
+},
+
+reminderPill: {
+  height: 34,
+  paddingHorizontal: 12,
+  borderRadius: 10,
+  borderWidth: 1,
+  borderColor: "rgba(239, 68, 68, 0.55)",
+  backgroundColor: "rgba(239, 68, 68, 0.08)",
+  justifyContent: "center",
+  alignItems: "center",
+},
+
+reminderPillText: {
+  fontSize: 11,
+  fontWeight: "900",
+  color: "#DC2626",
+  lineHeight: 14,
+},
 
   chipRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
   chip: {

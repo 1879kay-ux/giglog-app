@@ -256,6 +256,21 @@ if (unavailableMembers && unavailableMembers.length > 0) {
 );
 }
 
+try {
+  await supabase.functions.invoke("send-push-notification", {
+    body: {
+      title: "New GigLog event",
+      body: `${eventType} added for ${formatDisplayDate(eventDate)}. Please confirm availability.`,
+      data: {
+        type: "event_created",
+        event_id: data.event_id,
+      },
+    },
+  });
+} catch (notifyError) {
+  console.log("New event push notification error:", notifyError);
+}
+
 router.replace("/events");
     } catch (e: any) {
       console.log("saveEvent error:", e);

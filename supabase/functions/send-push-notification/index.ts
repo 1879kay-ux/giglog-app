@@ -3,7 +3,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const IAN_USER_ID = "776b89e1-4a94-443f-a822-1a1ab7d06574";
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  const body = await req.json();
+
+  const title = body?.title ?? "GigLog";
+  const message = body?.body ?? "Notification";
+  const dataPayload = body?.data ?? {};
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -23,11 +28,9 @@ Deno.serve(async () => {
     tokens?.map((row) => ({
       to: row.expo_push_token,
       sound: "default",
-      title: "GigLog test",
-      body: "Push notifications are working.",
-      data: {
-        type: "test",
-      },
+      title,
+body: message,
+data: dataPayload,
     })) ?? [];
 
   const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {

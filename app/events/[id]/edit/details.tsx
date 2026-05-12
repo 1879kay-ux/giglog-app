@@ -285,11 +285,31 @@ export default function EditEventDetailsScreen() {
     }
 
     if (!data || (Array.isArray(data) && data.length === 0)) {
-      Alert.alert("Save failed", "No rows updated.");
-      return;
-    }
+  Alert.alert("Save failed", "No rows updated.");
+  return;
+}
 
-    router.back();
+const dateChanged = event.event_date !== eventDate;
+const statusChanged = event.event_status !== eventStatus;
+
+if (dateChanged || statusChanged) {
+  try {
+    await supabase.functions.invoke("send-push-notification", {
+      body: {
+        title: "GigLog event updated",
+        body: `${eventType} updated for ${formatEventDate(eventDate)}. Status: ${eventStatus}.`,
+        data: {
+          type: "event_updated",
+          event_id: id,
+        },
+      },
+    });
+  } catch (notifyError) {
+    console.log("Event update push notification error:", notifyError);
+  }
+}
+
+router.back();
   }
 
   if (loading || !event) {

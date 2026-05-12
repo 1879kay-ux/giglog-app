@@ -237,7 +237,26 @@ export default function AddEventScreen() {
       }
 
       console.log("INSERT DATA:", data);
-      router.replace("/events");
+
+const { data: unavailableMembers } = await supabase
+  .from("member_unavailability")
+  .select("member_id")
+  .lte("start_date", eventDate)
+  .gte("end_date", eventDate);
+
+if (unavailableMembers && unavailableMembers.length > 0) {
+  await supabase.from("event_availability").upsert(
+  unavailableMembers.map((row: any) => ({
+    event_id: data.event_id,
+    member_id: row.member_id,
+    status: "unavailable",
+    status_source: "unavailability_period",
+  })),
+  { onConflict: "event_id,member_id" }
+);
+}
+
+router.replace("/events");
     } catch (e: any) {
       console.log("saveEvent error:", e);
       setSaveError(e?.message ?? String(e));

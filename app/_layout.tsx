@@ -1,9 +1,18 @@
 import { CurrentMemberProvider } from "@/components/auth/CurrentMemberContext";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
+import * as Notifications from "expo-notifications";
 import { Stack, usePathname, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export default function RootLayout() {
   const router = useRouter();

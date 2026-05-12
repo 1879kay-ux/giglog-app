@@ -11,6 +11,7 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -23,6 +24,14 @@ type EventLite = {
   event_status: string | null;
   event_type: string | null;
   venues: { event_venue_name: string; city: string } | null;
+};
+
+type UnavailabilityLite = {
+  id: string;
+  member_id: string;
+  start_date: string;
+  end_date: string;
+  band_members?: { display_name: string | null } | null;
 };
 
 type ViewMode = "year" | "month";
@@ -103,7 +112,8 @@ export default function EventsCalendarScreen() {
 
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<EventLite[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+const [unavailability, setUnavailability] = useState<UnavailabilityLite[]>([]);
+const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [dayModalOpen, setDayModalOpen] = useState(false);
 
   const monthsInYear = useMemo(() => {
@@ -142,37 +152,141 @@ export default function EventsCalendarScreen() {
 
     if (!error && data) setEvents(data as unknown as EventLite[]);
     else setEvents([]);
+const { data: userData } = await supabase.auth.getUser();
+const authUserId = userData?.user?.id ?? null;
 
+if (authUserId) {
+ if (authUserId) {
+    const { data: unavailableData } = await supabase
+      .from("member_unavailability")
+      .select(`
+  id,
+  member_id,
+  start_date,
+  end_date,
+  band_members:member_id (
+    display_name
+  )
+`)
+      
+      .lte("start_date", end)
+      .gte("end_date", start);
+
+    setUnavailability((unavailableData ?? []) as UnavailabilityLite[]);
+  } else {
+    setUnavailability([]);
+  }
+} else {
+  setUnavailability([]);
+}
     setLoading(false);
   }
 
   const eventsByDate = useMemo(() => {
-    const map: Record<string, EventLite[]> = {};
-    for (const e of events) {
-      if (!map[e.event_date]) map[e.event_date] = [];
-      map[e.event_date].push(e);
-    }
-    return map;
-  }, [events]);
+  const map: Record<string, EventLite[]> = {};
+  for (const e of events) {
+    if (!map[e.event_date]) map[e.event_date] = [];
+    map[e.event_date].push(e);
+  }
+  return map;
+}, [events]);
 
-  const selectedEvents = useMemo(() => {
+const unavailableDates = useMemo(() => {
+  const set = new Set<string>();
+
+  for (const row of unavailability) {
+    const d = new Date(`${row.start_date}T12:00:00`);
+    const endDate = new Date(`${row.end_date}T12:00:00`);
+
+    while (d <= endDate) {
+      set.add(ymd(d));
+      d.setDate(d.getDate() + 1);
+    }
+  }
+
+  return set;
+}, [unavailability]);
+
+const unavailableByDate = useMemo(() => {
+  const map: Record<string, string[]> = {};
+
+  for (const row of unavailability) {
+    const d = new Date(`${row.start_date}T12:00:00`);
+    const endDate = new Date(`${row.end_date}T12:00:00`);
+    const name = row.band_members?.display_name ?? "Unknown member";
+
+    while (d <= endDate) {
+      const key = ymd(d);
+      if (!map[key]) map[key] = [];
+      if (!map[key].includes(name)) map[key].push(name);
+      d.setDate(d.getDate() + 1);
+    }
+  }
+
+  return map;
+}, [unavailability]);
+
+const selectedEvents = useMemo(() => {
     if (!selectedDate) return [];
     return eventsByDate[selectedDate] ?? [];
   }, [selectedDate, eventsByDate]);
 
-  function onDayPress(dateKey: string) {
-    const dayEvents = eventsByDate[dateKey] ?? [];
-    if (dayEvents.length === 0) return;
+  const selectedUnavailableMembers = useMemo(() => {
+  if (!selectedDate) return [];
+  return unavailableByDate[selectedDate] ?? [];
+}, [selectedDate, unavailableByDate]);
 
-    if (dayEvents.length === 1) {
-      router.push(`/events/${dayEvents[0].event_id}`);
-      return;
-    }
+  function onDayPress(dateKey: string) {
+  const dayEvents = eventsByDate[dateKey] ?? [];
+  const dayUnavailable = unavailableByDate[dateKey] ?? [];
+
+  if (dayEvents.length === 0 && dayUnavailable.length === 0) return;
+
+    if (dayEvents.length === 1 && dayUnavailable.length === 0) {
+  router.push(`/events/${dayEvents[0].event_id}`);
+  return;
+}
 
     setSelectedDate(dateKey);
     setDayModalOpen(true);
   }
+async function shareUnavailabilitySummary() {
+  const grouped: Record<string, string[]> = {};
 
+  for (const row of unavailability) {
+    const name = row.band_members?.display_name ?? "Unknown member";
+
+    if (!grouped[name]) grouped[name] = [];
+
+    const start = new Intl.DateTimeFormat("en-GB").format(
+  new Date(`${row.start_date}T12:00:00`)
+);
+
+const end = new Intl.DateTimeFormat("en-GB").format(
+  new Date(`${row.end_date}T12:00:00`)
+);
+
+grouped[name].push(`${start} → ${end}`);
+  }
+
+  let message = `GigLog Unavailability Summary – ${year}\n\n`;
+
+  Object.entries(grouped)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .forEach(([name, periods]) => {
+      message += `${name}\n`;
+
+      periods.forEach((p) => {
+        message += `${p}\n`;
+      });
+
+      message += `\n`;
+    });
+
+  await Share.share({
+    message,
+  });
+}
   function renderMonthGrid(monthStart: Date, compact: boolean) {
     const first = startOfMonth(monthStart);
     const last = endOfMonth(monthStart);
@@ -225,6 +339,7 @@ export default function EventsCalendarScreen() {
             const hasEvents = !!dayEvents && dayEvents.length > 0;
             const isToday = c.dateKey && c.dateKey === todayKey;
             const isWeekend = c.dateKey ? isWeekendFromYmd(c.dateKey) : false;
+const isUnavailable = c.dateKey ? unavailableDates.has(c.dateKey) : false;
 
             return (
               <Pressable
@@ -237,7 +352,8 @@ export default function EventsCalendarScreen() {
                 style={[
                   compact ? styles.cellCompact : styles.cell,
                   isWeekend ? styles.cellWeekend : null,
-                  isToday ? styles.cellToday : null,
+                  isUnavailable ? styles.cellUnavailable : null,
+isToday ? styles.cellToday : null,
                 ]}
               >
                 <Text style={compact ? styles.dayNumberCompact : styles.dayNumber}>{c.label}</Text>
@@ -339,7 +455,9 @@ export default function EventsCalendarScreen() {
             </View>
 
             <View style={{ flex: 1 }} />
-
+<Pressable onPress={shareUnavailabilitySummary} style={styles.navBtn} hitSlop={10}>
+  <Ionicons name="share-outline" size={20} color="#111" />
+</Pressable>
             <View style={styles.yearNav}>
               <Pressable onPress={() => setAnchorYear((d) => addYears(d, -1))} style={styles.navBtn} hitSlop={10}>
                 <Ionicons name="chevron-back-outline" size={20} color="#111" />
@@ -352,6 +470,14 @@ export default function EventsCalendarScreen() {
               </Pressable>
             </View>
           </View>
+
+<View style={styles.legendRow}>
+  <Text style={styles.legendText}>
+    <Text style={{ color: "rgba(220, 38, 38, 0.55)" }}>■</Text> Band/Crew Unavailable ·{" "}
+    <Text style={{ color: "#16a34a" }}>■</Text> Event ·{" "}
+    <Text style={{ color: "#dc2626" }}>■</Text> Cancelled
+  </Text>
+</View>
 
           {/* YEAR VIEW: 12 months, one screen */}
           {viewMode === "year" ? (
@@ -385,7 +511,15 @@ export default function EventsCalendarScreen() {
 
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{selectedDate ? `Events: ${selectedDate}` : "Events"}</Text>
+{selectedUnavailableMembers.length > 0 ? (
+  <View style={styles.unavailableMembersBox}>
+    <Text style={styles.unavailableMembersTitle}>Unavailable</Text>
 
+    <Text style={styles.unavailableMembersText}>
+      {selectedUnavailableMembers.join(", ")}
+    </Text>
+  </View>
+) : null}
             {selectedEvents.map((e) => {
               const venueName = e.venues?.event_venue_name ?? "Unknown venue";
               const city = e.venues?.city ?? "";
@@ -428,7 +562,47 @@ export default function EventsCalendarScreen() {
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: "#f5f5f5" },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
+legendRow: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: 12,
+  marginHorizontal: 12,
+  marginBottom: 8,
+},
 
+legendItem: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6,
+},
+
+legendUnavailable: {
+  width: 14,
+  height: 14,
+  borderRadius: 4,
+  backgroundColor: "rgba(220, 38, 38, 0.12)",
+  borderWidth: 1,
+  borderColor: "#FCA5A5",
+},
+
+legendEvent: {
+  width: 14,
+  height: 14,
+  borderRadius: 4,
+  backgroundColor: "#16a34a",
+},
+legendCancelled: {
+  width: 14,
+  height: 14,
+  borderRadius: 4,
+  backgroundColor: "#dc2626",
+},
+legendText: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#444",
+},
   topRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -534,6 +708,11 @@ const styles = StyleSheet.create({
   cellWeekend: { backgroundColor: "#f8fafc" },
   cellToday: { borderWidth: 2, borderColor: colors.primary },
 
+  cellUnavailable: {
+  backgroundColor: "rgba(220, 38, 38, 0.12)",
+},
+
+
   dayNumber: { fontSize: 13, fontWeight: "900", color: "#111" },
   dayNumberCompact: { fontSize: 11, fontWeight: "900", color: "#111" },
 
@@ -585,6 +764,28 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#666",
   },
+
+unavailableMembersBox: {
+  borderWidth: 1,
+  borderColor: "#FCA5A5",
+  backgroundColor: "rgba(239, 68, 68, 0.08)",
+  borderRadius: 10,
+  padding: 10,
+  marginBottom: 10,
+},
+
+unavailableMembersTitle: {
+  color: "#DC2626",
+  fontWeight: "900",
+  fontSize: 12,
+  marginBottom: 4,
+},
+
+unavailableMembersText: {
+  color: "#7F1D1D",
+  fontWeight: "700",
+  fontSize: 13,
+},
 
   modalOverlay: {
     flex: 1,

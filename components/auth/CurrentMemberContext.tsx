@@ -1,3 +1,4 @@
+import { savePushToken } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { AppState } from "react-native";
@@ -111,12 +112,16 @@ export function CurrentMemberProvider({ children }: { children: React.ReactNode 
     }
 
     const member_id = (bm as any)?.member_id ?? null;
-    const band_id = (bm as any)?.band_id ?? null;
-    const admin = !!(bm as any)?.is_admin;
+const band_id = (bm as any)?.band_id ?? null;
+const admin = !!(bm as any)?.is_admin;
 
-    setMemberId(member_id);
-    setBandId(band_id);
-    setIsAdmin(admin);
+setMemberId(member_id);
+setBandId(band_id);
+setIsAdmin(admin);
+
+if (band_id) {
+  savePushToken(authId, band_id);
+}
 
     // default to true if null (safety for older rows)
     setAdminModeEnabledState((bm as any)?.admin_mode_enabled ?? true);

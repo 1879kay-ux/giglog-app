@@ -161,6 +161,7 @@ export default function EventDetailsScreen() {
   const [hasCustomLineup, setHasCustomLineup] = useState(false);
   const [accommodation, setAccommodation] = useState<AccommodationRow | null>(null);
   const [currentMemberId, setCurrentMemberId] = useState<string>("");
+  const [hasAvailabilityConflict, setHasAvailabilityConflict] = useState(false); 
 
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
     details: false,
@@ -356,8 +357,41 @@ setOpenSections((prev) => ({
   }, [loadEvent])
 );
 
-  useEffect(() => {
-    let isMounted = true;
+useEffect(() => {
+  async function checkAvailabilityConflict() {
+    if (!event?.event_id || !event?.event_date || !currentMemberId) {
+      setHasAvailabilityConflict(false);
+      return;
+    }
+
+    const { data: av } = await supabase
+      .from("event_availability")
+      .select("status")
+      .eq("event_id", event.event_id)
+      .eq("member_id", currentMemberId)
+      .maybeSingle();
+
+    if (String(av?.status).toLowerCase() !== "available") {
+      setHasAvailabilityConflict(false);
+      return;
+    }
+
+    const { data: periods } = await supabase
+      .from("member_unavailability")
+      .select("id")
+      .eq("member_id", currentMemberId)
+      .lte("start_date", event.event_date)
+      .gte("end_date", event.event_date)
+      .limit(1);
+
+    setHasAvailabilityConflict((periods ?? []).length > 0);
+  }
+
+  checkAvailabilityConflict();
+}, [event?.event_id, event?.event_date, currentMemberId]);
+
+useEffect(() => {
+  let isMounted = true;
 
     async function init() {
       const { data, error } = await supabase.auth.getSession();
@@ -540,22 +574,31 @@ setOpenSections((prev) => ({
                 />
               </Section>
 
-              <Section
-                sectionKey="availability"
-                title="Availability"
-                icon="checkmark-circle-outline"
-                open={openSections.availability}
-                onPress={() => toggleSection("availability")}
-                onLayoutY={handleSectionLayout}
-              >
-                <AvailabilitySection
-                  key={openSections.availability ? `open-${event.event_id}` : `closed-${event.event_id}`}
-                  eventId={event.event_id}
-                  memberId={currentMemberId}
-                  hasCustomLineup={hasCustomLineup}
-                  canEdit={canEdit}
-                />
-              </Section>
+<Section
+  sectionKey="availability"
+  title="Availability"
+  icon="checkmark-circle-outline"
+  open={openSections.availability}
+  onPress={() => toggleSection("availability")}
+  onLayoutY={handleSectionLayout}
+>
+  {hasAvailabilityConflict ? (
+    <View style={styles.conflictWarning}>
+      <Ionicons name="warning-outline" size={18} color="#B45309" />
+      <Text style={styles.conflictWarningText}>
+        You are marked Available during an unavailable period. Please review your availability.
+      </Text>
+    </View>
+  ) : null}
+
+  <AvailabilitySection
+    key={openSections.availability ? `open-${event.event_id}` : `closed-${event.event_id}`}
+    eventId={event.event_id}
+    memberId={currentMemberId}
+    hasCustomLineup={hasCustomLineup}
+    canEdit={canEdit}
+  />
+</Section>
 
               <Section
                 sectionKey="schedule"
@@ -818,7 +861,23 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
   },
+conflictWarning: {
+  flexDirection: "row",
+  gap: 8,
+  borderWidth: 1,
+  borderColor: "#F59E0B",
+  backgroundColor: "rgba(245, 158, 11, 0.12)",
+  borderRadius: 10,
+  padding: 10,
+  marginBottom: 10,
+},
 
+conflictWarningText: {
+  flex: 1,
+  color: "#B45309",
+  fontSize: 13,
+  fontWeight: "700",
+},
   sectionContent: {
     marginTop: 6,
     backgroundColor: colors.cardBg,

@@ -108,10 +108,19 @@ export default function ProfileScreen() {
       />
 
       <View style={styles.container}>
-        <View style={styles.card}>
-          <Text style={styles.label}>Signed in as</Text>
-          <Text style={styles.value}>{email || "—"}</Text>
-        </View>
+        <TouchableOpacity
+  style={styles.availabilityCard}
+  onPress={() => router.push("/profile/unavailability")}
+>
+  <Ionicons name="calendar-outline" size={24} color={colors.primary} />
+
+  <View style={{ flex: 1 }}>
+    <Text style={styles.availabilityTitle}>Unavailable Periods</Text>
+    <Text style={styles.availabilitySubtitle}>Add holidays, work blocks or dates you can’t gig</Text>
+  </View>
+
+  <Ionicons name="chevron-forward-outline" size={22} color="#999" />
+</TouchableOpacity>
 
         <View style={styles.card}>
           <Text style={styles.label}>Change password</Text>
@@ -206,7 +215,30 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 12,
   },
+availabilityCard: {
+  backgroundColor: "#EFFFFC",
+  borderRadius: 14,
+  padding: 16,
+  borderWidth: 1,
+  borderColor: colors.primary,
+  marginBottom: 16,
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 12,
+},
 
+availabilityTitle: {
+  fontSize: 16,
+  fontWeight: "900",
+  color: "#111",
+},
+
+availabilitySubtitle: {
+  marginTop: 3,
+  fontSize: 13,
+  color: "#555",
+  fontWeight: "600",
+},
   showBtn: {
     marginTop: 10,
     alignSelf: "flex-start",

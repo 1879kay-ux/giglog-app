@@ -4,10 +4,12 @@ import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -37,6 +39,28 @@ function niceTitleFromFilename(name: string) {
 
 function cap(s: string) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+async function pickDocType(): Promise<DocType | null> {
+  if (Platform.OS === "web") {
+    const selected = window.prompt("Document type: tech, rider, setlist, contracts, other", "other");
+    if (!selected) return null;
+    if (["tech", "rider", "setlist", "contracts", "other"].includes(selected)) {
+      return selected as DocType;
+    }
+    return "other";
+  }
+
+  return new Promise((resolve) => {
+    Alert.alert("Document type", "Choose document type", [
+      { text: "Tech", onPress: () => resolve("tech") },
+      { text: "Rider", onPress: () => resolve("rider") },
+      { text: "Set list", onPress: () => resolve("setlist") },
+      { text: "Contracts", onPress: () => resolve("contracts") },
+      { text: "Other", onPress: () => resolve("other") },
+      { text: "Cancel", style: "cancel", onPress: () => resolve(null) },
+    ]);
+  });
 }
 
 export default function BandDocumentsEditScreen() {
@@ -159,7 +183,21 @@ export default function BandDocumentsEditScreen() {
     setDeletingId(null);
   }
 }
+async function openDoc(doc: BandDocRow) {
+  try {
+    const { data, error } = await supabase.storage
+      .from(doc.storage_bucket)
+      .createSignedUrl(doc.storage_path, 3600);
 
+    if (error) throw error;
+    if (!data?.signedUrl) throw new Error("No download URL");
+
+    await WebBrowser.openBrowserAsync(data.signedUrl);
+  } catch (e: any) {
+    console.log("open doc error", e);
+    Alert.alert("Open failed", e?.message ?? "Could not open document");
+  }
+}
   async function uploadNew() {
   if (!bandId) {
     Alert.alert("Upload failed", "No band found for this user.");
@@ -185,16 +223,35 @@ export default function BandDocumentsEditScreen() {
     }
 
     const filename = file.name || "document";
-    const path = `bands/${bandId}/${filename}`;
+    const selectedDocType = await pickDocType();
+
+if (!selectedDocType) {
+  setUploading(false);
+  return;
+}
+    const path = `bands/${bandId}/${Date.now()}-${filename}`;
 
     // 1) Read file data
-    const blob = await fetch(file.uri).then((r) => r.blob());
+const response = await fetch(file.uri);
+const blob = await response.blob();
 
-    // 2) Upload to storage
-    const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, blob, {
-      upsert: false,
-      contentType: (file.mimeType as string | undefined) ?? undefined,
-    });
+if (!blob || blob.size === 0) {
+  throw new Error("Selected file is empty");
+}
+
+// 2) Upload to storage
+
+
+const formData = new FormData();
+formData.append("file", {
+  uri: file.uri,
+  name: filename,
+  type: file.mimeType ?? "application/octet-stream",
+} as any);
+
+const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, formData as any, {
+  upsert: true,
+});
 
     if (upErr) {
       console.log("UPLOAD ERROR:", upErr);
@@ -214,18 +271,32 @@ export default function BandDocumentsEditScreen() {
 const { error: insErr } = await supabase.from("band_documents").insert({
   band_id: bandId,
   title,
-  doc_type: "other",
+  doc_type: selectedDocType,
   storage_bucket: BUCKET,
   storage_path: path,
 });
 
     if (insErr) {
-      console.log("INSERT ERROR:", insErr);
-      Alert.alert("Upload saved file, but DB insert failed", insErr.message);
-      return;
-    }
+  console.log("INSERT ERROR:", insErr);
+  Alert.alert("Upload saved file, but DB insert failed", insErr.message);
+  return;
+}
 
-    router.back();
+try {
+  await supabase.functions.invoke("send-push-notification", {
+    body: {
+      title: "GigLog band document added",
+      body: `${filename} has been added to Band Docs.`,
+      data: {
+        type: "band_document_added",
+      },
+    },
+  });
+} catch (notifyError) {
+  console.log("Band document push notification error:", notifyError);
+}
+
+router.back();
 Alert.alert("Uploaded", filename);
   } catch (e: any) {
     console.log("upload doc error", e);
@@ -286,13 +357,16 @@ Alert.alert("Uploaded", filename);
         ) : (
           docs.map((d) => (
             <View key={d.doc_id} style={styles.card}>
-              <TextInput
-                value={d.title ?? ""}
-                onChangeText={(t) => updateLocal(d.doc_id, { title: t })}
-                placeholder="Document title"
-                style={styles.input}
-                placeholderTextColor="#999"
-              />
+  <Pressable onPress={() => openDoc(d)}>
+    <TextInput
+      value={d.title ?? ""}
+      onChangeText={(t) => updateLocal(d.doc_id, { title: t })}
+      placeholder="Document title"
+      style={styles.input}
+      placeholderTextColor="#999"
+      editable={false}
+    />
+  </Pressable>
 
               <View style={styles.typeRow}>
                 {docTypeOptions.map((opt) => {

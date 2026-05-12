@@ -129,19 +129,48 @@ export default function EditEventDocumentsScreen() {
       if (uploadErr) throw uploadErr;
 
       const { error: insertErr } = await supabase.from("event_documents").insert({
-        event_id: id,
-        title: file.name ?? "Document",
-        doc_type: null,
-        storage_bucket: bucket,
-        storage_path: storagePath,
-        mime_type: file.mimeType ?? null,
-        size_bytes: arrayBuffer.byteLength,
-        uploaded_by_member_id: null,
-      });
-      if (insertErr) throw insertErr;
+  event_id: id,
+  title: file.name ?? "Document",
+  doc_type: null,
+  storage_bucket: bucket,
+  storage_path: storagePath,
+  mime_type: file.mimeType ?? null,
+  size_bytes: arrayBuffer.byteLength,
+  uploaded_by_member_id: null,
+});
+if (insertErr) throw insertErr;
 
-      setUploading(false);
-      await loadDocs();
+const { data: eventInfo } = await supabase
+  .from("events")
+  .select("event_date,event_type,venues(event_venue_name,city)")
+  .eq("event_id", id)
+  .single();
+
+const venueName =
+  (eventInfo as any)?.venues?.event_venue_name ?? "Unknown venue";
+
+const eventLabel = eventInfo
+  ? `${eventInfo.event_type ?? "Event"} · ${venueName} · ${eventInfo.event_date}`
+  : "event";
+
+try {
+
+  await supabase.functions.invoke("send-push-notification", {
+    body: {
+      title: "GigLog document added",
+      body: `${file.name ?? "A document"} has been added to ${eventLabel}.`,
+      data: {
+        type: "event_document_added",
+        event_id: id,
+      },
+    },
+  });
+} catch (notifyError) {
+  console.log("Document push notification error:", notifyError);
+}
+
+setUploading(false);
+await loadDocs();
     } catch (e: any) {
       setUploading(false);
       Alert.alert("Upload failed", e?.message ?? "Please try again.");

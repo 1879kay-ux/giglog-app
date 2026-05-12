@@ -1,11 +1,12 @@
 // services/eventService.ts
 
-import { supabase } from '../lib/supabase';
+import { supabase } from "../lib/supabase";
 
 export async function getEventWithVenue(eventId: string) {
   const { data, error } = await supabase
-    .from('events')
-    .select(`
+    .from("events")
+    .select(
+      `
       event_id,
       created_at,
       event_date,
@@ -53,12 +54,13 @@ export async function getEventWithVenue(eventId: string) {
         capacity,
         capacity_notes
       )
-    `)
-    .eq('event_id', eventId)
+    `,
+    )
+    .eq("event_id", eventId)
     .single();
 
   if (error) {
-    console.error('Error fetching event with venue:', error);
+    console.error("Error fetching event with venue:", error);
     return null;
   }
 

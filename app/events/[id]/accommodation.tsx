@@ -4,9 +4,17 @@ import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
+import DateTimePicker, {
+  DateTimePickerAndroid,
+} from "@react-native-community/datetimepicker";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -26,7 +34,7 @@ function toLocalInputString(iso: string) {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
-    d.getHours()
+    d.getHours(),
   )}:${pad(d.getMinutes())}`;
 }
 
@@ -110,7 +118,10 @@ function toMoneyOrNull(s: string) {
 /* -----------------------------
    ANDROID DATE+TIME (two-step)
 ------------------------------*/
-function openAndroidDateTimePicker(valueIso: string, onChangeIso: (iso: string) => void) {
+function openAndroidDateTimePicker(
+  valueIso: string,
+  onChangeIso: (iso: string) => void,
+) {
   const initial = new Date(valueIso);
 
   // Step 1: date
@@ -125,7 +136,7 @@ function openAndroidDateTimePicker(valueIso: string, onChangeIso: (iso: string) 
       withDate.setFullYear(
         dateSelected.getFullYear(),
         dateSelected.getMonth(),
-        dateSelected.getDate()
+        dateSelected.getDate(),
       );
 
       // Step 2: time
@@ -137,7 +148,12 @@ function openAndroidDateTimePicker(valueIso: string, onChangeIso: (iso: string) 
           if (event2.type === "dismissed" || !timeSelected) return;
 
           const finalDt = new Date(withDate);
-          finalDt.setHours(timeSelected.getHours(), timeSelected.getMinutes(), 0, 0);
+          finalDt.setHours(
+            timeSelected.getHours(),
+            timeSelected.getMinutes(),
+            0,
+            0,
+          );
 
           onChangeIso(finalDt.toISOString());
         },
@@ -265,7 +281,7 @@ export default function EventAccommodationEditScreen() {
       const { data, error } = await supabase
         .from("accommodation")
         .select(
-          "name,address_line,postcode,breakfast_included,parking_available,notes,updated_at,event_id"
+          "name,address_line,postcode,breakfast_included,parking_available,notes,updated_at,event_id",
         )
         .ilike("name", `%${query}%`)
         .order("updated_at", { ascending: false })
@@ -282,7 +298,9 @@ export default function EventAccommodationEditScreen() {
         ((data as any[]) ?? [])
           .filter((r) => r?.event_id !== eventId) // don't suggest itself
           .filter((r) => {
-            const key = String(r?.name ?? "").trim().toLowerCase();
+            const key = String(r?.name ?? "")
+              .trim()
+              .toLowerCase();
             if (!key) return false;
             if (seen.has(key)) return false;
             seen.add(key);
@@ -299,7 +317,7 @@ export default function EventAccommodationEditScreen() {
 
       setSuggestions(items);
     },
-    [eventId]
+    [eventId],
   );
 
   useEffect(() => {
@@ -394,8 +412,12 @@ export default function EventAccommodationEditScreen() {
       event_id: eventId,
       name: form.name.trim(),
 
-      booked_under_name: form.booked_under_name.trim() ? form.booked_under_name.trim() : null,
-      booking_reference: form.booking_reference.trim() ? form.booking_reference.trim() : null,
+      booked_under_name: form.booked_under_name.trim()
+        ? form.booked_under_name.trim()
+        : null,
+      booking_reference: form.booking_reference.trim()
+        ? form.booking_reference.trim()
+        : null,
 
       address_line: form.address_line.trim() ? form.address_line.trim() : null,
       postcode: form.postcode.trim() ? form.postcode.trim() : null,
@@ -413,7 +435,10 @@ export default function EventAccommodationEditScreen() {
     };
 
     const { error } = row
-      ? await supabase.from("accommodation").update(payload).eq("event_id", eventId)
+      ? await supabase
+          .from("accommodation")
+          .update(payload)
+          .eq("event_id", eventId)
       : await supabase.from("accommodation").insert(payload);
 
     setSaving(false);
@@ -431,26 +456,33 @@ export default function EventAccommodationEditScreen() {
     if (!eventId) return;
     if (!row) return;
 
-    Alert.alert("Delete accommodation?", "This will remove accommodation for this event.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          setSaving(true);
-          const { error } = await supabase.from("accommodation").delete().eq("event_id", eventId);
-          setSaving(false);
+    Alert.alert(
+      "Delete accommodation?",
+      "This will remove accommodation for this event.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setSaving(true);
+            const { error } = await supabase
+              .from("accommodation")
+              .delete()
+              .eq("event_id", eventId);
+            setSaving(false);
 
-          if (error) {
-            Alert.alert("Error", error.message);
-            return;
-          }
+            if (error) {
+              Alert.alert("Error", error.message);
+              return;
+            }
 
-          Alert.alert("Deleted", "Accommodation removed.");
-          router.back();
+            Alert.alert("Deleted", "Accommodation removed.");
+            router.back();
+          },
         },
-      },
-    ]);
+      ],
+    );
   }
 
   if (loading) {
@@ -478,11 +510,16 @@ export default function EventAccommodationEditScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
+        >
           {!canEdit ? (
             <View style={styles.readOnlyCard}>
               <Text style={styles.readOnlyTitle}>Read only</Text>
-              <Text style={styles.readOnlyText}>Admins can add or edit accommodation.</Text>
+              <Text style={styles.readOnlyText}>
+                Admins can add or edit accommodation.
+              </Text>
             </View>
           ) : null}
 
@@ -502,7 +539,10 @@ export default function EventAccommodationEditScreen() {
               }}
               onBlur={() => {
                 // delay so taps on suggestion register
-                blurHideTimer.current = setTimeout(() => setShowSuggestions(false), 160);
+                blurHideTimer.current = setTimeout(
+                  () => setShowSuggestions(false),
+                  160,
+                );
               }}
               placeholder="Premier Inn"
               style={styles.input}
@@ -514,9 +554,13 @@ export default function EventAccommodationEditScreen() {
                 {suggestions.map((s, idx) => (
                   <Pressable
                     key={`${s.name}-${idx}`}
-                    style={[styles.suggestRow, idx === 0 ? { borderTopWidth: 0 } : null]}
+                    style={[
+                      styles.suggestRow,
+                      idx === 0 ? { borderTopWidth: 0 } : null,
+                    ]}
                     onPress={() => {
-                      if (blurHideTimer.current) clearTimeout(blurHideTimer.current);
+                      if (blurHideTimer.current)
+                        clearTimeout(blurHideTimer.current);
 
                       setForm((p) => ({
                         ...p,
@@ -525,7 +569,7 @@ export default function EventAccommodationEditScreen() {
                         postcode: s.postcode ?? "",
                         breakfast_included: !!s.breakfast_included,
                         parking_available: !!s.parking_available,
-                        notes: p.notes.trim() ? p.notes : s.notes ?? "",
+                        notes: p.notes.trim() ? p.notes : (s.notes ?? ""),
                       }));
 
                       setNameQuery(s.name);
@@ -535,7 +579,9 @@ export default function EventAccommodationEditScreen() {
                   >
                     <Text style={styles.suggestTitle}>{s.name}</Text>
                     <Text style={styles.suggestMeta}>
-                      {[s.postcode, s.address_line].filter(Boolean).join(" • ") || "No saved details"}
+                      {[s.postcode, s.address_line]
+                        .filter(Boolean)
+                        .join(" • ") || "No saved details"}
                     </Text>
                   </Pressable>
                 ))}
@@ -545,7 +591,9 @@ export default function EventAccommodationEditScreen() {
             <Label>Booked under</Label>
             <TextInput
               value={form.booked_under_name}
-              onChangeText={(t) => setForm((p) => ({ ...p, booked_under_name: t }))}
+              onChangeText={(t) =>
+                setForm((p) => ({ ...p, booked_under_name: t }))
+              }
               placeholder="Name on booking"
               style={styles.input}
               editable={canEdit && !saving}
@@ -554,7 +602,9 @@ export default function EventAccommodationEditScreen() {
             <Label>Booking reference</Label>
             <TextInput
               value={form.booking_reference}
-              onChangeText={(t) => setForm((p) => ({ ...p, booking_reference: t }))}
+              onChangeText={(t) =>
+                setForm((p) => ({ ...p, booking_reference: t }))
+              }
               placeholder="Ref"
               style={styles.input}
               autoCapitalize="characters"
@@ -585,7 +635,9 @@ export default function EventAccommodationEditScreen() {
               <WebDateTimeSplit
                 valueIso={form.check_in_at}
                 disabled={!canEdit || saving}
-                onChangeIso={(iso) => setForm((p) => ({ ...p, check_in_at: iso }))}
+                onChangeIso={(iso) =>
+                  setForm((p) => ({ ...p, check_in_at: iso }))
+                }
               />
             ) : (
               <>
@@ -596,7 +648,7 @@ export default function EventAccommodationEditScreen() {
 
                     if (Platform.OS === "android") {
                       openAndroidDateTimePicker(form.check_in_at, (iso) =>
-                        setForm((p) => ({ ...p, check_in_at: iso }))
+                        setForm((p) => ({ ...p, check_in_at: iso })),
                       );
                       return;
                     }
@@ -606,8 +658,14 @@ export default function EventAccommodationEditScreen() {
                   }}
                   disabled={!canEdit || saving}
                 >
-                  <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
-                  <Text style={styles.dateBtnText}>{toLocalInputString(form.check_in_at)}</Text>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={18}
+                    color={colors.textMuted}
+                  />
+                  <Text style={styles.dateBtnText}>
+                    {toLocalInputString(form.check_in_at)}
+                  </Text>
                 </Pressable>
 
                 {/* iOS only */}
@@ -622,7 +680,10 @@ export default function EventAccommodationEditScreen() {
                         return;
                       }
                       setShowCheckIn(false);
-                      setForm((p) => ({ ...p, check_in_at: selected.toISOString() }));
+                      setForm((p) => ({
+                        ...p,
+                        check_in_at: selected.toISOString(),
+                      }));
                     }}
                   />
                 ) : null}
@@ -634,7 +695,9 @@ export default function EventAccommodationEditScreen() {
               <WebDateTimeSplit
                 valueIso={form.check_out_at}
                 disabled={!canEdit || saving}
-                onChangeIso={(iso) => setForm((p) => ({ ...p, check_out_at: iso }))}
+                onChangeIso={(iso) =>
+                  setForm((p) => ({ ...p, check_out_at: iso }))
+                }
               />
             ) : (
               <>
@@ -645,7 +708,7 @@ export default function EventAccommodationEditScreen() {
 
                     if (Platform.OS === "android") {
                       openAndroidDateTimePicker(form.check_out_at, (iso) =>
-                        setForm((p) => ({ ...p, check_out_at: iso }))
+                        setForm((p) => ({ ...p, check_out_at: iso })),
                       );
                       return;
                     }
@@ -655,8 +718,14 @@ export default function EventAccommodationEditScreen() {
                   }}
                   disabled={!canEdit || saving}
                 >
-                  <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
-                  <Text style={styles.dateBtnText}>{toLocalInputString(form.check_out_at)}</Text>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={18}
+                    color={colors.textMuted}
+                  />
+                  <Text style={styles.dateBtnText}>
+                    {toLocalInputString(form.check_out_at)}
+                  </Text>
                 </Pressable>
 
                 {/* iOS only */}
@@ -671,7 +740,10 @@ export default function EventAccommodationEditScreen() {
                         return;
                       }
                       setShowCheckOut(false);
-                      setForm((p) => ({ ...p, check_out_at: selected.toISOString() }));
+                      setForm((p) => ({
+                        ...p,
+                        check_out_at: selected.toISOString(),
+                      }));
                     }}
                   />
                 ) : null}
@@ -683,7 +755,9 @@ export default function EventAccommodationEditScreen() {
                 <Label>Rooms</Label>
                 <TextInput
                   value={form.rooms_count}
-                  onChangeText={(t) => setForm((p) => ({ ...p, rooms_count: t }))}
+                  onChangeText={(t) =>
+                    setForm((p) => ({ ...p, rooms_count: t }))
+                  }
                   placeholder="1"
                   style={styles.input}
                   keyboardType="number-pad"
@@ -695,7 +769,9 @@ export default function EventAccommodationEditScreen() {
                 <Label>Total cost</Label>
                 <TextInput
                   value={form.total_cost}
-                  onChangeText={(t) => setForm((p) => ({ ...p, total_cost: t }))}
+                  onChangeText={(t) =>
+                    setForm((p) => ({ ...p, total_cost: t }))
+                  }
                   placeholder="120"
                   style={styles.input}
                   keyboardType="decimal-pad"
@@ -708,7 +784,9 @@ export default function EventAccommodationEditScreen() {
               label="Breakfast included"
               value={form.breakfast_included}
               disabled={!canEdit || saving}
-              onChange={(v) => setForm((p) => ({ ...p, breakfast_included: v }))}
+              onChange={(v) =>
+                setForm((p) => ({ ...p, breakfast_included: v }))
+              }
             />
 
             <ToggleRow
@@ -731,16 +809,24 @@ export default function EventAccommodationEditScreen() {
             {canEdit ? (
               <>
                 <Pressable
-                  style={[styles.saveBtn, !canSave || saving ? styles.saveBtnDisabled : null]}
+                  style={[
+                    styles.saveBtn,
+                    !canSave || saving ? styles.saveBtnDisabled : null,
+                  ]}
                   onPress={save}
                   disabled={!canSave || saving}
                 >
-                  <Text style={styles.saveBtnText}>{saving ? "Saving..." : "Save"}</Text>
+                  <Text style={styles.saveBtnText}>
+                    {saving ? "Saving..." : "Save"}
+                  </Text>
                 </Pressable>
 
                 {row ? (
                   <Pressable
-                    style={[styles.deleteBtn, saving ? styles.saveBtnDisabled : null]}
+                    style={[
+                      styles.deleteBtn,
+                      saving ? styles.saveBtnDisabled : null,
+                    ]}
                     onPress={deleteAccommodation}
                     disabled={saving}
                   >

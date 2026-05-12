@@ -1,9 +1,9 @@
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import {
-    addMemberUnavailability,
-    deleteMemberUnavailability,
-    listMemberUnavailability,
-    MemberUnavailability,
+  addMemberUnavailability,
+  deleteMemberUnavailability,
+  listMemberUnavailability,
+  MemberUnavailability,
 } from "@/lib/memberUnavailability";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
@@ -11,14 +11,14 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Stack } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 function toDbDate(date: Date) {
@@ -105,7 +105,11 @@ export default function UnavailabilityScreen() {
 
       <View style={styles.container}>
         <View style={styles.infoCard}>
-          <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
+          <Ionicons
+            name="information-circle-outline"
+            size={22}
+            color={colors.primary}
+          />
           <Text style={styles.infoText}>
             Add holidays, work commitments, or any dates you cannot gig.
           </Text>
@@ -115,14 +119,28 @@ export default function UnavailabilityScreen() {
           <Text style={styles.sectionTitle}>Add unavailable period</Text>
 
           <Text style={styles.label}>Start Date</Text>
-          <Pressable style={styles.dateInput} onPress={() => setShowPicker("start")}>
-            <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+          <Pressable
+            style={styles.dateInput}
+            onPress={() => setShowPicker("start")}
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={20}
+              color={colors.primary}
+            />
             <Text style={styles.dateInputText}>{toDisplayDate(startDate)}</Text>
           </Pressable>
 
           <Text style={styles.label}>End Date</Text>
-          <Pressable style={styles.dateInput} onPress={() => setShowPicker("end")}>
-            <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+          <Pressable
+            style={styles.dateInput}
+            onPress={() => setShowPicker("end")}
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={20}
+              color={colors.primary}
+            />
             <Text style={styles.dateInputText}>{toDisplayDate(endDate)}</Text>
           </Pressable>
 
@@ -146,7 +164,10 @@ export default function UnavailabilityScreen() {
           ) : null}
 
           {Platform.OS === "ios" && showPicker ? (
-            <Pressable style={styles.doneBtn} onPress={() => setShowPicker(null)}>
+            <Pressable
+              style={styles.doneBtn}
+              onPress={() => setShowPicker(null)}
+            >
               <Text style={styles.doneBtnText}>Done</Text>
             </Pressable>
           ) : null}
@@ -163,16 +184,23 @@ export default function UnavailabilityScreen() {
           keyExtractor={(item) => item.id}
           ListEmptyComponent={
             <View style={styles.emptyCard}>
-              <Ionicons name="calendar-clear-outline" size={28} color="#9CA3AF" />
+              <Ionicons
+                name="calendar-clear-outline"
+                size={28}
+                color="#9CA3AF"
+              />
               <Text style={styles.emptyTitle}>No unavailable periods yet</Text>
-              <Text style={styles.emptyText}>Add holidays, work blocks or dates you can’t gig.</Text>
+              <Text style={styles.emptyText}>
+                Add holidays, work blocks or dates you can’t gig.
+              </Text>
             </View>
           }
           renderItem={({ item }) => (
             <View style={styles.card}>
               <View>
                 <Text style={styles.dateText}>
-                  {toDisplayDate(item.start_date)} → {toDisplayDate(item.end_date)}
+                  {toDisplayDate(item.start_date)} →{" "}
+                  {toDisplayDate(item.end_date)}
                 </Text>
                 <Text style={styles.cardSubText}>Unavailable</Text>
               </View>

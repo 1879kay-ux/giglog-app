@@ -108,7 +108,11 @@ export default function FinanceSection({
               hitSlop={10}
               style={styles.editPill}
             >
-              <Ionicons name="create-outline" size={16} color={colors.primary} />
+              <Ionicons
+                name="create-outline"
+                size={16}
+                color={colors.primary}
+              />
               <Text style={styles.editPillText}>Edit</Text>
             </Pressable>
           ) : null}
@@ -132,7 +136,10 @@ export default function FinanceSection({
           <Row label="Van Hire" value={formatCurrency(vanHire)} />
           <Row label="Fuel" value={formatCurrency(fuel)} />
 
-          <Row label="Accommodation" value={formatCurrency(accommodationCost)} />
+          <Row
+            label="Accommodation"
+            value={formatCurrency(accommodationCost)}
+          />
           {showAccommodationSourceHint ? (
             <Text style={styles.sourceHint}>From accommodation details</Text>
           ) : null}

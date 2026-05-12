@@ -37,7 +37,9 @@ type GridAvailabilityRow = {
 };
 
 function normStatus(s: any): string {
-  return String(s ?? "").trim().toLowerCase();
+  return String(s ?? "")
+    .trim()
+    .toLowerCase();
 }
 
 function Dot({ kind }: { kind: "green" | "amber" | "red" | "awaiting" }) {
@@ -48,13 +50,18 @@ function Dot({ kind }: { kind: "green" | "amber" | "red" | "awaiting" }) {
       <View
         style={[
           base,
-          { backgroundColor: "transparent", borderWidth: 2, borderColor: "#B6B6B6" },
+          {
+            backgroundColor: "transparent",
+            borderWidth: 2,
+            borderColor: "#B6B6B6",
+          },
         ]}
       />
     );
   }
 
-  const bg = kind === "green" ? "#16A34A" : kind === "amber" ? "#F59E0B" : "#EF4444";
+  const bg =
+    kind === "green" ? "#16A34A" : kind === "amber" ? "#F59E0B" : "#EF4444";
   return <View style={[base, { backgroundColor: bg }]} />;
 }
 
@@ -80,7 +87,7 @@ export default function AvailabilityGridModal({
 
   const eventIds = useMemo(
     () => (events || []).map((e) => e.event_id).filter(Boolean),
-    [events]
+    [events],
   );
 
   const load = useCallback(async () => {
@@ -114,7 +121,10 @@ export default function AvailabilityGridModal({
   }, [load]);
 
   const members = useMemo(() => {
-    const seen = new Map<string, { member_id: string; display_name: string | null }>();
+    const seen = new Map<
+      string,
+      { member_id: string; display_name: string | null }
+    >();
 
     for (const r of rows) {
       if (!r.member_id) continue;
@@ -127,9 +137,13 @@ export default function AvailabilityGridModal({
     }
 
     return Array.from(seen.values()).sort((a, b) =>
-      String(a.display_name ?? "").localeCompare(String(b.display_name ?? ""), "en", {
-        sensitivity: "base",
-      })
+      String(a.display_name ?? "").localeCompare(
+        String(b.display_name ?? ""),
+        "en",
+        {
+          sensitivity: "base",
+        },
+      ),
     );
   }, [rows]);
 
@@ -143,7 +157,9 @@ export default function AvailabilityGridModal({
     return map;
   }, [rows]);
 
-  function kindFor(status: string | null | undefined): "green" | "amber" | "red" | "awaiting" {
+  function kindFor(
+    status: string | null | undefined,
+  ): "green" | "amber" | "red" | "awaiting" {
     const s = normStatus(status);
 
     if (!s || s === "awaiting") return "awaiting";
@@ -166,7 +182,12 @@ export default function AvailabilityGridModal({
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: colors.pageBg }}>
-        <View style={[styles.topBar, { paddingTop: Platform.OS === "ios" ? 54 : 14 }]}>
+        <View
+          style={[
+            styles.topBar,
+            { paddingTop: Platform.OS === "ios" ? 54 : 14 },
+          ]}
+        >
           <TouchableOpacity
             onPress={onClose}
             hitSlop={{ top: 18, bottom: 18, left: 18, right: 18 }}
@@ -218,16 +239,18 @@ export default function AvailabilityGridModal({
           </View>
         ) : err ? (
           <View style={{ padding: 16 }}>
-            <Text style={{ color: colors.danger, fontWeight: "800" }}>Grid load failed</Text>
+            <Text style={{ color: colors.danger, fontWeight: "800" }}>
+              Grid load failed
+            </Text>
             <Text style={{ color: colors.textMuted, marginTop: 6 }}>{err}</Text>
           </View>
         ) : (
-<ScrollView
-  style={{ flex: 1 }}
-  contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}
-  showsVerticalScrollIndicator
-  nestedScrollEnabled
->
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}
+            showsVerticalScrollIndicator
+            nestedScrollEnabled
+          >
             <View style={styles.gridWrap}>
               <View style={[styles.leftCol, { width: LEFT_W }]}>
                 <View style={[styles.corner, { height: HEADER_H }]}>
@@ -238,7 +261,10 @@ export default function AvailabilityGridModal({
                   const venue = e.venues?.event_venue_name ?? "Event";
                   const city = e.venues?.city ?? "";
                   return (
-                    <View key={e.event_id} style={[styles.leftRow, { height: ROW_H }]}>
+                    <View
+                      key={e.event_id}
+                      style={[styles.leftRow, { height: ROW_H }]}
+                    >
                       <Text numberOfLines={1} style={styles.venue}>
                         {venue}
                       </Text>
@@ -253,41 +279,50 @@ export default function AvailabilityGridModal({
               </View>
 
               <View style={{ flex: 1 }}>
-  <ScrollView horizontal showsHorizontalScrollIndicator>
-    <View>
-      <View style={[styles.headerRow, { height: HEADER_H }]}>
-        {members.map((m) => (
-          <View
-            key={m.member_id}
-            style={[styles.headerCell, { width: COL_W, height: HEADER_H }]}
-          >
-            <View style={styles.rotWrapOnly}>
-              <Text style={styles.rotNameOnly} numberOfLines={1}>
-                {String(m.display_name ?? "").trim() || "?"}
-              </Text>
-            </View>
-          </View>
-        ))}
-      </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator>
+                  <View>
+                    <View style={[styles.headerRow, { height: HEADER_H }]}>
+                      {members.map((m) => (
+                        <View
+                          key={m.member_id}
+                          style={[
+                            styles.headerCell,
+                            { width: COL_W, height: HEADER_H },
+                          ]}
+                        >
+                          <View style={styles.rotWrapOnly}>
+                            <Text style={styles.rotNameOnly} numberOfLines={1}>
+                              {String(m.display_name ?? "").trim() || "?"}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
 
-      {events.map((e) => {
-        const row = cellByEventMember[e.event_id] || {};
-        return (
-          <View key={e.event_id} style={[styles.dotRow, { height: ROW_H }]}>
-            {members.map((m) => (
-              <View
-                key={m.member_id}
-                style={[styles.dotCell, { width: COL_W, height: ROW_H }]}
-              >
-                <Dot kind={kindFor(row[m.member_id])} />
+                    {events.map((e) => {
+                      const row = cellByEventMember[e.event_id] || {};
+                      return (
+                        <View
+                          key={e.event_id}
+                          style={[styles.dotRow, { height: ROW_H }]}
+                        >
+                          {members.map((m) => (
+                            <View
+                              key={m.member_id}
+                              style={[
+                                styles.dotCell,
+                                { width: COL_W, height: ROW_H },
+                              ]}
+                            >
+                              <Dot kind={kindFor(row[m.member_id])} />
+                            </View>
+                          ))}
+                        </View>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
               </View>
-            ))}
-          </View>
-        );
-      })}
-    </View>
-  </ScrollView>
-</View>
             </View>
           </ScrollView>
         )}

@@ -59,12 +59,18 @@ function parseNullableNumber(raw: string) {
   if (!s) return { ok: true as const, value: null as number | null };
 
   if (!/^\d+(\.\d+)?$/.test(s)) {
-    return { ok: false as const, error: "Enter a valid number or leave blank." };
+    return {
+      ok: false as const,
+      error: "Enter a valid number or leave blank.",
+    };
   }
 
   const n = Number(s);
   if (!Number.isFinite(n)) {
-    return { ok: false as const, error: "Enter a valid number or leave blank." };
+    return {
+      ok: false as const,
+      error: "Enter a valid number or leave blank.",
+    };
   }
 
   return { ok: true as const, value: n };
@@ -110,8 +116,18 @@ export default function EditEventFinanceScreen() {
         value: incomeGuarantee,
         setValue: setIncomeGuarantee,
       },
-      { key: "income_door", label: "Door", value: incomeDoor, setValue: setIncomeDoor },
-      { key: "income_fee", label: "Fee (legacy)", value: incomeFee, setValue: setIncomeFee },
+      {
+        key: "income_door",
+        label: "Door",
+        value: incomeDoor,
+        setValue: setIncomeDoor,
+      },
+      {
+        key: "income_fee",
+        label: "Fee (legacy)",
+        value: incomeFee,
+        setValue: setIncomeFee,
+      },
       {
         key: "manual_playing_share_override",
         label: "Shares",
@@ -119,7 +135,12 @@ export default function EditEventFinanceScreen() {
         setValue: setShares,
       },
 
-      { key: "van_hire", label: "Van Hire", value: vanHire, setValue: setVanHire },
+      {
+        key: "van_hire",
+        label: "Van Hire",
+        value: vanHire,
+        setValue: setVanHire,
+      },
       { key: "fuel", label: "Fuel", value: fuel, setValue: setFuel },
       {
         key: "accommodation_cost",
@@ -127,10 +148,30 @@ export default function EditEventFinanceScreen() {
         value: accommodation,
         setValue: setAccommodation,
       },
-      { key: "dep_cost", label: "Dep Fees", value: depCost, setValue: setDepCost },
-      { key: "driver_cost", label: "Driver Cost", value: driverCost, setValue: setDriverCost },
-      { key: "foh_eng_cost", label: "FOH/Engineer", value: fohEngCost, setValue: setFohEngCost },
-      { key: "other_costs", label: "Other Costs", value: otherCosts, setValue: setOtherCosts },
+      {
+        key: "dep_cost",
+        label: "Dep Fees",
+        value: depCost,
+        setValue: setDepCost,
+      },
+      {
+        key: "driver_cost",
+        label: "Driver Cost",
+        value: driverCost,
+        setValue: setDriverCost,
+      },
+      {
+        key: "foh_eng_cost",
+        label: "FOH/Engineer",
+        value: fohEngCost,
+        setValue: setFohEngCost,
+      },
+      {
+        key: "other_costs",
+        label: "Other Costs",
+        value: otherCosts,
+        setValue: setOtherCosts,
+      },
     ],
     [
       incomeGuarantee,
@@ -144,7 +185,7 @@ export default function EditEventFinanceScreen() {
       driverCost,
       fohEngCost,
       otherCosts,
-    ]
+    ],
   );
 
   useEffect(() => {
@@ -189,7 +230,7 @@ export default function EditEventFinanceScreen() {
           "other_costs",
           "fee_notes",
           "cost_notes",
-        ].join(",")
+        ].join(","),
       )
       .eq("event_id", id)
       .maybeSingle();
@@ -248,7 +289,9 @@ export default function EditEventFinanceScreen() {
       income_guarantee: (parsed["income_guarantee"] as any).value,
       income_door: (parsed["income_door"] as any).value,
       income_fee: (parsed["income_fee"] as any).value,
-      manual_playing_share_override: (parsed["manual_playing_share_override"] as any).value,
+      manual_playing_share_override: (
+        parsed["manual_playing_share_override"] as any
+      ).value,
 
       fee_type: feeType.trim() ? feeType.trim() : null,
       paid_status: paidStatus.trim() ? paidStatus.trim() : null,
@@ -271,7 +314,10 @@ export default function EditEventFinanceScreen() {
     setSaving(true);
 
     // 1) Update events for van/fuel
-    const { error: evErr } = await supabase.from("events").update(eventPayload).eq("event_id", id);
+    const { error: evErr } = await supabase
+      .from("events")
+      .update(eventPayload)
+      .eq("event_id", id);
 
     if (evErr) {
       setSaving(false);
@@ -315,14 +361,25 @@ export default function EditEventFinanceScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Finance</Text>
 
             <Text style={styles.sectionLabel}>Income</Text>
 
-            <RowNumber label="Guarantee" value={incomeGuarantee} onChange={setIncomeGuarantee} />
-            <RowNumber label="Door" value={incomeDoor} onChange={setIncomeDoor} />
+            <RowNumber
+              label="Guarantee"
+              value={incomeGuarantee}
+              onChange={setIncomeGuarantee}
+            />
+            <RowNumber
+              label="Door"
+              value={incomeDoor}
+              onChange={setIncomeDoor}
+            />
 
             <RowChips
               label="Fee Type"
@@ -338,7 +395,11 @@ export default function EditEventFinanceScreen() {
               onChange={setPaidStatus}
             />
 
-            <RowNotes label="Fee Notes" value={feeNotes} onChange={setFeeNotes} />
+            <RowNotes
+              label="Fee Notes"
+              value={feeNotes}
+              onChange={setFeeNotes}
+            />
 
             <View style={styles.divider} />
 
@@ -346,13 +407,33 @@ export default function EditEventFinanceScreen() {
 
             <RowNumber label="Van Hire" value={vanHire} onChange={setVanHire} />
             <RowNumber label="Fuel" value={fuel} onChange={setFuel} />
-            <RowNumber label="Accommodation" value={accommodation} onChange={setAccommodation} />
+            <RowNumber
+              label="Accommodation"
+              value={accommodation}
+              onChange={setAccommodation}
+            />
             <RowNumber label="Dep Fees" value={depCost} onChange={setDepCost} />
-            <RowNumber label="Driver Cost" value={driverCost} onChange={setDriverCost} />
-            <RowNumber label="FOH/Engineer" value={fohEngCost} onChange={setFohEngCost} />
-            <RowNumber label="Other Costs" value={otherCosts} onChange={setOtherCosts} />
+            <RowNumber
+              label="Driver Cost"
+              value={driverCost}
+              onChange={setDriverCost}
+            />
+            <RowNumber
+              label="FOH/Engineer"
+              value={fohEngCost}
+              onChange={setFohEngCost}
+            />
+            <RowNumber
+              label="Other Costs"
+              value={otherCosts}
+              onChange={setOtherCosts}
+            />
 
-            <RowNotes label="Cost Notes" value={costNotes} onChange={setCostNotes} />
+            <RowNotes
+              label="Cost Notes"
+              value={costNotes}
+              onChange={setCostNotes}
+            />
 
             <View style={styles.divider} />
 
@@ -360,8 +441,14 @@ export default function EditEventFinanceScreen() {
             <RowNumber label="Shares" value={shares} onChange={setShares} />
           </View>
 
-          <TouchableOpacity style={styles.saveButton} onPress={onSave} disabled={saving}>
-            <Text style={styles.saveButtonText}>{saving ? "Saving…" : "Save"}</Text>
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={onSave}
+            disabled={saving}
+          >
+            <Text style={styles.saveButtonText}>
+              {saving ? "Saving…" : "Save"}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -369,7 +456,11 @@ export default function EditEventFinanceScreen() {
   );
 }
 
-function RowNumber(props: { label: string; value: string; onChange: (t: string) => void }) {
+function RowNumber(props: {
+  label: string;
+  value: string;
+  onChange: (t: string) => void;
+}) {
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{props.label}</Text>
@@ -406,7 +497,11 @@ function RowNumber(props: { label: string; value: string; onChange: (t: string) 
   );
 }
 
-function RowNotes(props: { label: string; value: string; onChange: (t: string) => void }) {
+function RowNotes(props: {
+  label: string;
+  value: string;
+  onChange: (t: string) => void;
+}) {
   return (
     <View style={styles.notesBlock}>
       <Text style={styles.notesLabel}>{props.label}</Text>
@@ -448,12 +543,17 @@ function RowChips(props: {
               key={opt}
               onPress={() => props.onChange(selected ? "" : opt)}
               activeOpacity={0.8}
-              style={[styles.chip, selected ? styles.chipSelected : styles.chipUnselected]}
+              style={[
+                styles.chip,
+                selected ? styles.chipSelected : styles.chipUnselected,
+              ]}
             >
               <Text
                 style={[
                   styles.chipText,
-                  selected ? styles.chipTextSelected : styles.chipTextUnselected,
+                  selected
+                    ? styles.chipTextSelected
+                    : styles.chipTextUnselected,
                 ]}
               >
                 {opt}
@@ -475,10 +575,10 @@ const styles = StyleSheet.create({
   },
 
   container: {
-  padding: 16,
-  paddingBottom: Platform.OS === "ios" ? 180 : 140,
-  backgroundColor: colors.pageBg,
-},
+    padding: 16,
+    paddingBottom: Platform.OS === "ios" ? 180 : 140,
+    backgroundColor: colors.pageBg,
+  },
 
   card: {
     backgroundColor: colors.cardBg,

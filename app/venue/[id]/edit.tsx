@@ -14,7 +14,9 @@ export default function EditVenueScreen() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [loading, setLoading] = useState(true);
-  const [initialValues, setInitialValues] = useState<Partial<Venue> | null>(null);
+  const [initialValues, setInitialValues] = useState<Partial<Venue> | null>(
+    null,
+  );
 
   useEffect(() => {
     if (memberLoading) return;
@@ -105,7 +107,11 @@ export default function EditVenueScreen() {
   return (
     <>
       <Stack.Screen options={{ title: "Edit Venue" }} />
-      <VenueForm key={id} initialValues={initialValues} onSubmit={handleSubmit} />
+      <VenueForm
+        key={id}
+        initialValues={initialValues}
+        onSubmit={handleSubmit}
+      />
     </>
   );
 }

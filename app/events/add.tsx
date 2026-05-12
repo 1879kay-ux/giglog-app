@@ -72,7 +72,7 @@ export default function AddEventScreen() {
 
   const eventTypes = useMemo(
     () => ["Gig", "Rehearsal", "Recording", "Promo", "Meeting", "Other"],
-    []
+    [],
   );
 
   const statusColors: Record<string, string> = {
@@ -98,8 +98,9 @@ export default function AddEventScreen() {
 
     const matchedVenue = allVenues.find(
       (v) =>
-        v.event_venue_name.trim().toLowerCase() === newVenueName.trim().toLowerCase() &&
-        v.city.trim().toLowerCase() === newVenueCity.trim().toLowerCase()
+        v.event_venue_name.trim().toLowerCase() ===
+          newVenueName.trim().toLowerCase() &&
+        v.city.trim().toLowerCase() === newVenueCity.trim().toLowerCase(),
     );
 
     const formatted = `${newVenueName} (${newVenueCity})`;
@@ -108,8 +109,8 @@ export default function AddEventScreen() {
       allVenues.filter((v) =>
         `${v.event_venue_name} (${v.city})`
           .toLowerCase()
-          .includes(formatted.toLowerCase())
-      )
+          .includes(formatted.toLowerCase()),
+      ),
     );
     setNoMatch(false);
 
@@ -186,7 +187,7 @@ export default function AddEventScreen() {
     }
 
     const filtered = allVenues.filter((v) =>
-      `${v.event_venue_name} (${v.city})`.toLowerCase().includes(q)
+      `${v.event_venue_name} (${v.city})`.toLowerCase().includes(q),
     );
 
     setVenueResults(filtered);
@@ -238,40 +239,40 @@ export default function AddEventScreen() {
 
       console.log("INSERT DATA:", data);
 
-const { data: unavailableMembers } = await supabase
-  .from("member_unavailability")
-  .select("member_id")
-  .lte("start_date", eventDate)
-  .gte("end_date", eventDate);
+      const { data: unavailableMembers } = await supabase
+        .from("member_unavailability")
+        .select("member_id")
+        .lte("start_date", eventDate)
+        .gte("end_date", eventDate);
 
-if (unavailableMembers && unavailableMembers.length > 0) {
-  await supabase.from("event_availability").upsert(
-  unavailableMembers.map((row: any) => ({
-    event_id: data.event_id,
-    member_id: row.member_id,
-    status: "unavailable",
-    status_source: "unavailability_period",
-  })),
-  { onConflict: "event_id,member_id" }
-);
-}
+      if (unavailableMembers && unavailableMembers.length > 0) {
+        await supabase.from("event_availability").upsert(
+          unavailableMembers.map((row: any) => ({
+            event_id: data.event_id,
+            member_id: row.member_id,
+            status: "unavailable",
+            status_source: "unavailability_period",
+          })),
+          { onConflict: "event_id,member_id" },
+        );
+      }
 
-try {
-  await supabase.functions.invoke("send-push-notification", {
-    body: {
-      title: "New GigLog event",
-      body: `${eventType} added for ${formatDisplayDate(eventDate)}. Please confirm availability.`,
-      data: {
-        type: "event_created",
-        event_id: data.event_id,
-      },
-    },
-  });
-} catch (notifyError) {
-  console.log("New event push notification error:", notifyError);
-}
+      try {
+        await supabase.functions.invoke("send-push-notification", {
+          body: {
+            title: "New GigLog event",
+            body: `${eventType} added for ${formatDisplayDate(eventDate)}. Please confirm availability.`,
+            data: {
+              type: "event_created",
+              event_id: data.event_id,
+            },
+          },
+        });
+      } catch (notifyError) {
+        console.log("New event push notification error:", notifyError);
+      }
 
-router.replace("/events");
+      router.replace("/events");
     } catch (e: any) {
       console.log("saveEvent error:", e);
       setSaveError(e?.message ?? String(e));
@@ -312,7 +313,8 @@ router.replace("/events");
             Admin access required
           </Text>
           <Text style={{ fontSize: 13, color: "#666", marginBottom: 14 }}>
-            You do not have permission to add events. Ask the band admin if you need access.
+            You do not have permission to add events. Ask the band admin if you
+            need access.
           </Text>
 
           <TouchableOpacity
@@ -343,7 +345,12 @@ router.replace("/events");
       </Text>
 
       <View style={styles.searchRow}>
-        <Ionicons name="search-outline" size={18} color="#666" style={{ marginRight: 6 }} />
+        <Ionicons
+          name="search-outline"
+          size={18}
+          color="#666"
+          style={{ marginRight: 6 }}
+        />
         <TextInput
           style={styles.searchInput}
           placeholder="Search venue..."
@@ -378,25 +385,28 @@ router.replace("/events");
       {(venueSearch.length === 0 || venueResults.length > 0) && (
         <View style={styles.venueList}>
           <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-            {(venueSearch.length === 0 ? allVenues : venueResults).map((item) => (
-              <TouchableOpacity
-                key={item.venue_id}
-                style={[
-                  styles.venueItem,
-                  selectedVenue?.venue_id === item.venue_id && styles.venueItemSelected,
-                ]}
-                onPress={() => {
-                  Keyboard.dismiss();
-                  setSelectedVenue(item);
-                  setVenueSearch(`${item.event_venue_name} (${item.city})`);
-                  setNoMatch(false);
-                  setSaveError("");
-                }}
-              >
-                <Text style={styles.venueName}>{item.event_venue_name}</Text>
-                <Text style={styles.venueCity}>{item.city}</Text>
-              </TouchableOpacity>
-            ))}
+            {(venueSearch.length === 0 ? allVenues : venueResults).map(
+              (item) => (
+                <TouchableOpacity
+                  key={item.venue_id}
+                  style={[
+                    styles.venueItem,
+                    selectedVenue?.venue_id === item.venue_id &&
+                      styles.venueItemSelected,
+                  ]}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setSelectedVenue(item);
+                    setVenueSearch(`${item.event_venue_name} (${item.city})`);
+                    setNoMatch(false);
+                    setSaveError("");
+                  }}
+                >
+                  <Text style={styles.venueName}>{item.event_venue_name}</Text>
+                  <Text style={styles.venueCity}>{item.city}</Text>
+                </TouchableOpacity>
+              ),
+            )}
           </ScrollView>
         </View>
       )}
@@ -417,7 +427,11 @@ router.replace("/events");
             style={styles.calendarIconBtn}
             accessibilityLabel="Pick date"
           >
-            <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+            <Ionicons
+              name="calendar-outline"
+              size={18}
+              color={colors.primary}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -428,7 +442,10 @@ router.replace("/events");
         animationType="fade"
         onRequestClose={() => setCalendarOpen(false)}
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setCalendarOpen(false)}>
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setCalendarOpen(false)}
+        >
           <Pressable style={styles.calendarModal} onPress={() => {}}>
             <Calendar
               current={eventDate}
@@ -456,7 +473,12 @@ router.replace("/events");
             style={[styles.chip, eventType === type && styles.chipSelected]}
             onPress={() => setEventType(type)}
           >
-            <Text style={[styles.chipText, eventType === type && styles.chipTextSelected]}>
+            <Text
+              style={[
+                styles.chipText,
+                eventType === type && styles.chipTextSelected,
+              ]}
+            >
               {type}
             </Text>
           </TouchableOpacity>
@@ -473,17 +495,26 @@ router.replace("/events");
           return (
             <TouchableOpacity
               key={status}
-              style={[styles.chip, selected && { backgroundColor: statusColors[status] }]}
+              style={[
+                styles.chip,
+                selected && { backgroundColor: statusColors[status] },
+              ]}
               onPress={() => setEventStatus(status)}
             >
-              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{status}</Text>
+              <Text
+                style={[styles.chipText, selected && styles.chipTextSelected]}
+              >
+                {status}
+              </Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
       {saveError ? (
-        <Text style={{ marginTop: 8, color: "#c62828", fontWeight: "700" }}>{saveError}</Text>
+        <Text style={{ marginTop: 8, color: "#c62828", fontWeight: "700" }}>
+          {saveError}
+        </Text>
       ) : null}
 
       <TouchableOpacity
@@ -492,7 +523,9 @@ router.replace("/events");
         disabled={saving}
       >
         <Ionicons name="save-outline" size={20} color="#fff" />
-        <Text style={styles.saveButtonText}>{saving ? "Saving..." : "Save Event"}</Text>
+        <Text style={styles.saveButtonText}>
+          {saving ? "Saving..." : "Save Event"}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );

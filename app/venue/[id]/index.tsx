@@ -35,14 +35,20 @@ function Field({ label, value }: { label: string; value: string | null }) {
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <Text style={styles.fieldValue}>{value && value.trim() ? value : "—"}</Text>
+      <Text style={styles.fieldValue}>
+        {value && value.trim() ? value : "—"}
+      </Text>
     </View>
   );
 }
 
 export default function VenueDetailScreen() {
   const router = useRouter();
-  const { isAdmin, adminModeEnabled, loading: memberLoading } = useCurrentMember() as any;
+  const {
+    isAdmin,
+    adminModeEnabled,
+    loading: memberLoading,
+  } = useCurrentMember() as any;
   const canEdit = !!isAdmin && !!adminModeEnabled;
 
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -59,7 +65,7 @@ export default function VenueDetailScreen() {
     const { data, error } = await supabase
       .from("venues")
       .select(
-        "venue_id,event_venue_name,city,address,postcode,venue_contact_name,venue_contact_phone,venue_contact_email,venue_notes,capacity,capacity_notes,is_active"
+        "venue_id,event_venue_name,city,address,postcode,venue_contact_name,venue_contact_phone,venue_contact_email,venue_notes,capacity,capacity_notes,is_active",
       )
       .eq("venue_id", id)
       .single();
@@ -76,7 +82,7 @@ export default function VenueDetailScreen() {
   useFocusEffect(
     useCallback(() => {
       loadVenue();
-    }, [loadVenue])
+    }, [loadVenue]),
   );
 
   if (loading || memberLoading) {
@@ -145,10 +151,18 @@ export default function VenueDetailScreen() {
           <Field label="Contact" value={venue.venue_contact_name} />
           <Field label="Phone" value={venue.venue_contact_phone} />
           <Field label="Email" value={venue.venue_contact_email} />
-          <Field label="Capacity" value={venue.capacity != null ? String(venue.capacity) : null} />
+          <Field
+            label="Capacity"
+            value={venue.capacity != null ? String(venue.capacity) : null}
+          />
           <Field label="Capacity notes" value={venue.capacity_notes} />
           <Field label="Notes" value={venue.venue_notes} />
-          <Field label="Active" value={venue.is_active == null ? null : venue.is_active ? "Yes" : "No"} />
+          <Field
+            label="Active"
+            value={
+              venue.is_active == null ? null : venue.is_active ? "Yes" : "No"
+            }
+          />
         </ScrollView>
       </View>
     </>

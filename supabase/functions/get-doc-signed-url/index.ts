@@ -41,7 +41,8 @@ Deno.serve(async (req: Request) => {
 
   // Explicitly validate JWT first
   const authClient = createClient(supabaseUrl, anonKey);
-  const { data: userData, error: userError } = await authClient.auth.getUser(token);
+  const { data: userData, error: userError } =
+    await authClient.auth.getUser(token);
 
   if (userError || !userData?.user) {
     return json(401, { error: "Invalid JWT" });

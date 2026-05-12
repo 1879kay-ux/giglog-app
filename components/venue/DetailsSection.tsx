@@ -38,7 +38,12 @@ type DetailsSectionProps = {
   venueId?: string | null; // optional, only if you want edit-venue shortcut
 };
 
-export default function DetailsSection({ eventId, event, venue, venueId }: DetailsSectionProps) {
+export default function DetailsSection({
+  eventId,
+  event,
+  venue,
+  venueId,
+}: DetailsSectionProps) {
   const router = useRouter();
   const { isAdmin, adminModeEnabled } = useCurrentMember();
   const canEdit = isAdmin && adminModeEnabled;
@@ -65,7 +70,9 @@ export default function DetailsSection({ eventId, event, venue, venueId }: Detai
     </Pressable>
   );
 
-  const editEventDetails = canEdit ? editPill(() => router.push(`/events/${eventId}/edit/details`)) : undefined;
+  const editEventDetails = canEdit
+    ? editPill(() => router.push(`/events/${eventId}/edit/details`))
+    : undefined;
 
   const editVenueDetails =
     canEdit && venueId
@@ -73,7 +80,7 @@ export default function DetailsSection({ eventId, event, venue, venueId }: Detai
           router.push({
             pathname: "/venue/[id]/edit",
             params: { id: venueId },
-          })
+          }),
         )
       : undefined;
 
@@ -136,12 +143,16 @@ export default function DetailsSection({ eventId, event, venue, venueId }: Detai
 
           <View style={styles.row}>
             <Text style={styles.label}>Contact Phone</Text>
-            <Text style={styles.value}>{venue?.venue_contact_phone || "—"}</Text>
+            <Text style={styles.value}>
+              {venue?.venue_contact_phone || "—"}
+            </Text>
           </View>
 
           <View style={styles.row}>
             <Text style={styles.label}>Contact Email</Text>
-            <Text style={styles.value}>{venue?.venue_contact_email || "—"}</Text>
+            <Text style={styles.value}>
+              {venue?.venue_contact_email || "—"}
+            </Text>
           </View>
 
           <View style={styles.row}>
@@ -166,17 +177,23 @@ export default function DetailsSection({ eventId, event, venue, venueId }: Detai
         <InfoCard title="Promoter Contact" right={editEventDetails}>
           <View style={styles.row}>
             <Text style={styles.label}>Name</Text>
-            <Text style={styles.value}>{event.promoter_contact_name || "—"}</Text>
+            <Text style={styles.value}>
+              {event.promoter_contact_name || "—"}
+            </Text>
           </View>
 
           <View style={styles.row}>
             <Text style={styles.label}>Phone</Text>
-            <Text style={styles.value}>{event.promoter_contact_phone || "—"}</Text>
+            <Text style={styles.value}>
+              {event.promoter_contact_phone || "—"}
+            </Text>
           </View>
 
           <View style={[styles.row, styles.rowLast]}>
             <Text style={styles.label}>Email</Text>
-            <Text style={styles.value}>{event.promoter_contact_email || "—"}</Text>
+            <Text style={styles.value}>
+              {event.promoter_contact_email || "—"}
+            </Text>
           </View>
         </InfoCard>
       </View>

@@ -24,7 +24,7 @@ function getTokensFromUrl(url: string) {
       : "";
 
   const params = new URLSearchParams(
-    [query, fragment].filter(Boolean).join("&")
+    [query, fragment].filter(Boolean).join("&"),
   );
 
   const accessToken = params.get("access_token");
@@ -75,7 +75,7 @@ export default function AuthCallback() {
         setStatusText("This link could not be completed.");
         Alert.alert(
           "Invite link failed",
-          error?.message ?? "Could not complete account activation."
+          error?.message ?? "Could not complete account activation.",
         );
       }
     }
@@ -181,7 +181,9 @@ export default function AuthCallback() {
                 justifyContent: "center",
               }}
               accessibilityRole="button"
-              accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+              accessibilityLabel={
+                showPassword ? "Hide password" : "Show password"
+              }
             >
               <Text style={{ fontWeight: "800", color: "#009999" }}>
                 {showPassword ? "Hide" : "Show"}

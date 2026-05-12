@@ -46,7 +46,7 @@ export async function applyUnavailabilityToExistingEvents(params: {
   if (existingError) return { error: existingError };
 
   const existingByEventId = new Map(
-    (existingRows ?? []).map((row: any) => [row.event_id, row.status])
+    (existingRows ?? []).map((row: any) => [row.event_id, row.status]),
   );
 
   const rowsToInsert = eventIds
@@ -64,7 +64,9 @@ export async function applyUnavailabilityToExistingEvents(params: {
   });
 
   if (rowsToInsert.length > 0) {
-    const { error } = await supabase.from("event_availability").insert(rowsToInsert);
+    const { error } = await supabase
+      .from("event_availability")
+      .insert(rowsToInsert);
     if (error) return { error };
   }
 
@@ -157,8 +159,5 @@ export async function deleteMemberUnavailability(id: string) {
     }
   }
 
-  return supabase
-    .from("member_unavailability")
-    .delete()
-    .eq("id", id);
+  return supabase.from("member_unavailability").delete().eq("id", id);
 }

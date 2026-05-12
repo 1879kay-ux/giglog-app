@@ -47,7 +47,11 @@ function isCrewMember(m: BandMemberRow) {
 
 export default function BandMembersScreen() {
   const router = useRouter();
-  const { isAdmin, adminModeEnabled, loading: memberLoading } = useCurrentMember();
+  const {
+    isAdmin,
+    adminModeEnabled,
+    loading: memberLoading,
+  } = useCurrentMember();
   const canEdit = isAdmin && adminModeEnabled;
 
   const [loading, setLoading] = useState(true);
@@ -56,7 +60,7 @@ export default function BandMembersScreen() {
 
   const title = useMemo(
     () => (showInactive ? "Band & Crew (All)" : "Band & Crew"),
-    [showInactive]
+    [showInactive],
   );
 
   const loadMembers = useCallback(async () => {
@@ -65,7 +69,7 @@ export default function BandMembersScreen() {
     let q = supabase
       .from("band_members")
       .select(
-        "member_id, display_name, email, member_type, band_role, band_role_other, band_positions, band_positions_other, is_active, is_admin, is_dep"
+        "member_id, display_name, email, member_type, band_role, band_role_other, band_positions, band_positions_other, is_active, is_admin, is_dep",
       )
       .order("display_name", { ascending: true });
 
@@ -88,16 +92,21 @@ export default function BandMembersScreen() {
     useCallback(() => {
       loadMembers();
       return () => {};
-    }, [loadMembers])
+    }, [loadMembers]),
   );
 
-  const musicians = useMemo(() => members.filter((m) => !isCrewMember(m)), [members]);
+  const musicians = useMemo(
+    () => members.filter((m) => !isCrewMember(m)),
+    [members],
+  );
   const crew = useMemo(() => members.filter((m) => isCrewMember(m)), [members]);
 
   const renderMemberRow = ({ item }: { item: BandMemberRow }) => {
     const presetPositions = item.band_positions ?? [];
     const customPositions = item.band_positions_other ?? [];
-    const allPositions = [...presetPositions, ...customPositions].filter(Boolean);
+    const allPositions = [...presetPositions, ...customPositions].filter(
+      Boolean,
+    );
     const positions = allPositions.length > 0 ? allPositions.join(", ") : "";
 
     const roleDisplay =
@@ -121,7 +130,9 @@ export default function BandMembersScreen() {
         <View style={styles.left}>
           <View style={styles.nameRow}>
             <Text style={styles.name}>{item.display_name ?? "Unnamed"}</Text>
-            {statusLabel ? <Text style={styles.inactiveTag}>{statusLabel}</Text> : null}
+            {statusLabel ? (
+              <Text style={styles.inactiveTag}>{statusLabel}</Text>
+            ) : null}
           </View>
 
           <Text style={styles.meta}>
@@ -141,7 +152,9 @@ export default function BandMembersScreen() {
               <Text
                 style={[
                   styles.typeTagText,
-                  crewLike ? styles.typeTagCrewText : styles.typeTagMusicianText,
+                  crewLike
+                    ? styles.typeTagCrewText
+                    : styles.typeTagMusicianText,
                 ]}
               >
                 {typeLabel}
@@ -177,7 +190,10 @@ export default function BandMembersScreen() {
 
           <View style={styles.headerActions}>
             <Pressable
-              style={[styles.filterButton, showInactive && styles.filterButtonOn]}
+              style={[
+                styles.filterButton,
+                showInactive && styles.filterButtonOn,
+              ]}
               onPress={() => setShowInactive((v) => !v)}
             >
               <Text
@@ -273,7 +289,12 @@ const styles = StyleSheet.create({
 
   loading: { flex: 1, justifyContent: "center", alignItems: "center" },
 
-  sectionTitle: { fontSize: 13, fontWeight: "800", color: "#333", marginBottom: 10 },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#333",
+    marginBottom: 10,
+  },
 
   row: {
     backgroundColor: "#fff",

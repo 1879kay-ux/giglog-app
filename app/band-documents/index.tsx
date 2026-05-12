@@ -79,7 +79,7 @@ export default function BandDocumentsScreen() {
       // IMPORTANT: refresh both docs + admin mode every time screen focuses
       loadAdminMode();
       loadDocs();
-    }, [loadAdminMode, loadDocs])
+    }, [loadAdminMode, loadDocs]),
   );
 
   const grouped = useMemo(() => {
@@ -106,12 +106,20 @@ export default function BandDocumentsScreen() {
         options={{
           title: "Band Docs",
           headerLeft: () => (
-            <Pressable onPress={() => router.back()} hitSlop={10} style={styles.headerBtn}>
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={10}
+              style={styles.headerBtn}
+            >
               <Ionicons name="arrow-back" size={22} color="#fff" />
             </Pressable>
           ),
           headerRight: () => (
-            <Pressable onPress={() => router.push("/")} hitSlop={10} style={styles.headerBtn}>
+            <Pressable
+              onPress={() => router.push("/")}
+              hitSlop={10}
+              style={styles.headerBtn}
+            >
               <Ionicons name="home-outline" size={22} color="#fff" />
             </Pressable>
           ),
@@ -130,7 +138,10 @@ export default function BandDocumentsScreen() {
           {isAdminMode ? (
             <Pressable
               onPress={() => router.push("/band-documents/edit")}
-              style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.editBtn,
+                pressed && styles.pressed,
+              ]}
             >
               <Ionicons name="create-outline" size={16} color="#0F766E" />
               <Text style={styles.editBtnText}>Edit</Text>
@@ -147,7 +158,9 @@ export default function BandDocumentsScreen() {
         ) : docs.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>No documents yet</Text>
-            <Text style={styles.emptyText}>Upload band docs like tech specs, riders, set lists.</Text>
+            <Text style={styles.emptyText}>
+              Upload band docs like tech specs, riders, set lists.
+            </Text>
           </View>
         ) : (
           grouped.map(({ category, items }) => (
@@ -157,7 +170,10 @@ export default function BandDocumentsScreen() {
               {items.map((item) => (
                 <Pressable
                   key={item.doc_id}
-                  style={({ pressed }) => [styles.docRow, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.docRow,
+                    pressed && styles.pressed,
+                  ]}
                   onPress={() => openDoc("band", item.doc_id)}
                 >
                   <View style={styles.docRowLeft}>
@@ -174,9 +190,16 @@ export default function BandDocumentsScreen() {
                         shareDoc("band", item.doc_id, item.title ?? "Document");
                       }}
                       hitSlop={10}
-                      style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                      style={({ pressed }) => [
+                        styles.iconBtn,
+                        pressed && styles.iconBtnPressed,
+                      ]}
                     >
-                      <Ionicons name="share-outline" size={20} color="#0F766E" />
+                      <Ionicons
+                        name="share-outline"
+                        size={20}
+                        color="#0F766E"
+                      />
                     </Pressable>
                   </View>
                 </Pressable>

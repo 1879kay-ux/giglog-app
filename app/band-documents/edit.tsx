@@ -43,7 +43,10 @@ function cap(s: string) {
 
 async function pickDocType(): Promise<DocType | null> {
   if (Platform.OS === "web") {
-    const selected = window.prompt("Document type: tech, rider, setlist, contracts, other", "other");
+    const selected = window.prompt(
+      "Document type: tech, rider, setlist, contracts, other",
+      "other",
+    );
     if (!selected) return null;
     if (["tech", "rider", "setlist", "contracts", "other"].includes(selected)) {
       return selected as DocType;
@@ -99,7 +102,9 @@ export default function BandDocumentsEditScreen() {
 
       const { data, error } = await supabase
         .from("band_documents")
-        .select("doc_id, band_id, title, doc_type, storage_bucket, storage_path, created_at")
+        .select(
+          "doc_id, band_id, title, doc_type, storage_bucket, storage_path, created_at",
+        )
         .eq("band_id", bId)
         .order("doc_type", { ascending: true })
         .order("title", { ascending: true });
@@ -120,7 +125,7 @@ export default function BandDocumentsEditScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [load])
+    }, [load]),
   );
 
   const docTypeOptions: { key: DocType; label: string }[] = useMemo(
@@ -131,11 +136,13 @@ export default function BandDocumentsEditScreen() {
       { key: "contracts", label: "Contracts" },
       { key: "other", label: "Other" },
     ],
-    []
+    [],
   );
 
   function updateLocal(docId: string, patch: Partial<BandDocRow>) {
-    setDocs((prev) => prev.map((d) => (d.doc_id === docId ? { ...d, ...patch } : d)));
+    setDocs((prev) =>
+      prev.map((d) => (d.doc_id === docId ? { ...d, ...patch } : d)),
+    );
   }
 
   async function saveRow(doc: BandDocRow) {
@@ -159,154 +166,155 @@ export default function BandDocumentsEditScreen() {
   }
 
   async function deleteRow(doc: BandDocRow) {
-  setDeletingId(doc.doc_id);
-  try {
-    // delete storage object first (ignore if it fails)
-    const { error: storErr } = await supabase.storage
-      .from(doc.storage_bucket)
-      .remove([doc.storage_path]);
+    setDeletingId(doc.doc_id);
+    try {
+      // delete storage object first (ignore if it fails)
+      const { error: storErr } = await supabase.storage
+        .from(doc.storage_bucket)
+        .remove([doc.storage_path]);
 
-    if (storErr) console.log("storage delete error (ignored):", storErr);
+      if (storErr) console.log("storage delete error (ignored):", storErr);
 
-    const { error: dbErr } = await supabase
-      .from("band_documents")
-      .delete()
-      .eq("doc_id", doc.doc_id);
+      const { error: dbErr } = await supabase
+        .from("band_documents")
+        .delete()
+        .eq("doc_id", doc.doc_id);
 
-    if (dbErr) throw dbErr;
+      if (dbErr) throw dbErr;
 
-    setDocs((prev) => prev.filter((d) => d.doc_id !== doc.doc_id));
-  } catch (e: any) {
-    console.log("delete doc error", e);
-    Alert.alert("Delete failed", e?.message ?? "Failed to delete");
-  } finally {
-    setDeletingId(null);
+      setDocs((prev) => prev.filter((d) => d.doc_id !== doc.doc_id));
+    } catch (e: any) {
+      console.log("delete doc error", e);
+      Alert.alert("Delete failed", e?.message ?? "Failed to delete");
+    } finally {
+      setDeletingId(null);
+    }
   }
-}
-async function openDoc(doc: BandDocRow) {
-  try {
-    const { data, error } = await supabase.storage
-      .from(doc.storage_bucket)
-      .createSignedUrl(doc.storage_path, 3600);
+  async function openDoc(doc: BandDocRow) {
+    try {
+      const { data, error } = await supabase.storage
+        .from(doc.storage_bucket)
+        .createSignedUrl(doc.storage_path, 3600);
 
-    if (error) throw error;
-    if (!data?.signedUrl) throw new Error("No download URL");
+      if (error) throw error;
+      if (!data?.signedUrl) throw new Error("No download URL");
 
-    await WebBrowser.openBrowserAsync(data.signedUrl);
-  } catch (e: any) {
-    console.log("open doc error", e);
-    Alert.alert("Open failed", e?.message ?? "Could not open document");
+      await WebBrowser.openBrowserAsync(data.signedUrl);
+    } catch (e: any) {
+      console.log("open doc error", e);
+      Alert.alert("Open failed", e?.message ?? "Could not open document");
+    }
   }
-}
   async function uploadNew() {
-  if (!bandId) {
-    Alert.alert("Upload failed", "No band found for this user.");
-    return;
+    if (!bandId) {
+      Alert.alert("Upload failed", "No band found for this user.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        multiple: false,
+        copyToCacheDirectory: true,
+      });
+
+      if (res.canceled) {
+        Alert.alert("Upload", "Cancelled.");
+        return;
+      }
+
+      const file = res.assets?.[0];
+      if (!file) {
+        Alert.alert("Upload failed", "No file returned from picker.");
+        return;
+      }
+
+      const filename = file.name || "document";
+      const selectedDocType = await pickDocType();
+
+      if (!selectedDocType) {
+        setUploading(false);
+        return;
+      }
+      const path = `bands/${bandId}/${Date.now()}-${filename}`;
+
+      // 1) Read file data
+      const response = await fetch(file.uri);
+      const blob = await response.blob();
+
+      if (!blob || blob.size === 0) {
+        throw new Error("Selected file is empty");
+      }
+
+      // 2) Upload to storage
+
+      const formData = new FormData();
+      formData.append("file", {
+        uri: file.uri,
+        name: filename,
+        type: file.mimeType ?? "application/octet-stream",
+      } as any);
+
+      const { error: upErr } = await supabase.storage
+        .from(BUCKET)
+        .upload(path, formData as any, {
+          upsert: true,
+        });
+
+      if (upErr) {
+        console.log("UPLOAD ERROR:", upErr);
+        Alert.alert("Upload failed", upErr.message);
+        return;
+      }
+
+      // 3) Insert DB row
+      const docId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? // @ts-ignore
+            crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`;
+
+      const title = niceTitleFromFilename(filename);
+
+      const { error: insErr } = await supabase.from("band_documents").insert({
+        band_id: bandId,
+        title,
+        doc_type: selectedDocType,
+        storage_bucket: BUCKET,
+        storage_path: path,
+      });
+
+      if (insErr) {
+        console.log("INSERT ERROR:", insErr);
+        Alert.alert("Upload saved file, but DB insert failed", insErr.message);
+        return;
+      }
+
+      try {
+        await supabase.functions.invoke("send-push-notification", {
+          body: {
+            title: "GigLog band document added",
+            body: `${selectedDocType.charAt(0).toUpperCase() + selectedDocType.slice(1)}: ${
+              file.name ?? "A document"
+            } has been added to band documents.`,
+            data: {
+              type: "band_document_added",
+            },
+          },
+        });
+      } catch (notifyError) {
+        console.log("Band document push notification error:", notifyError);
+      }
+
+      router.back();
+      Alert.alert("Uploaded", filename);
+    } catch (e: any) {
+      console.log("upload doc error", e);
+      Alert.alert("Upload failed", e?.message ?? "Could not upload document");
+    } finally {
+      setUploading(false);
+    }
   }
-
-  setUploading(true);
-  try {
-    const res = await DocumentPicker.getDocumentAsync({
-      multiple: false,
-      copyToCacheDirectory: true,
-    });
-
-    if (res.canceled) {
-      Alert.alert("Upload", "Cancelled.");
-      return;
-    }
-
-    const file = res.assets?.[0];
-    if (!file) {
-      Alert.alert("Upload failed", "No file returned from picker.");
-      return;
-    }
-
-    const filename = file.name || "document";
-    const selectedDocType = await pickDocType();
-
-if (!selectedDocType) {
-  setUploading(false);
-  return;
-}
-    const path = `bands/${bandId}/${Date.now()}-${filename}`;
-
-    // 1) Read file data
-const response = await fetch(file.uri);
-const blob = await response.blob();
-
-if (!blob || blob.size === 0) {
-  throw new Error("Selected file is empty");
-}
-
-// 2) Upload to storage
-
-
-const formData = new FormData();
-formData.append("file", {
-  uri: file.uri,
-  name: filename,
-  type: file.mimeType ?? "application/octet-stream",
-} as any);
-
-const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, formData as any, {
-  upsert: true,
-});
-
-    if (upErr) {
-      console.log("UPLOAD ERROR:", upErr);
-      Alert.alert("Upload failed", upErr.message);
-      return;
-    }
-
-    // 3) Insert DB row
-    const docId =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? // @ts-ignore
-          crypto.randomUUID()
-        : `${Date.now()}-${Math.random()}`;
-
-    const title = niceTitleFromFilename(filename);
-
-const { error: insErr } = await supabase.from("band_documents").insert({
-  band_id: bandId,
-  title,
-  doc_type: selectedDocType,
-  storage_bucket: BUCKET,
-  storage_path: path,
-});
-
-    if (insErr) {
-  console.log("INSERT ERROR:", insErr);
-  Alert.alert("Upload saved file, but DB insert failed", insErr.message);
-  return;
-}
-
-try {
-  await supabase.functions.invoke("send-push-notification", {
-    body: {
-      title: "GigLog band document added",
-      body: `${selectedDocType.charAt(0).toUpperCase() + selectedDocType.slice(1)}: ${
-  file.name ?? "A document"
-} has been added to band documents.`,
-      data: {
-        type: "band_document_added",
-      },
-    },
-  });
-} catch (notifyError) {
-  console.log("Band document push notification error:", notifyError);
-}
-
-router.back();
-Alert.alert("Uploaded", filename);
-  } catch (e: any) {
-    console.log("upload doc error", e);
-    Alert.alert("Upload failed", e?.message ?? "Could not upload document");
-  } finally {
-    setUploading(false);
-  }
-}
 
   return (
     <>
@@ -316,7 +324,11 @@ Alert.alert("Uploaded", filename);
           headerStyle: { backgroundColor: "#0D9488" },
           headerTintColor: "#fff",
           headerLeft: () => (
-            <Pressable onPress={() => router.back()} hitSlop={10} style={styles.headerBtn}>
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={10}
+              style={styles.headerBtn}
+            >
               <Ionicons name="arrow-back" size={22} color="#fff" />
             </Pressable>
           ),
@@ -340,7 +352,11 @@ Alert.alert("Uploaded", filename);
               <ActivityIndicator />
             ) : (
               <>
-                <Ionicons name="cloud-upload-outline" size={16} color="#0F766E" />
+                <Ionicons
+                  name="cloud-upload-outline"
+                  size={16}
+                  color="#0F766E"
+                />
                 <Text style={styles.primaryBtnText}>Upload</Text>
               </>
             )}
@@ -354,21 +370,23 @@ Alert.alert("Uploaded", filename);
         ) : docs.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>No documents yet</Text>
-            <Text style={styles.emptyText}>Upload your first doc using the Upload button.</Text>
+            <Text style={styles.emptyText}>
+              Upload your first doc using the Upload button.
+            </Text>
           </View>
         ) : (
           docs.map((d) => (
             <View key={d.doc_id} style={styles.card}>
-  <Pressable onPress={() => openDoc(d)}>
-    <TextInput
-      value={d.title ?? ""}
-      onChangeText={(t) => updateLocal(d.doc_id, { title: t })}
-      placeholder="Document title"
-      style={styles.input}
-      placeholderTextColor="#999"
-      editable={false}
-    />
-  </Pressable>
+              <Pressable onPress={() => openDoc(d)}>
+                <TextInput
+                  value={d.title ?? ""}
+                  onChangeText={(t) => updateLocal(d.doc_id, { title: t })}
+                  placeholder="Document title"
+                  style={styles.input}
+                  placeholderTextColor="#999"
+                  editable={false}
+                />
+              </Pressable>
 
               <View style={styles.typeRow}>
                 {docTypeOptions.map((opt) => {
@@ -376,14 +394,21 @@ Alert.alert("Uploaded", filename);
                   return (
                     <Pressable
                       key={opt.key}
-                      onPress={() => updateLocal(d.doc_id, { doc_type: opt.key })}
+                      onPress={() =>
+                        updateLocal(d.doc_id, { doc_type: opt.key })
+                      }
                       style={({ pressed }) => [
                         styles.typePill,
                         selected && styles.typePillSelected,
                         pressed && styles.pressed,
                       ]}
                     >
-                      <Text style={[styles.typePillText, selected && styles.typePillTextSelected]}>
+                      <Text
+                        style={[
+                          styles.typePillText,
+                          selected && styles.typePillTextSelected,
+                        ]}
+                      >
                         {opt.label}
                       </Text>
                     </Pressable>
@@ -424,7 +449,11 @@ Alert.alert("Uploaded", filename);
                     <ActivityIndicator />
                   ) : (
                     <>
-                      <Ionicons name="trash-outline" size={16} color="#B42318" />
+                      <Ionicons
+                        name="trash-outline"
+                        size={16}
+                        color="#B42318"
+                      />
                       <Text style={styles.dangerBtnText}>Delete</Text>
                     </>
                   )}

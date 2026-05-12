@@ -3,7 +3,14 @@
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 export type AccommodationRow = {
   id: string;
@@ -79,7 +86,11 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.valueWrap}>
-        {typeof value === "string" ? <Text style={styles.value}>{value}</Text> : value}
+        {typeof value === "string" ? (
+          <Text style={styles.value}>{value}</Text>
+        ) : (
+          value
+        )}
       </View>
     </View>
   );
@@ -87,7 +98,11 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 
 function Chip({ label, onPress }: { label: string; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={styles.chip} android_ripple={{ color: "#d9f0f0" }}>
+    <Pressable
+      onPress={onPress}
+      style={styles.chip}
+      android_ripple={{ color: "#d9f0f0" }}
+    >
       <Text style={styles.chipText}>{label}</Text>
     </Pressable>
   );
@@ -110,7 +125,11 @@ export default function AccommodationSection({
 
         {canEdit ? (
           <Pressable style={styles.editPill} onPress={onPressEdit}>
-            <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
+            <Ionicons
+              name="add-circle-outline"
+              size={16}
+              color={colors.primary}
+            />
             <Text style={styles.editPillText}>Add accommodation</Text>
           </Pressable>
         ) : null}
@@ -118,19 +137,27 @@ export default function AccommodationSection({
     );
   }
 
-  const addressBits = [clean(accommodation.address_line), clean(accommodation.postcode)]
+  const addressBits = [
+    clean(accommodation.address_line),
+    clean(accommodation.postcode),
+  ]
     .filter(Boolean)
     .join(", ");
 
   // Prefer address + postcode, fallback to postcode
   const hotelDest =
-    [clean(accommodation.address_line), clean(accommodation.postcode)].filter(Boolean).join(", ") ||
+    [clean(accommodation.address_line), clean(accommodation.postcode)]
+      .filter(Boolean)
+      .join(", ") ||
     clean(accommodation.postcode) ||
     "";
 
   function openToHotel(app: "apple" | "google" | "waze") {
     if (!hotelDest) {
-      Alert.alert("Hotel location missing", "Add a postcode (or address) to the accommodation.");
+      Alert.alert(
+        "Hotel location missing",
+        "Add a postcode (or address) to the accommodation.",
+      );
       return;
     }
 
@@ -164,7 +191,9 @@ export default function AccommodationSection({
       {/* Current location -> Hotel directions (match Travel section chips) */}
       {hotelDest ? (
         <View style={styles.directionsBlock}>
-          <Text style={styles.directionsLabel}>Current Location → Accommodation</Text>
+          <Text style={styles.directionsLabel}>
+            Current Location → Accommodation
+          </Text>
 
           <View style={styles.travelButtonRow}>
             <Chip label="Apple" onPress={() => openToHotel("apple")} />
@@ -175,15 +204,24 @@ export default function AccommodationSection({
       ) : null}
 
       <View style={styles.card}>
-        <Row label="Check-in" value={formatDateTime(accommodation.check_in_at)} />
-        <Row label="Check-out" value={formatDateTime(accommodation.check_out_at)} />
+        <Row
+          label="Check-in"
+          value={formatDateTime(accommodation.check_in_at)}
+        />
+        <Row
+          label="Check-out"
+          value={formatDateTime(accommodation.check_out_at)}
+        />
 
         {accommodation.rooms_count !== null ? (
           <Row label="Rooms" value={String(accommodation.rooms_count)} />
         ) : null}
 
         {accommodation.total_cost !== null ? (
-          <Row label="Total cost" value={formatMoneyGBP(accommodation.total_cost)} />
+          <Row
+            label="Total cost"
+            value={formatMoneyGBP(accommodation.total_cost)}
+          />
         ) : null}
 
         {accommodation.booked_under_name ? (
@@ -194,8 +232,14 @@ export default function AccommodationSection({
           <Row label="Booking ref" value={accommodation.booking_reference} />
         ) : null}
 
-        <Row label="Breakfast" value={accommodation.breakfast_included ? "Yes" : "No"} />
-        <Row label="Parking" value={accommodation.parking_available ? "Yes" : "No"} />
+        <Row
+          label="Breakfast"
+          value={accommodation.breakfast_included ? "Yes" : "No"}
+        />
+        <Row
+          label="Parking"
+          value={accommodation.parking_available ? "Yes" : "No"}
+        />
       </View>
 
       {accommodation.notes ? (

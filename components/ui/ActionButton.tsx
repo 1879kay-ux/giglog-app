@@ -11,7 +11,13 @@ type Props = {
   style?: ViewStyle | ViewStyle[];
 };
 
-export default function ActionButton({ label, icon, onPress, disabled, style }: Props) {
+export default function ActionButton({
+  label,
+  icon,
+  onPress,
+  disabled,
+  style,
+}: Props) {
   return (
     <Pressable
       onPress={onPress}
@@ -24,7 +30,9 @@ export default function ActionButton({ label, icon, onPress, disabled, style }: 
       ]}
     >
       <View style={styles.content}>
-        {icon ? <Ionicons name={icon} size={18} color="#fff" style={styles.icon} /> : null}
+        {icon ? (
+          <Ionicons name={icon} size={18} color="#fff" style={styles.icon} />
+        ) : null}
         <Text style={styles.text}>{label}</Text>
       </View>
     </Pressable>

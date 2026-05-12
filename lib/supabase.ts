@@ -9,7 +9,8 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const webStorage =
   typeof window !== "undefined"
     ? {
-        getItem: (key: string) => Promise.resolve(window.localStorage.getItem(key)),
+        getItem: (key: string) =>
+          Promise.resolve(window.localStorage.getItem(key)),
         setItem: (key: string, value: string) => {
           window.localStorage.setItem(key, value);
           return Promise.resolve();

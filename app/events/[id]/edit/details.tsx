@@ -1,7 +1,12 @@
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import {
+  Stack,
+  useFocusEffect,
+  useLocalSearchParams,
+  useRouter,
+} from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -59,7 +64,13 @@ function formatEventDate(isoDate: string) {
     .replace(",", "");
 }
 
-function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
+function InfoRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null | undefined;
+}) {
   const display = value && String(value).trim() ? String(value) : "—";
   return (
     <View style={styles.row}>
@@ -101,7 +112,9 @@ function ChipGroup({
                 },
               ]}
             >
-              <Text style={[styles.chipText, selected && { color: "#fff" }]}>{opt.key}</Text>
+              <Text style={[styles.chipText, selected && { color: "#fff" }]}>
+                {opt.key}
+              </Text>
             </TouchableOpacity>
           );
         })}
@@ -142,7 +155,7 @@ export default function EditEventDetailsScreen() {
       { key: "Meeting", selectedColor: "#2ECC71" },
       { key: "Other", selectedColor: "#2ECC71" },
     ],
-    []
+    [],
   );
 
   const statusOptions: ChipOption[] = useMemo(
@@ -151,14 +164,14 @@ export default function EditEventDetailsScreen() {
       { key: "Provisional", selectedColor: "#F39C12" },
       { key: "Cancelled", selectedColor: "#E74C3C" },
     ],
-    []
+    [],
   );
 
   useFocusEffect(
     useCallback(() => {
       if (!id) return;
       load();
-    }, [id])
+    }, [id]),
   );
 
   async function load() {
@@ -169,7 +182,7 @@ export default function EditEventDetailsScreen() {
     const { data: eventData, error: eventErr } = await supabase
       .from("events")
       .select(
-        "event_id,event_date,venue_id,event_type,event_status,event_notes,promoter_contact_name,promoter_contact_phone,promoter_contact_email"
+        "event_id,event_date,venue_id,event_type,event_status,event_notes,promoter_contact_name,promoter_contact_phone,promoter_contact_email",
       )
       .eq("event_id", id)
       .single();
@@ -197,7 +210,7 @@ export default function EditEventDetailsScreen() {
       const { data: venueData } = await supabase
         .from("venues")
         .select(
-          "venue_id,event_venue_name,city,address,postcode,venue_contact_name,venue_contact_phone,venue_contact_email,venue_notes,capacity"
+          "venue_id,event_venue_name,city,address,postcode,venue_contact_name,venue_contact_phone,venue_contact_email,venue_notes,capacity",
         )
         .eq("venue_id", eventData.venue_id)
         .single();
@@ -214,50 +227,51 @@ export default function EditEventDetailsScreen() {
     if (!id) return;
 
     if (!eventDate) return Alert.alert("Missing", "Please choose a Date.");
-    if (!eventType) return Alert.alert("Missing", "Please choose an Event Type.");
+    if (!eventType)
+      return Alert.alert("Missing", "Please choose an Event Type.");
     if (!eventStatus) return Alert.alert("Missing", "Please choose a Status.");
     if (eventStatus === "Deleted") {
-  Alert.alert(
-    "Delete Event",
-    "Do you wish to delete this event? This action cannot be undone.",
-    [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete Event",
-        style: "destructive",
-        onPress: async () => {
-          setSaving(true);
+      Alert.alert(
+        "Delete Event",
+        "Do you wish to delete this event? This action cannot be undone.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete Event",
+            style: "destructive",
+            onPress: async () => {
+              setSaving(true);
 
-          const payload = {
-            event_date: eventDate,
-            event_type: eventType,
-            event_status: "Deleted",
-            promoter_contact_name: promoterName.trim() || null,
-            promoter_contact_phone: promoterPhone.trim() || null,
-            promoter_contact_email: promoterEmail.trim() || null,
-            event_notes: notes.trim() || null,
-          };
+              const payload = {
+                event_date: eventDate,
+                event_type: eventType,
+                event_status: "Deleted",
+                promoter_contact_name: promoterName.trim() || null,
+                promoter_contact_phone: promoterPhone.trim() || null,
+                promoter_contact_email: promoterEmail.trim() || null,
+                event_notes: notes.trim() || null,
+              };
 
-          const { data, error } = await supabase
-            .from("events")
-            .update(payload)
-            .eq("event_id", id)
-            .select("event_id");
+              const { data, error } = await supabase
+                .from("events")
+                .update(payload)
+                .eq("event_id", id)
+                .select("event_id");
 
-          setSaving(false);
+              setSaving(false);
 
-          if (error) {
-            Alert.alert("Save failed", error.message);
-            return;
-          }
+              if (error) {
+                Alert.alert("Save failed", error.message);
+                return;
+              }
 
-          router.back();
-        },
-      },
-    ]
-  );
-  return;
-}
+              router.back();
+            },
+          },
+        ],
+      );
+      return;
+    }
 
     setSaving(true);
 
@@ -285,31 +299,31 @@ export default function EditEventDetailsScreen() {
     }
 
     if (!data || (Array.isArray(data) && data.length === 0)) {
-  Alert.alert("Save failed", "No rows updated.");
-  return;
-}
+      Alert.alert("Save failed", "No rows updated.");
+      return;
+    }
 
-const dateChanged = event.event_date !== eventDate;
-const statusChanged = event.event_status !== eventStatus;
+    const dateChanged = event.event_date !== eventDate;
+    const statusChanged = event.event_status !== eventStatus;
 
-if (dateChanged || statusChanged) {
-  try {
-    await supabase.functions.invoke("send-push-notification", {
-      body: {
-        title: "GigLog event updated",
-        body: `${eventType} updated for ${formatEventDate(eventDate)}. Status: ${eventStatus}.`,
-        data: {
-          type: "event_updated",
-          event_id: id,
-        },
-      },
-    });
-  } catch (notifyError) {
-    console.log("Event update push notification error:", notifyError);
-  }
-}
+    if (dateChanged || statusChanged) {
+      try {
+        await supabase.functions.invoke("send-push-notification", {
+          body: {
+            title: "GigLog event updated",
+            body: `${eventType} updated for ${formatEventDate(eventDate)}. Status: ${eventStatus}.`,
+            data: {
+              type: "event_updated",
+              event_id: id,
+            },
+          },
+        });
+      } catch (notifyError) {
+        console.log("Event update push notification error:", notifyError);
+      }
+    }
 
-router.back();
+    router.back();
   }
 
   if (loading || !event) {
@@ -335,7 +349,11 @@ router.back();
         </Text>
         <Text style={styles.summaryMeta}>
           {eventType ?? event.event_type ?? "Event"}
-          {eventStatus ? `, ${eventStatus}` : event.event_status ? `, ${event.event_status}` : ""}
+          {eventStatus
+            ? `, ${eventStatus}`
+            : event.event_status
+              ? `, ${event.event_status}`
+              : ""}
         </Text>
       </View>
 
@@ -353,7 +371,11 @@ router.back();
             activeOpacity={0.7}
           >
             <Text style={styles.rowValue}>{formatEventDate(safeDate)}</Text>
-            <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+            <Ionicons
+              name="calendar-outline"
+              size={18}
+              color={colors.primary}
+            />
           </TouchableOpacity>
         </View>
 
@@ -373,41 +395,52 @@ router.back();
           </View>
         )}
 
-        <ChipGroup label="Event Type" value={eventType} options={typeOptions} onChange={setEventType} />
+        <ChipGroup
+          label="Event Type"
+          value={eventType}
+          options={typeOptions}
+          onChange={setEventType}
+        />
 
-<ChipGroup label="Status" value={eventStatus} options={statusOptions} onChange={setEventStatus} />
+        <ChipGroup
+          label="Status"
+          value={eventStatus}
+          options={statusOptions}
+          onChange={setEventStatus}
+        />
 
-<View style={{ marginTop: 16 }}>
-  <Text style={styles.sectionTitle}>Delete Event</Text>
+        <View style={{ marginTop: 16 }}>
+          <Text style={styles.sectionTitle}>Delete Event</Text>
 
-  <Text style={styles.helper}>
-    Selecting this will remove the event from all views. This action cannot be undone.
-  </Text>
+          <Text style={styles.helper}>
+            Selecting this will remove the event from all views. This action
+            cannot be undone.
+          </Text>
 
-  <View style={{ marginTop: 10 }}>
-    <TouchableOpacity
-  onPress={() => setEventStatus("Deleted")}
-  style={[
-    styles.chip,
-    {
-      alignSelf: "flex-start",
-      backgroundColor: eventStatus === "Deleted" ? "#E74C3C" : colors.border,
-      borderColor: "#E74C3C",
-    },
-  ]}
->
-      <Text
-        style={[
-          styles.chipText,
-          { color: eventStatus === "Deleted" ? "#fff" : "#E74C3C" },
-        ]}
-      >
-        Delete
-      </Text>
-    </TouchableOpacity>
-  </View>
-</View>
-        
+          <View style={{ marginTop: 10 }}>
+            <TouchableOpacity
+              onPress={() => setEventStatus("Deleted")}
+              style={[
+                styles.chip,
+                {
+                  alignSelf: "flex-start",
+                  backgroundColor:
+                    eventStatus === "Deleted" ? "#E74C3C" : colors.border,
+                  borderColor: "#E74C3C",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  { color: eventStatus === "Deleted" ? "#fff" : "#E74C3C" },
+                ]}
+              >
+                Delete
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
 
       {/* VENUE DETAILS */}
@@ -416,16 +449,33 @@ router.back();
         <InfoRow label="Venue Name" value={venue?.event_venue_name ?? null} />
         <InfoRow label="Address" value={venue?.address ?? null} />
         <InfoRow label="Postcode" value={venue?.postcode ?? null} />
-        <InfoRow label="Contact Name" value={venue?.venue_contact_name ?? null} />
-        <InfoRow label="Contact Phone" value={venue?.venue_contact_phone ?? null} />
-        <InfoRow label="Contact Email" value={venue?.venue_contact_email ?? null} />
-        <InfoRow label="Capacity" value={venue?.capacity != null ? String(venue.capacity) : null} />
+        <InfoRow
+          label="Contact Name"
+          value={venue?.venue_contact_name ?? null}
+        />
+        <InfoRow
+          label="Contact Phone"
+          value={venue?.venue_contact_phone ?? null}
+        />
+        <InfoRow
+          label="Contact Email"
+          value={venue?.venue_contact_email ?? null}
+        />
+        <InfoRow
+          label="Capacity"
+          value={venue?.capacity != null ? String(venue.capacity) : null}
+        />
         <InfoRow label="Venue Notes" value={venue?.venue_notes ?? null} />
 
-        <Text style={styles.helper}>If you need to change venue details, edit the venue record.</Text>
+        <Text style={styles.helper}>
+          If you need to change venue details, edit the venue record.
+        </Text>
 
         {!!event.venue_id && (
-          <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push(`/venue/${event.venue_id}/edit`)}>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => router.push(`/venue/${event.venue_id}/edit`)}
+          >
             <Ionicons name="create-outline" size={18} color="#fff" />
             <Text style={styles.secondaryButtonText}>Edit Venue</Text>
           </TouchableOpacity>
@@ -437,13 +487,25 @@ router.back();
         <Text style={styles.cardTitle}>Promoter Contact</Text>
 
         <Text style={styles.inputLabel}>Name</Text>
-        <TextInput style={styles.input} value={promoterName} onChangeText={setPromoterName} />
+        <TextInput
+          style={styles.input}
+          value={promoterName}
+          onChangeText={setPromoterName}
+        />
 
         <Text style={styles.inputLabel}>Phone</Text>
-        <TextInput style={styles.input} value={promoterPhone} onChangeText={setPromoterPhone} />
+        <TextInput
+          style={styles.input}
+          value={promoterPhone}
+          onChangeText={setPromoterPhone}
+        />
 
         <Text style={styles.inputLabel}>Email</Text>
-        <TextInput style={styles.input} value={promoterEmail} onChangeText={setPromoterEmail} />
+        <TextInput
+          style={styles.input}
+          value={promoterEmail}
+          onChangeText={setPromoterEmail}
+        />
       </View>
 
       {/* NOTES */}
@@ -460,7 +522,11 @@ router.back();
       </View>
 
       {/* SAVE */}
-      <TouchableOpacity style={styles.saveButton} onPress={onSave} disabled={saving}>
+      <TouchableOpacity
+        style={styles.saveButton}
+        onPress={onSave}
+        disabled={saving}
+      >
         <Text style={styles.saveButtonText}>{saving ? "Saving…" : "Save"}</Text>
       </TouchableOpacity>
     </>
@@ -484,7 +550,10 @@ router.back();
             {scrollContent}
           </ScrollView>
         ) : (
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <TouchableWithoutFeedback
+            onPress={Keyboard.dismiss}
+            accessible={false}
+          >
             <ScrollView
               contentContainerStyle={[styles.container, { paddingBottom: 180 }]}
               keyboardShouldPersistTaps="handled"

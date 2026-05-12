@@ -32,7 +32,9 @@ type EventScheduleRow = {
 
 function toHHMM(value?: string | null) {
   if (!value) return "";
-  const m = String(value).trim().match(/^(\d{1,2}):(\d{2})/);
+  const m = String(value)
+    .trim()
+    .match(/^(\d{1,2}):(\d{2})/);
   if (!m) return "";
   return `${m[1].padStart(2, "0")}:${m[2]}`;
 }
@@ -112,7 +114,7 @@ export default function EditEventScheduleScreen() {
         { key: "venue_curfew", label: "Venue Curfew" },
         { key: "depart_venue", label: "Depart Venue" },
       ] as { key: TimeFieldKey; label: string }[],
-    []
+    [],
   );
 
   useEffect(() => {
@@ -129,7 +131,7 @@ export default function EditEventScheduleScreen() {
     const { data, error } = await supabase
       .from("events")
       .select(
-        "travel_venue,loadin,soundcheck,doors,onstage,offstage,venue_curfew,depart_venue,schedule_notes"
+        "travel_venue,loadin,soundcheck,doors,onstage,offstage,venue_curfew,depart_venue,schedule_notes",
       )
       .eq("event_id", id)
       .single();
@@ -178,7 +180,10 @@ export default function EditEventScheduleScreen() {
       schedule_notes: scheduleNotes.trim() ? scheduleNotes.trim() : null,
     };
 
-    const { error } = await supabase.from("events").update(payload).eq("event_id", id);
+    const { error } = await supabase
+      .from("events")
+      .update(payload)
+      .eq("event_id", id);
 
     setSaving(false);
 
@@ -207,7 +212,10 @@ export default function EditEventScheduleScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Schedule</Text>
 
@@ -245,7 +253,11 @@ export default function EditEventScheduleScreen() {
                     activeOpacity={0.7}
                   >
                     <Text style={styles.timeText}>{times[f.key] || "—"}</Text>
-                    <Ionicons name="time-outline" size={16} color={colors.primary} />
+                    <Ionicons
+                      name="time-outline"
+                      size={16}
+                      color={colors.primary}
+                    />
                   </TouchableOpacity>
                 )}
               </View>
@@ -264,8 +276,14 @@ export default function EditEventScheduleScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.saveButton} onPress={onSave} disabled={saving}>
-            <Text style={styles.saveButtonText}>{saving ? "Saving…" : "Save"}</Text>
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={onSave}
+            disabled={saving}
+          >
+            <Text style={styles.saveButtonText}>
+              {saving ? "Saving…" : "Save"}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
 

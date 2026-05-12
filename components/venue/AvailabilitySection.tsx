@@ -35,7 +35,12 @@ type AvailabilityRow = {
   band_positions: string[] | null;
   band_positions_other: string[] | null;
 
-  availability_status: "available" | "provisional" | "unavailable" | "dep" | null;
+  availability_status:
+    | "available"
+    | "provisional"
+    | "unavailable"
+    | "dep"
+    | null;
   availability_label: AvailabilityLabel;
   notes?: string | null;
 };
@@ -115,7 +120,9 @@ export default function AvailabilitySection({
         else if (s === "unavailable") unavailable += 1;
       }
 
-      const awaiting_count = list.filter((r) => r.availability_label === "awaiting").length;
+      const awaiting_count = list.filter(
+        (r) => r.availability_label === "awaiting",
+      ).length;
 
       return {
         event_id,
@@ -126,7 +133,7 @@ export default function AvailabilitySection({
         unavailable_count: unavailable,
       };
     },
-    []
+    [],
   );
 
   const load = useCallback(async () => {
@@ -150,7 +157,7 @@ export default function AvailabilitySection({
           band_positions,
           band_positions_other
         )
-      `
+      `,
       )
       .eq("event_id", eventId);
 
@@ -191,7 +198,9 @@ export default function AvailabilitySection({
           notes: r.notes ?? null,
         };
       })
-      .sort((a, b) => (a.display_name ?? "").localeCompare(b.display_name ?? ""));
+      .sort((a, b) =>
+        (a.display_name ?? "").localeCompare(b.display_name ?? ""),
+      );
 
     setRows(mapped);
     setSummary(computeSummary(eventId, mapped));
@@ -205,64 +214,71 @@ export default function AvailabilitySection({
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [load])
+    }, [load]),
   );
 
   const musicians = useMemo(
     () => rows.filter((r) => r.member_type === "musician"),
-    [rows]
+    [rows],
   );
-  const crew = useMemo(() => rows.filter((r) => r.member_type === "crew"), [rows]);
+  const crew = useMemo(
+    () => rows.filter((r) => r.member_type === "crew"),
+    [rows],
+  );
 
   const currentRow = useMemo(
     () => rows.find((r) => r.member_id === memberId) ?? null,
-    [rows, memberId]
+    [rows, memberId],
   );
 
-  const currentLabel: AvailabilityLabel = currentRow?.availability_label ?? "awaiting";
+  const currentLabel: AvailabilityLabel =
+    currentRow?.availability_label ?? "awaiting";
 
-async function sendAvailabilityReminder() {
-  try {
-    const awaitingIds = rows
-      .filter((r) => r.availability_label === "awaiting")
-      .map((r) => r.member_id);
+  async function sendAvailabilityReminder() {
+    try {
+      const awaitingIds = rows
+        .filter((r) => r.availability_label === "awaiting")
+        .map((r) => r.member_id);
 
-    if (awaitingIds.length === 0) {
-      Alert.alert("No reminders needed", "Everyone has responded.");
-      return;
-    }
+      if (awaitingIds.length === 0) {
+        Alert.alert("No reminders needed", "Everyone has responded.");
+        return;
+      }
 
-    const title = "Availability reminder";
+      const title = "Availability reminder";
 
-    const body = `Please confirm availability for ${venueName ?? "this event"}${
-  eventDate ? ` on ${eventDate}` : ""
-}.`;
+      const body = `Please confirm availability for ${venueName ?? "this event"}${
+        eventDate ? ` on ${eventDate}` : ""
+      }.`;
 
-    const { error } = await supabase.functions.invoke("send-push-notification", {
-      body: {
-        user_ids: awaitingIds,
-        title,
-        body,
-        data: {
-          type: "availability_reminder",
-          event_id: eventId,
-          open: "availability",
+      const { error } = await supabase.functions.invoke(
+        "send-push-notification",
+        {
+          body: {
+            user_ids: awaitingIds,
+            title,
+            body,
+            data: {
+              type: "availability_reminder",
+              event_id: eventId,
+              open: "availability",
+            },
+          },
         },
-      },
-    });
+      );
 
-    if (error) throw error;
+      if (error) throw error;
 
-    Alert.alert(
-      "Reminder sent",
-      `Sent to ${awaitingIds.length} awaiting member${
-        awaitingIds.length === 1 ? "" : "s"
-      }.`
-    );
-  } catch (e: any) {
-    Alert.alert("Reminder failed", e?.message ?? "Please try again.");
+      Alert.alert(
+        "Reminder sent",
+        `Sent to ${awaitingIds.length} awaiting member${
+          awaitingIds.length === 1 ? "" : "s"
+        }.`,
+      );
+    } catch (e: any) {
+      Alert.alert("Reminder failed", e?.message ?? "Please try again.");
+    }
   }
-}
 
   const roleDisplay = (r: AvailabilityRow) => {
     if ((r.band_role ?? "") === "Other") return r.band_role_other ?? "Other";
@@ -284,7 +300,7 @@ async function sendAvailabilityReminder() {
           .from("event_availability")
           .upsert(
             { event_id: eventId, member_id: memberId, status: null },
-            { onConflict: "event_id,member_id" }
+            { onConflict: "event_id,member_id" },
           );
         if (error) throw error;
       } else {
@@ -292,31 +308,31 @@ async function sendAvailabilityReminder() {
           label === "available"
             ? "available"
             : label === "provisional"
-            ? "provisional"
-            : label === "unavailable"
-            ? "unavailable"
-            : label === "dep"
-            ? "dep"
-            : null;
+              ? "provisional"
+              : label === "unavailable"
+                ? "unavailable"
+                : label === "dep"
+                  ? "dep"
+                  : null;
 
         const { error } = await supabase
           .from("event_availability")
           .upsert(
             { event_id: eventId, member_id: memberId, status },
-            { onConflict: "event_id,member_id" }
+            { onConflict: "event_id,member_id" },
           );
         if (error) throw error;
       }
 
       await load();
 
-if (label === "available") {
-  Alert.alert("Availability updated", "You are marked as Available.");
-} else if (label === "provisional") {
-  Alert.alert("Availability updated", "You are marked as Provisional.");
-} else if (label === "unavailable") {
-  Alert.alert("Availability updated", "You are marked as Unavailable.");
-}
+      if (label === "available") {
+        Alert.alert("Availability updated", "You are marked as Available.");
+      } else if (label === "provisional") {
+        Alert.alert("Availability updated", "You are marked as Provisional.");
+      } else if (label === "unavailable") {
+        Alert.alert("Availability updated", "You are marked as Unavailable.");
+      }
     } catch (e: any) {
       console.log("setAvailability error", e);
       Alert.alert("Error", e?.message ?? "Failed to update availability");
@@ -332,21 +348,26 @@ if (label === "available") {
       label === "available"
         ? "#2ECC71"
         : label === "provisional"
-        ? "#F1C40F"
-        : label === "unavailable"
-        ? "#E74C3C"
-        : label === "dep"
-        ? "#5B6CFF"
-        : "#e0e0e0";
+          ? "#F1C40F"
+          : label === "unavailable"
+            ? "#E74C3C"
+            : label === "dep"
+              ? "#5B6CFF"
+              : "#e0e0e0";
 
     return (
       <Pressable
         key={label}
-        style={[styles.chip, selected ? { backgroundColor: bg, borderColor: bg } : null]}
+        style={[
+          styles.chip,
+          selected ? { backgroundColor: bg, borderColor: bg } : null,
+        ]}
         disabled={saving}
         onPress={() => setAvailability(label)}
       >
-        <Text style={[styles.chipText, selected ? { color: "#fff" } : null]}>{text}</Text>
+        <Text style={[styles.chipText, selected ? { color: "#fff" } : null]}>
+          {text}
+        </Text>
       </Pressable>
     );
   };
@@ -362,16 +383,18 @@ if (label === "available") {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <InfoCard title="Your Availability">
-  {currentLabel === "awaiting" ? (
-    <View style={styles.confirmPrompt}>
-      <Text style={styles.confirmPromptTitle}>Please confirm your availability</Text>
-      <Text style={styles.confirmPromptText}>
-        Choose Available, Provisional or Unavailable for this event.
-      </Text>
-    </View>
-  ) : null}
+        {currentLabel === "awaiting" ? (
+          <View style={styles.confirmPrompt}>
+            <Text style={styles.confirmPromptTitle}>
+              Please confirm your availability
+            </Text>
+            <Text style={styles.confirmPromptText}>
+              Choose Available, Provisional or Unavailable for this event.
+            </Text>
+          </View>
+        ) : null}
 
-  <View style={styles.badgeRow}>
+        <View style={styles.badgeRow}>
           <View style={styles.lineupBadge}>
             <Text style={styles.lineupBadgeText}>
               {hasCustomLineup ? "Custom Lineup" : "Core Band"}
@@ -379,32 +402,32 @@ if (label === "available") {
           </View>
 
           {canEdit ? (
-  <View style={styles.adminActions}>
-    <Pressable
-      onPress={() => router.push(`/events/${eventId}/lineup`)}
-      hitSlop={10}
-      style={styles.editLineupPill}
-    >
-      <Text style={styles.editLineupPillText}>Edit Lineup</Text>
-    </Pressable>
+            <View style={styles.adminActions}>
+              <Pressable
+                onPress={() => router.push(`/events/${eventId}/lineup`)}
+                hitSlop={10}
+                style={styles.editLineupPill}
+              >
+                <Text style={styles.editLineupPillText}>Edit Lineup</Text>
+              </Pressable>
 
-    <Pressable
-      onPress={sendAvailabilityReminder}
-      hitSlop={10}
-      style={styles.reminderPill}
-    >
-      <Text style={styles.reminderPillText}>Remind Awaiting</Text>
-    </Pressable>
-  </View>
-) : (
-  <View />
-)}
+              <Pressable
+                onPress={sendAvailabilityReminder}
+                hitSlop={10}
+                style={styles.reminderPill}
+              >
+                <Text style={styles.reminderPillText}>Remind Awaiting</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View />
+          )}
         </View>
 
         <View style={styles.chipRow}>
           {chip("available", "✓ Available")}
-{chip("provisional", "• Provisional")}
-{chip("unavailable", "✕ Unavailable")}
+          {chip("provisional", "• Provisional")}
+          {chip("unavailable", "✕ Unavailable")}
         </View>
 
         {saving ? <Text style={styles.saving}>Saving…</Text> : null}
@@ -412,27 +435,45 @@ if (label === "available") {
 
       <InfoCard title="Event Summary">
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryItem}>Total to respond: {summary?.total_expected ?? 0}</Text>
-          <Text style={styles.summaryItem}>Responses due: {summary?.awaiting_count ?? 0}</Text>
+          <Text style={styles.summaryItem}>
+            Total to respond: {summary?.total_expected ?? 0}
+          </Text>
+          <Text style={styles.summaryItem}>
+            Responses due: {summary?.awaiting_count ?? 0}
+          </Text>
         </View>
 
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryItem}>Available: {summary?.available_count ?? 0}</Text>
-          <Text style={styles.summaryItem}>Provisional: {summary?.provisional_count ?? 0}</Text>
-          <Text style={styles.summaryItem}>Unavailable: {summary?.unavailable_count ?? 0}</Text>
+          <Text style={styles.summaryItem}>
+            Available: {summary?.available_count ?? 0}
+          </Text>
+          <Text style={styles.summaryItem}>
+            Provisional: {summary?.provisional_count ?? 0}
+          </Text>
+          <Text style={styles.summaryItem}>
+            Unavailable: {summary?.unavailable_count ?? 0}
+          </Text>
         </View>
 
-        <Text style={styles.smallNote}>Counts are for members expected to respond.</Text>
+        <Text style={styles.smallNote}>
+          Counts are for members expected to respond.
+        </Text>
       </InfoCard>
 
       {/* MUSICIANS */}
       <InfoCard title="Musicians">
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.cell, styles.cellHeader, { flex: 1.1 }]} numberOfLines={1}>
+            <Text
+              style={[styles.cell, styles.cellHeader, { flex: 1.1 }]}
+              numberOfLines={1}
+            >
               Member
             </Text>
-            <Text style={[styles.cell, styles.cellHeader, { flex: 2.1 }]} numberOfLines={1}>
+            <Text
+              style={[styles.cell, styles.cellHeader, { flex: 2.1 }]}
+              numberOfLines={1}
+            >
               Instruments
             </Text>
 
@@ -446,7 +487,10 @@ if (label === "available") {
           {musicians.map((r) => (
             <View
               key={r.member_id}
-              style={[styles.tableRow, r.member_id === memberId ? styles.currentUserRow : null]}
+              style={[
+                styles.tableRow,
+                r.member_id === memberId ? styles.currentUserRow : null,
+              ]}
             >
               <Text style={[styles.cell, { flex: 1.1 }]} numberOfLines={1}>
                 {r.display_name ?? "Unnamed"}
@@ -457,9 +501,17 @@ if (label === "available") {
               </Text>
 
               <View style={[styles.statusCell, { width: STATUS_W }]}>
-                <View style={[styles.statusPill, { backgroundColor: statusBg(r.availability_label) }]}>
+                <View
+                  style={[
+                    styles.statusPill,
+                    { backgroundColor: statusBg(r.availability_label) },
+                  ]}
+                >
                   <Text
-                    style={[styles.statusText, { color: statusText(r.availability_label) }]}
+                    style={[
+                      styles.statusText,
+                      { color: statusText(r.availability_label) },
+                    ]}
                     numberOfLines={1}
                     ellipsizeMode="clip"
                   >
@@ -470,7 +522,9 @@ if (label === "available") {
             </View>
           ))}
 
-          {musicians.length === 0 ? <Text style={styles.empty}>No musicians found.</Text> : null}
+          {musicians.length === 0 ? (
+            <Text style={styles.empty}>No musicians found.</Text>
+          ) : null}
         </View>
       </InfoCard>
 
@@ -478,10 +532,16 @@ if (label === "available") {
       <InfoCard title="Crew">
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.cell, styles.cellHeader, { flex: 1.1 }]} numberOfLines={1}>
+            <Text
+              style={[styles.cell, styles.cellHeader, { flex: 1.1 }]}
+              numberOfLines={1}
+            >
               Member
             </Text>
-            <Text style={[styles.cell, styles.cellHeader, { flex: 2.1 }]} numberOfLines={1}>
+            <Text
+              style={[styles.cell, styles.cellHeader, { flex: 2.1 }]}
+              numberOfLines={1}
+            >
               Role
             </Text>
 
@@ -495,7 +555,10 @@ if (label === "available") {
           {crew.map((r) => (
             <View
               key={r.member_id}
-              style={[styles.tableRow, r.member_id === memberId ? styles.currentUserRow : null]}
+              style={[
+                styles.tableRow,
+                r.member_id === memberId ? styles.currentUserRow : null,
+              ]}
             >
               <Text style={[styles.cell, { flex: 1.1 }]} numberOfLines={1}>
                 {r.display_name ?? "Unnamed"}
@@ -506,9 +569,17 @@ if (label === "available") {
               </Text>
 
               <View style={[styles.statusCell, { width: STATUS_W }]}>
-                <View style={[styles.statusPill, { backgroundColor: statusBg(r.availability_label) }]}>
+                <View
+                  style={[
+                    styles.statusPill,
+                    { backgroundColor: statusBg(r.availability_label) },
+                  ]}
+                >
                   <Text
-                    style={[styles.statusText, { color: statusText(r.availability_label) }]}
+                    style={[
+                      styles.statusText,
+                      { color: statusText(r.availability_label) },
+                    ]}
                     numberOfLines={1}
                     ellipsizeMode="clip"
                   >
@@ -519,7 +590,9 @@ if (label === "available") {
             </View>
           ))}
 
-          {crew.length === 0 ? <Text style={styles.empty}>No crew found.</Text> : null}
+          {crew.length === 0 ? (
+            <Text style={styles.empty}>No crew found.</Text>
+          ) : null}
         </View>
       </InfoCard>
     </ScrollView>
@@ -558,27 +631,27 @@ const styles = StyleSheet.create({
 
   smallNote: { fontSize: 12, color: "#666", marginBottom: 10 },
 
-confirmPrompt: {
-  borderWidth: 1,
-  borderColor: "rgba(13,148,136,0.35)",
-  backgroundColor: "rgba(13,148,136,0.08)",
-  borderRadius: 12,
-  padding: 10,
-  marginBottom: 12,
-},
+  confirmPrompt: {
+    borderWidth: 1,
+    borderColor: "rgba(13,148,136,0.35)",
+    backgroundColor: "rgba(13,148,136,0.08)",
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12,
+  },
 
-confirmPromptTitle: {
-  fontSize: 14,
-  fontWeight: "900",
-  color: colors.primary,
-  marginBottom: 3,
-},
+  confirmPromptTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: colors.primary,
+    marginBottom: 3,
+  },
 
-confirmPromptText: {
-  fontSize: 12,
-  fontWeight: "700",
-  color: "#555",
-},
+  confirmPromptText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#555",
+  },
 
   badgeRow: {
     flexDirection: "row",
@@ -599,47 +672,47 @@ confirmPromptText: {
     color: colors.primary,
   },
 
-adminActions: {
-  flexDirection: "row",
-  gap: 8,
-  alignItems: "center",
-},
+  adminActions: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
 
   editLineupPill: {
-  height: 34,
-  paddingHorizontal: 12,
-  borderRadius: 10,
-  borderWidth: 1,
-  borderColor: "rgba(13,148,136,0.35)",
-  backgroundColor: "rgba(13,148,136,0.08)",
-  justifyContent: "center",
-  alignItems: "center",
-},
+    height: 34,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(13,148,136,0.35)",
+    backgroundColor: "rgba(13,148,136,0.08)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
-editLineupPillText: {
-  fontSize: 11,
-  fontWeight: "900",
-  color: colors.primary,
-  lineHeight: 14,
-},
+  editLineupPillText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: colors.primary,
+    lineHeight: 14,
+  },
 
-reminderPill: {
-  height: 34,
-  paddingHorizontal: 12,
-  borderRadius: 10,
-  borderWidth: 1,
-  borderColor: "rgba(239, 68, 68, 0.55)",
-  backgroundColor: "rgba(239, 68, 68, 0.08)",
-  justifyContent: "center",
-  alignItems: "center",
-},
+  reminderPill: {
+    height: 34,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.55)",
+    backgroundColor: "rgba(239, 68, 68, 0.08)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
-reminderPillText: {
-  fontSize: 11,
-  fontWeight: "900",
-  color: "#DC2626",
-  lineHeight: 14,
-},
+  reminderPillText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#DC2626",
+    lineHeight: 14,
+  },
 
   chipRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
   chip: {
@@ -677,7 +750,12 @@ reminderPillText: {
     backgroundColor: "#F0FAFA",
   },
 
-  cell: { paddingVertical: 10, paddingHorizontal: 8, fontSize: 13, color: "#333" },
+  cell: {
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    fontSize: 13,
+    color: "#333",
+  },
   cellHeader: { fontWeight: "800", color: "#666" },
 
   statusHeaderCell: {

@@ -49,8 +49,14 @@ export default function EventLineupScreen() {
   const [members, setMembers] = useState<BandMemberRow[]>([]);
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
 
-  const musicians = useMemo(() => members.filter((m) => m.member_type === "musician"), [members]);
-  const crew = useMemo(() => members.filter((m) => m.member_type === "crew"), [members]);
+  const musicians = useMemo(
+    () => members.filter((m) => m.member_type === "musician"),
+    [members],
+  );
+  const crew = useMemo(
+    () => members.filter((m) => m.member_type === "crew"),
+    [members],
+  );
 
   const roleDisplay = (m: BandMemberRow) => {
     if ((m.band_role ?? "") === "Other") return m.band_role_other ?? "Other";
@@ -65,7 +71,10 @@ export default function EventLineupScreen() {
 
   // Core band definition (your rule)
   const isCore = (m: BandMemberRow) =>
-    m.is_active === true && m.is_dep === false && m.member_type === "musician" && m.band_role === "Band";
+    m.is_active === true &&
+    m.is_dep === false &&
+    m.member_type === "musician" &&
+    m.band_role === "Band";
 
   async function load() {
     if (!eventId) return;
@@ -113,7 +122,7 @@ export default function EventLineupScreen() {
         is_active,
         is_dep,
         band_id
-      `
+      `,
       )
       .eq("is_active", true)
       .or(`band_id.eq.${evRow.band_id},band_id.is.null`)
@@ -153,7 +162,7 @@ export default function EventLineupScreen() {
         .from("event_availability")
         .upsert(
           { event_id: eventId, member_id: memberId, status: null },
-          { onConflict: "event_id,member_id" }
+          { onConflict: "event_id,member_id" },
         );
 
       if (error) throw error;
@@ -170,13 +179,15 @@ export default function EventLineupScreen() {
   async function removeInvite(memberId: string) {
     if (!eventId) return;
 
-    const memberName = members.find((m) => m.member_id === memberId)?.display_name ?? "this member";
+    const memberName =
+      members.find((m) => m.member_id === memberId)?.display_name ??
+      "this member";
 
     let confirmed = false;
     if (Platform.OS === "web") {
       // @ts-ignore web-only
       confirmed = window.confirm(
-        `Remove from event?\n\n${memberName} will be removed from this event and their availability will be deleted.`
+        `Remove from event?\n\n${memberName} will be removed from this event and their availability will be deleted.`,
       );
     } else {
       confirmed = await new Promise<boolean>((resolve) => {
@@ -185,8 +196,12 @@ export default function EventLineupScreen() {
           `${memberName} will be removed from this event and their availability will be deleted.`,
           [
             { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-            { text: "Remove", style: "destructive", onPress: () => resolve(true) },
-          ]
+            {
+              text: "Remove",
+              style: "destructive",
+              onPress: () => resolve(true),
+            },
+          ],
         );
       });
     }
@@ -209,7 +224,9 @@ export default function EventLineupScreen() {
 
       if (avErr) throw avErr;
       if (!deletedAvail || deletedAvail.length === 0) {
-        throw new Error("Availability row was not deleted (likely blocked by RLS).");
+        throw new Error(
+          "Availability row was not deleted (likely blocked by RLS).",
+        );
       }
 
       await load();
@@ -255,9 +272,15 @@ export default function EventLineupScreen() {
         <Pressable
           onPress={() => removeInvite(m.member_id)}
           disabled={saving}
-          style={[styles.button, styles.removeButton, saving ? styles.buttonDisabled : null]}
+          style={[
+            styles.button,
+            styles.removeButton,
+            saving ? styles.buttonDisabled : null,
+          ]}
         >
-          <Text style={[styles.buttonText, styles.removeButtonText]}>{saving ? "Removing..." : "Remove"}</Text>
+          <Text style={[styles.buttonText, styles.removeButtonText]}>
+            {saving ? "Removing..." : "Remove"}
+          </Text>
         </Pressable>
       );
     }
@@ -279,18 +302,26 @@ export default function EventLineupScreen() {
         options={{
           title: "Edit Lineup",
           headerLeft: () => (
-            <Pressable onPress={() => router.back()} hitSlop={10} style={{ paddingHorizontal: 8 }}>
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={10}
+              style={{ paddingHorizontal: 8 }}
+            >
               <Ionicons name="arrow-back-outline" size={24} color="#fff" />
             </Pressable>
           ),
         }}
       />
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+      >
         <View style={styles.cardWrap}>
           <InfoCard title="Invite Members">
             <Text style={styles.note}>
-              Invite adds them to this event and seeds availability as Awaiting. Remove reverses that.
+              Invite adds them to this event and seeds availability as Awaiting.
+              Remove reverses that.
             </Text>
           </InfoCard>
         </View>
@@ -301,12 +332,16 @@ export default function EventLineupScreen() {
               <View key={m.member_id} style={styles.row}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{m.display_name ?? "Unnamed"}</Text>
-                  <Text style={styles.sub}>{instrumentsDisplay(m) || "No instruments set"}</Text>
+                  <Text style={styles.sub}>
+                    {instrumentsDisplay(m) || "No instruments set"}
+                  </Text>
                 </View>
                 {actionButton(m)}
               </View>
             ))}
-            {musicians.length === 0 ? <Text style={styles.empty}>No musicians found.</Text> : null}
+            {musicians.length === 0 ? (
+              <Text style={styles.empty}>No musicians found.</Text>
+            ) : null}
           </InfoCard>
         </View>
 
@@ -316,12 +351,16 @@ export default function EventLineupScreen() {
               <View key={m.member_id} style={styles.row}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{m.display_name ?? "Unnamed"}</Text>
-                  <Text style={styles.sub}>{roleDisplay(m) || "No role set"}</Text>
+                  <Text style={styles.sub}>
+                    {roleDisplay(m) || "No role set"}
+                  </Text>
                 </View>
                 {actionButton(m)}
               </View>
             ))}
-            {crew.length === 0 ? <Text style={styles.empty}>No crew found.</Text> : null}
+            {crew.length === 0 ? (
+              <Text style={styles.empty}>No crew found.</Text>
+            ) : null}
           </InfoCard>
         </View>
       </ScrollView>

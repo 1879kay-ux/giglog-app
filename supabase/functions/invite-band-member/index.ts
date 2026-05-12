@@ -22,23 +22,30 @@ function normalizeEmail(email: string) {
 }
 
 function getAuthToken(req: Request) {
-  const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
+  const authHeader =
+    req.headers.get("authorization") ?? req.headers.get("Authorization");
   if (!authHeader) throw new Error("Missing authorization header");
   const [bearer, token] = authHeader.split(" ");
-  if (bearer !== "Bearer" || !token) throw new Error("Auth header must be 'Bearer {token}'");
+  if (bearer !== "Bearer" || !token)
+    throw new Error("Auth header must be 'Bearer {token}'");
   return token;
 }
 
 function makeVerifier() {
   const url = Deno.env.get("SUPABASE_URL")!;
-  const issuer = (Deno.env.get("SB_JWT_ISSUER") ?? `${url}/auth/v1`).replace(/\/+$/, "");
-  const jwks = jose.createRemoteJWKSet(new URL(`${url}/auth/v1/.well-known/jwks.json`));
+  const issuer = (Deno.env.get("SB_JWT_ISSUER") ?? `${url}/auth/v1`).replace(
+    /\/+$/,
+    "",
+  );
+  const jwks = jose.createRemoteJWKSet(
+    new URL(`${url}/auth/v1/.well-known/jwks.json`),
+  );
   return async (jwt: string) => jose.jwtVerify(jwt, jwks, { issuer });
 }
 
 async function findAuthUserIdByEmail(
   admin: ReturnType<typeof createClient>,
-  email: string
+  email: string,
 ): Promise<string | null> {
   const perPage = 1000;
   let page = 1;
@@ -59,7 +66,8 @@ async function findAuthUserIdByEmail(
 const verifySupabaseJWT = makeVerifier();
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -91,10 +99,13 @@ Deno.serve(async (req) => {
     const email = normalizeEmail(String(body.email ?? ""));
     const member_type = String(body.member_type ?? "musician").trim();
 
-    const is_active = body.is_active === undefined ? true : Boolean(body.is_active);
-    const is_admin = body.is_admin === undefined ? false : Boolean(body.is_admin);
+    const is_active =
+      body.is_active === undefined ? true : Boolean(body.is_active);
+    const is_admin =
+      body.is_admin === undefined ? false : Boolean(body.is_admin);
     const band_role = body.band_role == null ? null : String(body.band_role);
-    const band_role_other = body.band_role_other == null ? null : String(body.band_role_other);
+    const band_role_other =
+      body.band_role_other == null ? null : String(body.band_role_other);
     const is_dep = body.is_dep === undefined ? null : Boolean(body.is_dep);
 
     const band_positions = Array.isArray(body.band_positions)
@@ -105,11 +116,15 @@ Deno.serve(async (req) => {
       : undefined;
 
     if (!band_id || !display_name || !email) {
-      return json(400, { error: "band_id, display_name, and email are required" });
+      return json(400, {
+        error: "band_id, display_name, and email are required",
+      });
     }
 
     const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { authorization: `Bearer ${token}`, apikey: anonKey } },
+      global: {
+        headers: { authorization: `Bearer ${token}`, apikey: anonKey },
+      },
       auth: { persistSession: false },
     });
 
@@ -124,7 +139,11 @@ Deno.serve(async (req) => {
       .eq("auth_user_id", callerId)
       .maybeSingle();
 
-    if (permErr) return json(403, { error: "Permission check failed", details: permErr.message });
+    if (permErr)
+      return json(403, {
+        error: "Permission check failed",
+        details: permErr.message,
+      });
     if (!callerMember?.is_active || !callerMember?.is_admin) {
       return json(403, { error: "Only active band admins can invite members" });
     }
@@ -136,7 +155,8 @@ Deno.serve(async (req) => {
       .ilike("email", email)
       .maybeSingle();
 
-    if (existErr) return json(500, { error: "Lookup failed", details: existErr.message });
+    if (existErr)
+      return json(500, { error: "Lookup failed", details: existErr.message });
     if (existing?.member_id) {
       return json(200, {
         ok: true,
@@ -151,13 +171,11 @@ Deno.serve(async (req) => {
     let invite_sent = false;
     let userWasNew = false;
 
-    const { data: inviteData, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(
-      email,
-      {
+    const { data: inviteData, error: inviteErr } =
+      await adminClient.auth.admin.inviteUserByEmail(email, {
         data: { invited_to_band_id: band_id },
         redirectTo: "giglog://auth/callback",
-      }
-    );
+      });
 
     if (!inviteErr && inviteData?.user?.id) {
       auth_user_id = inviteData.user.id;
@@ -190,7 +208,8 @@ Deno.serve(async (req) => {
     };
 
     if (band_positions !== undefined) insertRow.band_positions = band_positions;
-    if (band_positions_other !== undefined) insertRow.band_positions_other = band_positions_other;
+    if (band_positions_other !== undefined)
+      insertRow.band_positions_other = band_positions_other;
 
     const { data: inserted, error: insErr } = await adminClient
       .from("band_members")
@@ -202,7 +221,10 @@ Deno.serve(async (req) => {
       if (userWasNew && auth_user_id) {
         await adminClient.auth.admin.deleteUser(auth_user_id).catch(() => {});
       }
-      return json(409, { error: "Failed to create member", details: insErr.message });
+      return json(409, {
+        error: "Failed to create member",
+        details: insErr.message,
+      });
     }
 
     return json(200, {
@@ -215,6 +237,9 @@ Deno.serve(async (req) => {
         : "User existed; membership created.",
     });
   } catch (e: any) {
-    return json(401, { error: "Unauthorized", details: String(e?.message ?? e) });
+    return json(401, {
+      error: "Unauthorized",
+      details: String(e?.message ?? e),
+    });
   }
 });

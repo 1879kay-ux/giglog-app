@@ -20,7 +20,9 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" color={color} size={size} />
+          ),
         }}
       />
 
@@ -28,7 +30,9 @@ export default function TabsLayout() {
         name="two"
         options={{
           title: "More",
-          tabBarIcon: ({ color, size }) => <Ionicons name="ellipsis-horizontal" color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="ellipsis-horizontal" color={color} size={size} />
+          ),
         }}
       />
     </Tabs>

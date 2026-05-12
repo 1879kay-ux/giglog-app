@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 export type InfoCardProps = {
   title: string;
@@ -22,20 +22,20 @@ export default function InfoCard({ title, right, children }: InfoCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 14,
     padding: 14,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 10,
   },
   title: {
     fontSize: 16,
-    fontWeight: '900',
-    color: '#111',
+    fontWeight: "900",
+    color: "#111",
   },
   right: {
     marginLeft: 12,

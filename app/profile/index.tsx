@@ -39,13 +39,18 @@ export default function ProfileScreen() {
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert("Passwords do not match", "Please retype the same password twice.");
+      Alert.alert(
+        "Passwords do not match",
+        "Please retype the same password twice.",
+      );
       return;
     }
 
     setSavingPassword(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
       if (error) throw error;
 
       setNewPassword("");
@@ -75,7 +80,9 @@ export default function ProfileScreen() {
   }
 
   const mismatch =
-    newPassword.length > 0 && confirmPassword.length > 0 && newPassword !== confirmPassword;
+    newPassword.length > 0 &&
+    confirmPassword.length > 0 &&
+    newPassword !== confirmPassword;
 
   return (
     <>
@@ -109,18 +116,20 @@ export default function ProfileScreen() {
 
       <View style={styles.container}>
         <TouchableOpacity
-  style={styles.availabilityCard}
-  onPress={() => router.push("/profile/unavailability")}
->
-  <Ionicons name="calendar-outline" size={24} color={colors.primary} />
+          style={styles.availabilityCard}
+          onPress={() => router.push("/profile/unavailability")}
+        >
+          <Ionicons name="calendar-outline" size={24} color={colors.primary} />
 
-  <View style={{ flex: 1 }}>
-    <Text style={styles.availabilityTitle}>Unavailable Periods</Text>
-    <Text style={styles.availabilitySubtitle}>Add holidays, work blocks or dates you can’t gig</Text>
-  </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.availabilityTitle}>Unavailable Periods</Text>
+            <Text style={styles.availabilitySubtitle}>
+              Add holidays, work blocks or dates you can’t gig
+            </Text>
+          </View>
 
-  <Ionicons name="chevron-forward-outline" size={22} color="#999" />
-</TouchableOpacity>
+          <Ionicons name="chevron-forward-outline" size={22} color="#999" />
+        </TouchableOpacity>
 
         <View style={styles.card}>
           <Text style={styles.label}>Change password</Text>
@@ -148,19 +157,28 @@ export default function ProfileScreen() {
             onSubmitEditing={changePassword}
           />
 
-          {mismatch ? <Text style={styles.errorText}>Passwords do not match.</Text> : null}
+          {mismatch ? (
+            <Text style={styles.errorText}>Passwords do not match.</Text>
+          ) : null}
 
           <TouchableOpacity
             onPress={() => setShowPassword((v) => !v)}
             style={styles.showBtn}
             accessibilityRole="button"
-            accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+            accessibilityLabel={
+              showPassword ? "Hide password" : "Show password"
+            }
           >
-            <Text style={styles.showBtnText}>{showPassword ? "Hide" : "Show"}</Text>
+            <Text style={styles.showBtnText}>
+              {showPassword ? "Hide" : "Show"}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.primaryBtn, savingPassword ? styles.btnDisabled : null]}
+            style={[
+              styles.primaryBtn,
+              savingPassword ? styles.btnDisabled : null,
+            ]}
             onPress={changePassword}
             disabled={savingPassword}
           >
@@ -171,7 +189,9 @@ export default function ProfileScreen() {
             )}
           </TouchableOpacity>
 
-          <Text style={styles.hint}>Tip: set this once and you can ignore email reset links.</Text>
+          <Text style={styles.hint}>
+            Tip: set this once and you can ignore email reset links.
+          </Text>
         </View>
 
         <TouchableOpacity style={styles.signOutBtn} onPress={signOut}>
@@ -215,30 +235,30 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 12,
   },
-availabilityCard: {
-  backgroundColor: "#EFFFFC",
-  borderRadius: 14,
-  padding: 16,
-  borderWidth: 1,
-  borderColor: colors.primary,
-  marginBottom: 16,
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 12,
-},
+  availabilityCard: {
+    backgroundColor: "#EFFFFC",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
 
-availabilityTitle: {
-  fontSize: 16,
-  fontWeight: "900",
-  color: "#111",
-},
+  availabilityTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#111",
+  },
 
-availabilitySubtitle: {
-  marginTop: 3,
-  fontSize: 13,
-  color: "#555",
-  fontWeight: "600",
-},
+  availabilitySubtitle: {
+    marginTop: 3,
+    fontSize: 13,
+    color: "#555",
+    fontWeight: "600",
+  },
   showBtn: {
     marginTop: 10,
     alignSelf: "flex-start",

@@ -26,7 +26,9 @@ type ScheduleSectionProps = {
 function formatTime(value?: string | null) {
   if (!value) return null;
 
-  const m = String(value).trim().match(/^(\d{1,2}):(\d{2})/);
+  const m = String(value)
+    .trim()
+    .match(/^(\d{1,2}):(\d{2})/);
   if (!m) return String(value).trim();
   const hh = m[1].padStart(2, "0");
   const mm = m[2];
@@ -81,7 +83,10 @@ export default function ScheduleSection({
             const isLast = index === timeFields.length - 1;
 
             return (
-              <View key={field.label} style={[styles.timeRow, isLast && styles.timeRowLast]}>
+              <View
+                key={field.label}
+                style={[styles.timeRow, isLast && styles.timeRowLast]}
+              >
                 <Text style={styles.label}>{field.label}</Text>
                 <Text style={styles.value}>{display}</Text>
               </View>
@@ -91,7 +96,9 @@ export default function ScheduleSection({
           <View style={styles.notesWrap}>
             <Text style={styles.notesLabel}>Schedule Notes</Text>
             <Text style={styles.notesText}>
-              {scheduleNotes && scheduleNotes.trim() ? scheduleNotes.trim() : "—"}
+              {scheduleNotes && scheduleNotes.trim()
+                ? scheduleNotes.trim()
+                : "—"}
             </Text>
           </View>
         </InfoCard>

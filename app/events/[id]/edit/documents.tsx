@@ -49,7 +49,7 @@ async function confirmDelete(message: string) {
   if (Platform.OS === "web") {
     return window.confirm(message);
   }
-  
+
   return new Promise<boolean>((resolve) => {
     Alert.alert("Confirm delete", message, [
       { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
@@ -62,7 +62,7 @@ async function pickDocType(): Promise<EventDocType | null> {
   if (Platform.OS === "web") {
     const selected = window.prompt(
       "Document type: tech, rider, setlist, contracts, other",
-      "other"
+      "other",
     );
 
     if (!selected) return null;
@@ -109,7 +109,9 @@ export default function EditEventDocumentsScreen() {
 
     const { data, error } = await supabase
       .from("event_documents")
-      .select("doc_id,title,doc_type,storage_bucket,storage_path,mime_type,size_bytes,created_at")
+      .select(
+        "doc_id,title,doc_type,storage_bucket,storage_path,mime_type,size_bytes,created_at",
+      )
       .eq("event_id", id)
       .order("created_at", { ascending: false });
 
@@ -144,15 +146,15 @@ export default function EditEventDocumentsScreen() {
 
       const filename = sanitizeFilename(file.name ?? "document");
 
-const selectedDocType = await pickDocType();
+      const selectedDocType = await pickDocType();
 
-if (!selectedDocType) {
-  setUploading(false);
-  return;
-}
+      if (!selectedDocType) {
+        setUploading(false);
+        return;
+      }
 
-const bucket = "event-docs";
-const storagePath = `events/${id}/${Date.now()}-${filename}`;
+      const bucket = "event-docs";
+      const storagePath = `events/${id}/${Date.now()}-${filename}`;
 
       const fileResponse = await fetch(file.uri);
       const arrayBuffer = await fileResponse.arrayBuffer();
@@ -161,57 +163,60 @@ const storagePath = `events/${id}/${Date.now()}-${filename}`;
         throw new Error("Selected file is empty");
       }
 
-      const { error: uploadErr } = await supabase.storage.from(bucket).upload(storagePath, arrayBuffer, {
-        contentType: file.mimeType ?? undefined,
-        upsert: false,
-      });
+      const { error: uploadErr } = await supabase.storage
+        .from(bucket)
+        .upload(storagePath, arrayBuffer, {
+          contentType: file.mimeType ?? undefined,
+          upsert: false,
+        });
       if (uploadErr) throw uploadErr;
 
-      const { error: insertErr } = await supabase.from("event_documents").insert({
-  event_id: id,
-  title: file.name ?? "Document",
-  doc_type: selectedDocType,
-  storage_bucket: bucket,
-  storage_path: storagePath,
-  mime_type: file.mimeType ?? null,
-  size_bytes: arrayBuffer.byteLength,
-  uploaded_by_member_id: null,
-});
-if (insertErr) throw insertErr;
+      const { error: insertErr } = await supabase
+        .from("event_documents")
+        .insert({
+          event_id: id,
+          title: file.name ?? "Document",
+          doc_type: selectedDocType,
+          storage_bucket: bucket,
+          storage_path: storagePath,
+          mime_type: file.mimeType ?? null,
+          size_bytes: arrayBuffer.byteLength,
+          uploaded_by_member_id: null,
+        });
+      if (insertErr) throw insertErr;
 
-const { data: eventInfo } = await supabase
-  .from("events")
-  .select("event_date,event_type,venues(event_venue_name,city)")
-  .eq("event_id", id)
-  .single();
+      const { data: eventInfo } = await supabase
+        .from("events")
+        .select("event_date,event_type,venues(event_venue_name,city)")
+        .eq("event_id", id)
+        .single();
 
-const venueName =
-  (eventInfo as any)?.venues?.event_venue_name ?? "Unknown venue";
+      const venueName =
+        (eventInfo as any)?.venues?.event_venue_name ?? "Unknown venue";
 
-const eventLabel = eventInfo
-  ? `${eventInfo.event_type ?? "Event"} · ${venueName} · ${eventInfo.event_date}`
-  : "event";
+      const eventLabel = eventInfo
+        ? `${eventInfo.event_type ?? "Event"} · ${venueName} · ${eventInfo.event_date}`
+        : "event";
 
-try {
+      try {
+        await supabase.functions.invoke("send-push-notification", {
+          body: {
+            title: "GigLog document added",
+            body: `${selectedDocType.charAt(0).toUpperCase() + selectedDocType.slice(1)}: ${
+              file.name ?? "A document"
+            } has been added to ${eventLabel}.`,
+            data: {
+              type: "event_document_added",
+              event_id: id,
+            },
+          },
+        });
+      } catch (notifyError) {
+        console.log("Document push notification error:", notifyError);
+      }
 
-  await supabase.functions.invoke("send-push-notification", {
-    body: {
-      title: "GigLog document added",
-      body: `${selectedDocType.charAt(0).toUpperCase() + selectedDocType.slice(1)}: ${
-  file.name ?? "A document"
-} has been added to ${eventLabel}.`,
-      data: {
-        type: "event_document_added",
-        event_id: id,
-      },
-    },
-  });
-} catch (notifyError) {
-  console.log("Document push notification error:", notifyError);
-}
-
-setUploading(false);
-await loadDocs();
+      setUploading(false);
+      await loadDocs();
     } catch (e: any) {
       setUploading(false);
       Alert.alert("Upload failed", e?.message ?? "Please try again.");
@@ -221,7 +226,9 @@ await loadDocs();
   async function onDelete(doc: EventDocRow) {
     if (!id) return;
 
-    const ok = await confirmDelete(`Delete "${doc.title}"? This cannot be undone.`);
+    const ok = await confirmDelete(
+      `Delete "${doc.title}"? This cannot be undone.`,
+    );
     if (!ok) return;
 
     try {
@@ -233,7 +240,10 @@ await loadDocs();
 
       if (storageErr) throw storageErr;
 
-      const { error: dbErr } = await supabase.from("event_documents").delete().eq("doc_id", doc.doc_id);
+      const { error: dbErr } = await supabase
+        .from("event_documents")
+        .delete()
+        .eq("doc_id", doc.doc_id);
       if (dbErr) throw dbErr;
 
       setDeletingId(null);
@@ -261,7 +271,8 @@ await loadDocs();
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Upload Event Document</Text>
           <Text style={styles.cardSub}>
-            Uploads to Supabase Storage (event-docs) and creates an event_documents row.
+            Uploads to Supabase Storage (event-docs) and creates an
+            event_documents row.
           </Text>
 
           <TouchableOpacity
@@ -270,15 +281,21 @@ await loadDocs();
             disabled={uploading}
           >
             <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
-            <Text style={styles.primaryButtonText}>{uploading ? "Uploading…" : "Pick & Upload"}</Text>
+            <Text style={styles.primaryButtonText}>
+              {uploading ? "Uploading…" : "Pick & Upload"}
+            </Text>
           </TouchableOpacity>
 
-          <Text style={styles.note}>Path format enforced: events/{`{event_id}`}/…</Text>
+          <Text style={styles.note}>
+            Path format enforced: events/{`{event_id}`}/…
+          </Text>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Uploaded Documents</Text>
-          <Text style={styles.cardSub}>These are the storage-backed docs for this event.</Text>
+          <Text style={styles.cardSub}>
+            These are the storage-backed docs for this event.
+          </Text>
 
           {docs.length === 0 ? (
             <Text style={styles.emptyText}>No uploaded documents yet.</Text>
@@ -288,36 +305,53 @@ await loadDocs();
                 const last = idx === docs.length - 1;
                 const size = formatBytes(d.size_bytes);
                 return (
-                  <View key={d.doc_id} style={[styles.row, last && styles.rowLast]}>
+                  <View
+                    key={d.doc_id}
+                    style={[styles.row, last && styles.rowLast]}
+                  >
                     <View style={styles.rowLeft}>
                       <View style={styles.docIcon}>
-                        <Ionicons name="document-text-outline" size={16} color={colors.primary} />
+                        <Ionicons
+                          name="document-text-outline"
+                          size={16}
+                          color={colors.primary}
+                        />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.docTitle} numberOfLines={2}>
                           {d.title}
                         </Text>
                         <View style={styles.metaRow}>
-  {d.doc_type ? (
-    <View style={styles.docTypePill}>
-      <Text style={styles.docTypePillText}>
-        {d.doc_type.charAt(0).toUpperCase() + d.doc_type.slice(1)}
-      </Text>
-    </View>
-  ) : null}
+                          {d.doc_type ? (
+                            <View style={styles.docTypePill}>
+                              <Text style={styles.docTypePillText}>
+                                {d.doc_type.charAt(0).toUpperCase() +
+                                  d.doc_type.slice(1)}
+                              </Text>
+                            </View>
+                          ) : null}
 
-  {size ? <Text style={styles.docMeta}>{size}</Text> : null}
-</View>
+                          {size ? (
+                            <Text style={styles.docMeta}>{size}</Text>
+                          ) : null}
+                        </View>
                       </View>
                     </View>
 
                     <Pressable
                       onPress={() => onDelete(d)}
                       disabled={deletingId === d.doc_id}
-                      style={[styles.deleteBtn, deletingId === d.doc_id && { opacity: 0.6 }]}
+                      style={[
+                        styles.deleteBtn,
+                        deletingId === d.doc_id && { opacity: 0.6 },
+                      ]}
                       hitSlop={10}
                     >
-                      <Ionicons name="trash-outline" size={18} color={colors.danger ?? "#DC2626"} />
+                      <Ionicons
+                        name="trash-outline"
+                        size={18}
+                        color={colors.danger ?? "#DC2626"}
+                      />
                     </Pressable>
                   </View>
                 );
@@ -326,7 +360,10 @@ await loadDocs();
           )}
         </View>
 
-        <TouchableOpacity style={styles.doneButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.doneButton}
+          onPress={() => router.back()}
+        >
           <Text style={styles.doneButtonText}>Done</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -425,32 +462,32 @@ const styles = StyleSheet.create({
     color: "#111",
   },
   metaRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 6,
-  marginTop: 2,
-},
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 2,
+  },
 
-docTypePill: {
-  backgroundColor: "#E6F7F7",
-  borderWidth: 1,
-  borderColor: "#0F766E",
-  paddingHorizontal: 6,
-  paddingVertical: Platform.OS === "android" ? 1 : 2,
-  borderRadius: 999,
-},
+  docTypePill: {
+    backgroundColor: "#E6F7F7",
+    borderWidth: 1,
+    borderColor: "#0F766E",
+    paddingHorizontal: 6,
+    paddingVertical: Platform.OS === "android" ? 1 : 2,
+    borderRadius: 999,
+  },
 
-docTypePillText: {
-  fontSize: 10,
-  fontWeight: "800",
-  color: "#0F766E",
-  textTransform: "capitalize",
-},
+  docTypePillText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#0F766E",
+    textTransform: "capitalize",
+  },
 
-docMeta: {
-  fontSize: 12,
-  color: "#666",
-},
+  docMeta: {
+    fontSize: 12,
+    color: "#666",
+  },
   deleteBtn: {
     paddingHorizontal: 6,
     paddingVertical: 6,

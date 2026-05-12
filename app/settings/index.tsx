@@ -3,7 +3,15 @@ import { supabase } from "@/lib/supabase";
 import { pickAndUploadBandLogo } from "@/lib/uploadBandLogo";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 type AppSettingsRow = {
   id?: string;
@@ -17,7 +25,8 @@ function clean(v?: string | null) {
 }
 
 export default function SettingsScreen() {
-  const { loading, isAdmin, adminModeEnabled, setAdminModeEnabled } = useCurrentMember() as any;
+  const { loading, isAdmin, adminModeEnabled, setAdminModeEnabled } =
+    useCurrentMember() as any;
   const canAdminEdit = !!isAdmin && !!adminModeEnabled;
 
   const [saving, setSaving] = useState(false);
@@ -38,7 +47,8 @@ export default function SettingsScreen() {
 
     (async () => {
       try {
-        const { data: userData, error: userErr } = await supabase.auth.getUser();
+        const { data: userData, error: userErr } =
+          await supabase.auth.getUser();
         if (userErr) throw userErr;
 
         const user = userData.user;
@@ -52,7 +62,7 @@ export default function SettingsScreen() {
             bands:band_id (
               band_name
             )
-          `
+          `,
           )
           .eq("auth_user_id", user.id)
           .maybeSingle();
@@ -106,7 +116,7 @@ export default function SettingsScreen() {
       return () => {
         alive = false;
       };
-    }, [])
+    }, []),
   );
 
   async function toggleAdminMode(next: boolean) {
@@ -139,7 +149,10 @@ export default function SettingsScreen() {
 
       setSavingBandName(true);
 
-      const { error } = await supabase.from("bands").update({ band_name: nextName }).eq("band_id", bandId);
+      const { error } = await supabase
+        .from("bands")
+        .update({ band_name: nextName })
+        .eq("band_id", bandId);
 
       if (error) throw error;
 
@@ -163,7 +176,10 @@ export default function SettingsScreen() {
       const result = await pickAndUploadBandLogo(bandId);
       if (result.canceled) return;
 
-      const { error } = await supabase.from("bands").update({ logo_url: result.publicUrl }).eq("band_id", bandId);
+      const { error } = await supabase
+        .from("bands")
+        .update({ logo_url: result.publicUrl })
+        .eq("band_id", bandId);
 
       if (error) throw error;
 
@@ -191,7 +207,10 @@ export default function SettingsScreen() {
             value={bandName}
             onChangeText={setBandName}
             placeholder="Enter band name"
-            style={[styles.input, !canAdminEdit && { backgroundColor: "#f3f3f3" }]}
+            style={[
+              styles.input,
+              !canAdminEdit && { backgroundColor: "#f3f3f3" },
+            ]}
             autoCapitalize="words"
             editable={canAdminEdit}
           />
@@ -207,12 +226,17 @@ export default function SettingsScreen() {
                 ]}
                 disabled={savingBandName}
               >
-                <Text style={styles.secondaryBtnText}>{savingBandName ? "Saving..." : "Save band name"}</Text>
+                <Text style={styles.secondaryBtnText}>
+                  {savingBandName ? "Saving..." : "Save band name"}
+                </Text>
               </Pressable>
 
               <Pressable
                 onPress={onChangeLogo}
-                style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.85 }]}
+                style={({ pressed }) => [
+                  styles.primaryBtn,
+                  pressed && { opacity: 0.85 },
+                ]}
               >
                 <Text style={styles.primaryBtnText}>Change band logo</Text>
               </Pressable>
@@ -238,7 +262,10 @@ export default function SettingsScreen() {
           {canAdminEdit ? (
             <Pressable
               onPress={() => router.push("/settings/travel" as any)}
-              style={({ pressed }) => [styles.linkBtn, pressed && { opacity: 0.85 }]}
+              style={({ pressed }) => [
+                styles.linkBtn,
+                pressed && { opacity: 0.85 },
+              ]}
             >
               <Text style={styles.linkBtnText}>Edit default departure</Text>
             </Pressable>
@@ -257,15 +284,23 @@ export default function SettingsScreen() {
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.label}>Admin Mode</Text>
-                <Text style={styles.hint}>Show or hide edit controls. Only affects your account.</Text>
+                <Text style={styles.hint}>
+                  Show or hide edit controls. Only affects your account.
+                </Text>
               </View>
 
-              <Switch value={!!adminModeEnabled} onValueChange={toggleAdminMode} disabled={saving || loading} />
+              <Switch
+                value={!!adminModeEnabled}
+                onValueChange={toggleAdminMode}
+                disabled={saving || loading}
+              />
             </View>
 
             {!adminModeEnabled ? (
               <View style={styles.warnBox}>
-                <Text style={styles.warnText}>Admin Mode is off. Edit buttons are hidden.</Text>
+                <Text style={styles.warnText}>
+                  Admin Mode is off. Edit buttons are hidden.
+                </Text>
               </View>
             ) : null}
           </View>
@@ -319,7 +354,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#f7f7f7",
     borderRadius: 10,
   },
-  infoLabel: { fontSize: 12, fontWeight: "900", color: "#333", marginBottom: 4 },
+  infoLabel: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#333",
+    marginBottom: 4,
+  },
   infoText: { fontSize: 13, color: "#555" },
 
   secondaryBtn: {

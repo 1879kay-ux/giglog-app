@@ -6,7 +6,13 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import AvailabilityGridModal from "./AvailabilityGridModal";
 
 import {
@@ -43,7 +49,9 @@ type AvailabilityStatus = string | null;
 
 type Readiness = "green" | "amber" | "red";
 
-function normStatus(s: any): "available" | "provisional" | "unavailable" | "awaiting" {
+function normStatus(
+  s: any,
+): "available" | "provisional" | "unavailable" | "awaiting" {
   const v = String(s ?? "awaiting").toLowerCase();
   if (v === "available") return "available";
   if (v === "provisional") return "provisional";
@@ -53,7 +61,11 @@ function normStatus(s: any): "available" | "provisional" | "unavailable" | "awai
 
 function computeReadiness(
   expectedMemberIds: string[],
-  availabilityRows: { member_id: string; status: AvailabilityStatus; is_dep?: boolean }[]
+  availabilityRows: {
+    member_id: string;
+    status: AvailabilityStatus;
+    is_dep?: boolean;
+  }[],
 ): Readiness {
   if (expectedMemberIds.length === 0) return "amber";
 
@@ -66,15 +78,18 @@ function computeReadiness(
     const status = normStatus(map.get(memberId));
 
     if (status === "unavailable") hasUnavailable = true;
-    else if (status === "awaiting" || status === "provisional") hasAwaitingOrProvisional = true;
+    else if (status === "awaiting" || status === "provisional")
+      hasAwaitingOrProvisional = true;
   }
 
   const hasAvailableDep = availabilityRows.some(
-    (r) => r.is_dep && normStatus(r.status) === "available"
+    (r) => r.is_dep && normStatus(r.status) === "available",
   );
 
-  if (hasUnavailable && hasAvailableDep && !hasAwaitingOrProvisional) return "green";
-  if (hasUnavailable && hasAvailableDep && hasAwaitingOrProvisional) return "amber";
+  if (hasUnavailable && hasAvailableDep && !hasAwaitingOrProvisional)
+    return "green";
+  if (hasUnavailable && hasAvailableDep && hasAwaitingOrProvisional)
+    return "amber";
   if (hasUnavailable) return "red";
   if (hasAwaitingOrProvisional) return "amber";
   return "green";
@@ -111,223 +126,268 @@ export default function EventsListScreen() {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [eventsMode, setEventsMode] = useState<"upcoming" | "archived">("upcoming");
+  const [eventsMode, setEventsMode] = useState<"upcoming" | "archived">(
+    "upcoming",
+  );
   const [needsAvailabilityOnly, setNeedsAvailabilityOnly] = useState(false);
-const [availabilityConflictOnly, setAvailabilityConflictOnly] = useState(false);
-const [gridOpen, setGridOpen] = useState(false);
-  const [readinessByEventId, setReadinessByEventId] = useState<Record<string, Readiness>>({});
+  const [availabilityConflictOnly, setAvailabilityConflictOnly] =
+    useState(false);
+  const [gridOpen, setGridOpen] = useState(false);
+  const [readinessByEventId, setReadinessByEventId] = useState<
+    Record<string, Readiness>
+  >({});
   const listRef = useRef<FlatList<EventRow>>(null);
 
   const [bandName, setBandName] = useState<string>("");
 
-  const [needsResponseByEventId, setNeedsResponseByEventId] = useState<Record<string, boolean>>(
-  {}
-);
-const [availabilityConflictByEventId, setAvailabilityConflictByEventId] = useState<Record<string, boolean>>({});
+  const [needsResponseByEventId, setNeedsResponseByEventId] = useState<
+    Record<string, boolean>
+  >({});
+  const [availabilityConflictByEventId, setAvailabilityConflictByEventId] =
+    useState<Record<string, boolean>>({});
 
   const todayLondon = useMemo(() => getTodayLondonYYYYMMDD(), []);
 
-  const loadEvents = useCallback(async (showLoading = true) => {
-    if (showLoading) setLoading(true);
+  const loadEvents = useCallback(
+    async (showLoading = true) => {
+      if (showLoading) setLoading(true);
 
-    const { data: s } = await supabase.auth.getSession();
-    console.log("SESSION USER ID", s?.session?.user?.id, "EMAIL", s?.session?.user?.email);
+      const { data: s } = await supabase.auth.getSession();
+      console.log(
+        "SESSION USER ID",
+        s?.session?.user?.id,
+        "EMAIL",
+        s?.session?.user?.email,
+      );
 
-    // NOTE: do NOT embed venues here; if venues RLS blocks SELECT, PostgREST will error and return 0 events.
-    let q = supabase
-      .from("events")
-      .select(`
+      // NOTE: do NOT embed venues here; if venues RLS blocks SELECT, PostgREST will error and return 0 events.
+      let q = supabase
+        .from("events")
+        .select(
+          `
         event_id,
         event_date,
         event_status,
         event_type,
         venue_id
-      `)
-      .neq("event_status", "Deleted");
+      `,
+        )
+        .neq("event_status", "Deleted");
 
-    if (eventsMode === "upcoming") {
-      q = q.gte("event_date", todayLondon).order("event_date", { ascending: true });
-    } else {
-      q = q.lt("event_date", todayLondon).order("event_date", { ascending: false });
-    }
-
-    const { data, error } = await q;
-
-    if (error) {
-      console.log("events list load error", error);
-      setEvents([]);
-setReadinessByEventId({});
-setNeedsResponseByEventId({});
-setAvailabilityConflictByEventId({});
-setLoading(false);
-      return;
-    }
-
-    const baseEvents = data ? (data as unknown as EventRow[]) : [];
-
-    // Hydrate venue name/city best-effort (ignore failures, still show events)
-    const venueIds = Array.from(
-      new Set(baseEvents.map((e) => e.venue_id).filter(Boolean) as string[])
-    );
-
-    let venuesById: Record<string, { event_venue_name: string | null; city: string | null }> = {};
-    if (venueIds.length > 0) {
-      const { data: vData, error: vErr } = await supabase
-        .from("venues")
-        .select("venue_id,event_venue_name,city")
-        .in("venue_id", venueIds);
-
-      if (vErr) {
-        console.log("venues hydrate error (ignored)", vErr);
+      if (eventsMode === "upcoming") {
+        q = q
+          .gte("event_date", todayLondon)
+          .order("event_date", { ascending: true });
       } else {
-        for (const v of (vData ?? []) as any[]) {
-          if (!v?.venue_id) continue;
-          venuesById[v.venue_id] = {
-            event_venue_name: v.event_venue_name ?? null,
-            city: v.city ?? null,
-          };
+        q = q
+          .lt("event_date", todayLondon)
+          .order("event_date", { ascending: false });
+      }
+
+      const { data, error } = await q;
+
+      if (error) {
+        console.log("events list load error", error);
+        setEvents([]);
+        setReadinessByEventId({});
+        setNeedsResponseByEventId({});
+        setAvailabilityConflictByEventId({});
+        setLoading(false);
+        return;
+      }
+
+      const baseEvents = data ? (data as unknown as EventRow[]) : [];
+
+      // Hydrate venue name/city best-effort (ignore failures, still show events)
+      const venueIds = Array.from(
+        new Set(baseEvents.map((e) => e.venue_id).filter(Boolean) as string[]),
+      );
+
+      let venuesById: Record<
+        string,
+        { event_venue_name: string | null; city: string | null }
+      > = {};
+      if (venueIds.length > 0) {
+        const { data: vData, error: vErr } = await supabase
+          .from("venues")
+          .select("venue_id,event_venue_name,city")
+          .in("venue_id", venueIds);
+
+        if (vErr) {
+          console.log("venues hydrate error (ignored)", vErr);
+        } else {
+          for (const v of (vData ?? []) as any[]) {
+            if (!v?.venue_id) continue;
+            venuesById[v.venue_id] = {
+              event_venue_name: v.event_venue_name ?? null,
+              city: v.city ?? null,
+            };
+          }
         }
       }
-    }
 
-    const nextEvents = baseEvents.map((e) => ({
-      ...e,
-      venues: e.venue_id ? venuesById[e.venue_id] ?? null : null,
-    }));
+      const nextEvents = baseEvents.map((e) => ({
+        ...e,
+        venues: e.venue_id ? (venuesById[e.venue_id] ?? null) : null,
+      }));
 
-    setEvents(nextEvents);
+      setEvents(nextEvents);
 
-    // --- Readiness dots (expected lineup only) ---
-    try {
-      const eventIds = nextEvents.map((e) => e.event_id);
-      if (eventIds.length === 0) {
+      // --- Readiness dots (expected lineup only) ---
+      try {
+        const eventIds = nextEvents.map((e) => e.event_id);
+        if (eventIds.length === 0) {
+          setReadinessByEventId({});
+        } else {
+          const { data: coreData } = await supabase
+            .from("band_members")
+            .select("member_id")
+            .eq("is_active", true)
+            .eq("is_dep", false)
+            .eq("band_role", "Band")
+            .eq("member_type", "musician");
+
+          const { data: depData } = await supabase
+            .from("band_members")
+            .select("member_id")
+            .eq("is_active", true)
+            .eq("is_dep", true);
+
+          const coreMemberIds = (coreData ?? [])
+            .map((r: any) => r.member_id)
+            .filter(Boolean);
+
+          const depMemberIds = (depData ?? [])
+            .map((r: any) => r.member_id)
+            .filter(Boolean);
+
+          const { data: emData } = await supabase
+            .from("event_members")
+            .select("event_id, member_id")
+            .in("event_id", eventIds);
+
+          const customByEventId: Record<string, string[]> = {};
+          for (const r of (emData ?? []) as any[]) {
+            if (!r?.event_id || !r?.member_id) continue;
+            (customByEventId[r.event_id] ??= []).push(r.member_id);
+          }
+
+          const hasCustomByEventId: Record<string, boolean> = {};
+          for (const id of eventIds)
+            hasCustomByEventId[id] = (customByEventId[id]?.length ?? 0) > 0;
+
+          const memberIdSet = new Set<string>([
+            ...coreMemberIds,
+            ...depMemberIds,
+          ]);
+          for (const id of eventIds) {
+            for (const mid of customByEventId[id] ?? []) memberIdSet.add(mid);
+          }
+          const memberIds = Array.from(memberIdSet);
+
+          const { data: avAllData } = await supabase
+            .from("event_availability")
+            .select("event_id, member_id, status")
+            .in("event_id", eventIds)
+            .in("member_id", memberIds);
+
+          const avByEventId: Record<
+            string,
+            {
+              member_id: string;
+              status: AvailabilityStatus;
+              is_dep?: boolean;
+            }[]
+          > = {};
+          for (const r of (avAllData ?? []) as any[]) {
+            if (!r?.event_id || !r?.member_id) continue;
+            (avByEventId[r.event_id] ??= []).push({
+              member_id: r.member_id,
+              status: r.status,
+              is_dep: depMemberIds.includes(r.member_id),
+            });
+          }
+
+          const nextReadiness: Record<string, Readiness> = {};
+          for (const id of eventIds) {
+            const expected = hasCustomByEventId[id]
+              ? (customByEventId[id] ?? [])
+              : coreMemberIds;
+            const rows = avByEventId[id] ?? [];
+            nextReadiness[id] = computeReadiness(expected, rows);
+          }
+
+          setReadinessByEventId(nextReadiness);
+        }
+      } catch (e) {
+        console.log("readiness compute error (ignored)", e);
         setReadinessByEventId({});
-      } else {
-        const { data: coreData } = await supabase
-          .from("band_members")
-          .select("member_id")
-          .eq("is_active", true)
-          .eq("is_dep", false)
-          .eq("band_role", "Band")
-          .eq("member_type", "musician");
+      }
 
-        const { data: depData } = await supabase
-          .from("band_members")
-          .select("member_id")
-          .eq("is_active", true)
-          .eq("is_dep", true);
+      if (
+        eventsMode === "upcoming" &&
+        currentMemberId &&
+        nextEvents.length > 0
+      ) {
+        const eventIds = nextEvents.map((e) => e.event_id);
 
-        const coreMemberIds = (coreData ?? [])
-          .map((r: any) => r.member_id)
-          .filter(Boolean);
-
-        const depMemberIds = (depData ?? [])
-          .map((r: any) => r.member_id)
-          .filter(Boolean);
-
-        const { data: emData } = await supabase
-          .from("event_members")
-          .select("event_id, member_id")
+        const { data: avData, error: avError } = await supabase
+          .from("event_availability")
+          .select("event_id, status")
+          .eq("member_id", currentMemberId)
           .in("event_id", eventIds);
 
-        const customByEventId: Record<string, string[]> = {};
-        for (const r of (emData ?? []) as any[]) {
-          if (!r?.event_id || !r?.member_id) continue;
-          (customByEventId[r.event_id] ??= []).push(r.member_id);
+        if (!avError && avData) {
+          const map: Record<string, boolean> = {};
+          const statusByEventId: Record<string, AvailabilityStatus> = {};
+
+          for (const row of avData as {
+            event_id: string;
+            status: AvailabilityStatus;
+          }[]) {
+            const status = row.status;
+            statusByEventId[row.event_id] = status;
+            const needs =
+              status === null || String(status).toLowerCase() === "awaiting";
+            map[row.event_id] = needs;
+          }
+
+          for (const id of eventIds) {
+            if (map[id] === undefined) map[id] = true;
+          }
+
+          setNeedsResponseByEventId(map);
+
+          const { data: unavailabilityData } = await supabase
+            .from("member_unavailability")
+            .select("start_date, end_date")
+            .eq("member_id", currentMemberId);
+
+          const conflictMap: Record<string, boolean> = {};
+          for (const e of nextEvents) {
+            const status = statusByEventId[e.event_id];
+            conflictMap[e.event_id] =
+              String(status).toLowerCase() === "available" &&
+              (unavailabilityData ?? []).some(
+                (u: any) =>
+                  u.start_date <= e.event_date && u.end_date >= e.event_date,
+              );
+          }
+
+          setAvailabilityConflictByEventId(conflictMap);
+        } else {
+          setNeedsResponseByEventId({});
+          setAvailabilityConflictByEventId({});
         }
-
-        const hasCustomByEventId: Record<string, boolean> = {};
-        for (const id of eventIds) hasCustomByEventId[id] = (customByEventId[id]?.length ?? 0) > 0;
-
-        const memberIdSet = new Set<string>([...coreMemberIds, ...depMemberIds]);
-        for (const id of eventIds) {
-          for (const mid of customByEventId[id] ?? []) memberIdSet.add(mid);
-        }
-        const memberIds = Array.from(memberIdSet);
-
-        const { data: avAllData } = await supabase
-          .from("event_availability")
-          .select("event_id, member_id, status")
-          .in("event_id", eventIds)
-          .in("member_id", memberIds);
-
-        const avByEventId: Record<string, { member_id: string; status: AvailabilityStatus; is_dep?: boolean }[]> = {};
-        for (const r of (avAllData ?? []) as any[]) {
-          if (!r?.event_id || !r?.member_id) continue;
-          (avByEventId[r.event_id] ??= []).push({
-            member_id: r.member_id,
-            status: r.status,
-            is_dep: depMemberIds.includes(r.member_id),
-          });
-        }
-
-        const nextReadiness: Record<string, Readiness> = {};
-        for (const id of eventIds) {
-          const expected = hasCustomByEventId[id] ? (customByEventId[id] ?? []) : coreMemberIds;
-          const rows = avByEventId[id] ?? [];
-          nextReadiness[id] = computeReadiness(expected, rows);
-        }
-
-        setReadinessByEventId(nextReadiness);
-      }
-    } catch (e) {
-      console.log("readiness compute error (ignored)", e);
-      setReadinessByEventId({});
-    }
-
-    if (eventsMode === "upcoming" && currentMemberId && nextEvents.length > 0) {
-      const eventIds = nextEvents.map((e) => e.event_id);
-
-      const { data: avData, error: avError } = await supabase
-        .from("event_availability")
-        .select("event_id, status")
-        .eq("member_id", currentMemberId)
-        .in("event_id", eventIds);
-
-      if (!avError && avData) {
-  const map: Record<string, boolean> = {};
-  const statusByEventId: Record<string, AvailabilityStatus> = {};
-
-  for (const row of avData as { event_id: string; status: AvailabilityStatus }[]) {
-    const status = row.status;
-    statusByEventId[row.event_id] = status;
-          const needs = status === null || String(status).toLowerCase() === "awaiting";
-          map[row.event_id] = needs;
-        }
-
-        for (const id of eventIds) {
-          if (map[id] === undefined) map[id] = true;
-        }
-
-        setNeedsResponseByEventId(map);
-
-const { data: unavailabilityData } = await supabase
-  .from("member_unavailability")
-  .select("start_date, end_date")
-  .eq("member_id", currentMemberId);
-
-const conflictMap: Record<string, boolean> = {};
-for (const e of nextEvents) {
-  const status = statusByEventId[e.event_id];
-  conflictMap[e.event_id] =
-    String(status).toLowerCase() === "available" &&
-    (unavailabilityData ?? []).some(
-      (u: any) => u.start_date <= e.event_date && u.end_date >= e.event_date
-    );
-}
-
-setAvailabilityConflictByEventId(conflictMap);
       } else {
         setNeedsResponseByEventId({});
         setAvailabilityConflictByEventId({});
       }
-    } else {
-      setNeedsResponseByEventId({});
-      setAvailabilityConflictByEventId({});
-    }
 
-    setLoading(false);
-  }, [eventsMode, todayLondon, currentMemberId]);
+      setLoading(false);
+    },
+    [eventsMode, todayLondon, currentMemberId],
+  );
 
   useEffect(() => {
     loadEvents();
@@ -336,7 +396,7 @@ setAvailabilityConflictByEventId(conflictMap);
   useFocusEffect(
     useCallback(() => {
       loadEvents(false);
-    }, [loadEvents])
+    }, [loadEvents]),
   );
 
   useEffect(() => {
@@ -368,16 +428,22 @@ setAvailabilityConflictByEventId(conflictMap);
   }
 
   const filteredEvents = events.filter((item) => {
-    if (needsAvailabilityOnly && !needsResponseByEventId[item.event_id]) return false;
-if (availabilityConflictOnly && !availabilityConflictByEventId[item.event_id]) return false;
+    if (needsAvailabilityOnly && !needsResponseByEventId[item.event_id])
+      return false;
+    if (
+      availabilityConflictOnly &&
+      !availabilityConflictByEventId[item.event_id]
+    )
+      return false;
 
-const venue = item.venues;
+    const venue = item.venues;
     const venueName = venue?.event_venue_name ?? "";
     const city = venue?.city ?? "";
     const status = item.event_status ?? "";
     const type = item.event_type ?? "";
 
-    const haystack = `${venueName} ${city} ${item.event_date} ${status} ${type}`.toLowerCase();
+    const haystack =
+      `${venueName} ${city} ${item.event_date} ${status} ${type}`.toLowerCase();
     return haystack.includes(search.toLowerCase());
   });
 
@@ -389,7 +455,9 @@ const venue = item.venues;
   useEffect(() => {
     if (loading || !savedEventsReturnEventId) return;
 
-    const index = filteredEvents.findIndex((e) => e.event_id === savedEventsReturnEventId);
+    const index = filteredEvents.findIndex(
+      (e) => e.event_id === savedEventsReturnEventId,
+    );
 
     if (index < 0 || filteredEvents.length === 0) {
       if (needsAvailabilityOnly) {
@@ -402,7 +470,7 @@ const venue = item.venues;
 
     setTimeout(() => {
       const latestIndex = filteredEventsRef.current.findIndex(
-        (e) => e.event_id === savedEventsReturnEventId
+        (e) => e.event_id === savedEventsReturnEventId,
       );
 
       if (latestIndex < 0 || filteredEventsRef.current.length === 0) {
@@ -427,14 +495,20 @@ const venue = item.venues;
   }, [needsAvailabilityOnly, loading, filteredEvents.length]);
 
   const responseRequiredCount = useMemo(() => {
-  if (eventsMode !== "upcoming") return 0;
-  return filteredEvents.reduce((acc, e) => acc + (needsResponseByEventId[e.event_id] ? 1 : 0), 0);
-}, [eventsMode, filteredEvents, needsResponseByEventId]);
+    if (eventsMode !== "upcoming") return 0;
+    return filteredEvents.reduce(
+      (acc, e) => acc + (needsResponseByEventId[e.event_id] ? 1 : 0),
+      0,
+    );
+  }, [eventsMode, filteredEvents, needsResponseByEventId]);
 
-const availabilityConflictCount = useMemo(() => {
-  if (eventsMode !== "upcoming") return 0;
-  return events.reduce((acc, e) => acc + (availabilityConflictByEventId[e.event_id] ? 1 : 0), 0);
-}, [eventsMode, events, availabilityConflictByEventId]);
+  const availabilityConflictCount = useMemo(() => {
+    if (eventsMode !== "upcoming") return 0;
+    return events.reduce(
+      (acc, e) => acc + (availabilityConflictByEventId[e.event_id] ? 1 : 0),
+      0,
+    );
+  }, [eventsMode, events, availabilityConflictByEventId]);
 
   if (loading) {
     return (
@@ -478,7 +552,14 @@ const availabilityConflictCount = useMemo(() => {
 
           headerRight: () => {
             return (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingRight: 12 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 14,
+                  paddingRight: 12,
+                }}
+              >
                 <TouchableOpacity
                   onPress={() =>
                     shareUpcomingNext6Months({
@@ -522,18 +603,34 @@ const availabilityConflictCount = useMemo(() => {
           <View style={styles.modePill}>
             <Pressable
               onPress={() => setEventsMode("upcoming")}
-              style={[styles.modeBtn, eventsMode === "upcoming" ? styles.modeBtnActive : null]}
+              style={[
+                styles.modeBtn,
+                eventsMode === "upcoming" ? styles.modeBtnActive : null,
+              ]}
             >
-              <Text style={[styles.modeText, eventsMode === "upcoming" ? styles.modeTextActive : null]}>
+              <Text
+                style={[
+                  styles.modeText,
+                  eventsMode === "upcoming" ? styles.modeTextActive : null,
+                ]}
+              >
                 Upcoming
               </Text>
             </Pressable>
 
             <Pressable
               onPress={() => setEventsMode("archived")}
-              style={[styles.modeBtn, eventsMode === "archived" ? styles.modeBtnActive : null]}
+              style={[
+                styles.modeBtn,
+                eventsMode === "archived" ? styles.modeBtnActive : null,
+              ]}
             >
-              <Text style={[styles.modeText, eventsMode === "archived" ? styles.modeTextActive : null]}>
+              <Text
+                style={[
+                  styles.modeText,
+                  eventsMode === "archived" ? styles.modeTextActive : null,
+                ]}
+              >
                 Archived
               </Text>
             </Pressable>
@@ -562,27 +659,41 @@ const availabilityConflictCount = useMemo(() => {
 
         <View style={styles.actionsRow}>
           {eventsMode === "upcoming" && availabilityConflictCount > 0 ? (
-  <Pressable
-  onPress={() => setAvailabilityConflictOnly((v) => !v)}
-  style={[styles.conflictPill, availabilityConflictOnly ? styles.conflictPillActive : null]}
->
-  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-    <Ionicons name="filter-outline" size={14} color="#B45309" />
+            <Pressable
+              onPress={() => setAvailabilityConflictOnly((v) => !v)}
+              style={[
+                styles.conflictPill,
+                availabilityConflictOnly ? styles.conflictPillActive : null,
+              ]}
+            >
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                <Ionicons name="filter-outline" size={14} color="#B45309" />
 
-    <Text style={styles.conflictPillText}>
-      {availabilityConflictCount} Availability Conflict
-    </Text>
-  </View>
-</Pressable>
-) : null}
+                <Text style={styles.conflictPillText}>
+                  {availabilityConflictCount} Availability Conflict
+                </Text>
+              </View>
+            </Pressable>
+          ) : null}
           {eventsMode === "upcoming" && responseRequiredCount > 0 ? (
             <Pressable
               onPress={() => setNeedsAvailabilityOnly((v) => !v)}
-              style={[styles.countPill, needsAvailabilityOnly ? styles.countPillActive : null]}
+              style={[
+                styles.countPill,
+                needsAvailabilityOnly ? styles.countPillActive : null,
+              ]}
             >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
                 <Ionicons
-                  name={needsAvailabilityOnly ? "close-circle-outline" : "filter-outline"}
+                  name={
+                    needsAvailabilityOnly
+                      ? "close-circle-outline"
+                      : "filter-outline"
+                  }
                   size={14}
                   color={colors.danger}
                 />
@@ -619,31 +730,48 @@ const availabilityConflictCount = useMemo(() => {
             const statusNorm = String(item.event_status ?? "").toLowerCase();
             const type = item.event_type ?? "Event";
 
-            const needsResponse = eventsMode === "upcoming" && !!needsResponseByEventId[item.event_id];
+            const needsResponse =
+              eventsMode === "upcoming" &&
+              !!needsResponseByEventId[item.event_id];
 
-const hasAvailabilityConflict =
-  eventsMode === "upcoming" && !!availabilityConflictByEventId[item.event_id];
+            const hasAvailabilityConflict =
+              eventsMode === "upcoming" &&
+              !!availabilityConflictByEventId[item.event_id];
 
-const readiness: Readiness | null =
-              statusNorm === "cancelled" ? null : readinessByEventId[item.event_id] ?? "amber";
+            const readiness: Readiness | null =
+              statusNorm === "cancelled"
+                ? null
+                : (readinessByEventId[item.event_id] ?? "amber");
 
             return (
               <TouchableOpacity
                 style={styles.eventItem}
                 onPress={() => {
                   savedEventsReturnEventId = item.event_id;
-                  router.push({ pathname: "/events/[id]", params: { id: item.event_id } });
+                  router.push({
+                    pathname: "/events/[id]",
+                    params: {
+                      id: item.event_id,
+                      ...(needsAvailabilityOnly
+                        ? { open: "availability" }
+                        : {}),
+                    },
+                  });
                 }}
               >
                 <View style={styles.eventRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.eventDate}>{formatDisplayDate(item.event_date)}</Text>
+                    <Text style={styles.eventDate}>
+                      {formatDisplayDate(item.event_date)}
+                    </Text>
 
                     <Text style={styles.eventVenue}>
                       {venueName}, {city}
                     </Text>
 
-                    {eventsMode === "archived" ? <Text style={styles.archivedBadge}>ARCHIVED</Text> : null}
+                    {eventsMode === "archived" ? (
+                      <Text style={styles.archivedBadge}>ARCHIVED</Text>
+                    ) : null}
 
                     <Text style={styles.eventMeta}>
                       {type},{" "}
@@ -664,9 +792,15 @@ const readiness: Readiness | null =
 
                   <View style={styles.rightCol}>
                     {hasAvailabilityConflict ? (
-  <Text style={styles.conflictBadgeSmall}>Availability conflict</Text>
-) : null}
-                    {needsResponse ? <Text style={styles.responseBadgeSmall}>Confirm availability</Text> : null}
+                      <Text style={styles.conflictBadgeSmall}>
+                        Availability conflict
+                      </Text>
+                    ) : null}
+                    {needsResponse ? (
+                      <Text style={styles.responseBadgeSmall}>
+                        Confirm availability
+                      </Text>
+                    ) : null}
 
                     <View style={styles.rightIcons}>
                       {readiness ? (
@@ -682,7 +816,11 @@ const readiness: Readiness | null =
                         />
                       ) : null}
 
-                      <Ionicons name="chevron-forward-outline" size={22} color="#9CA3AF" />
+                      <Ionicons
+                        name="chevron-forward-outline"
+                        size={22}
+                        color="#9CA3AF"
+                      />
                     </View>
                   </View>
                 </View>
@@ -751,7 +889,10 @@ function safeTrim(v: any) {
   return String(v ?? "").trim();
 }
 
-function buildUpcomingShareMessage(opts: { bandName?: string | null; events: EventRow[] }) {
+function buildUpcomingShareMessage(opts: {
+  bandName?: string | null;
+  events: EventRow[];
+}) {
   const today = startOfTodayLocal();
 
   const until = addMonths(today, 6);
@@ -797,9 +938,16 @@ function buildUpcomingShareMessage(opts: { bandName?: string | null; events: Eve
     const status = safeTrim(e?.event_status) || "Unknown";
 
     const statusNorm = safeTrim(e?.event_status).toLowerCase();
-    const mark = statusNorm === "provisional" ? "P" : statusNorm === "cancelled" ? "X" : "";
+    const mark =
+      statusNorm === "provisional"
+        ? "P"
+        : statusNorm === "cancelled"
+          ? "X"
+          : "";
 
-    lines.push([mark, dateText, venueName, city, status].filter(Boolean).join(" · "));
+    lines.push(
+      [mark, dateText, venueName, city, status].filter(Boolean).join(" · "),
+    );
   }
   lines.push("");
   lines.push("Shared via GigLog");
@@ -807,7 +955,10 @@ function buildUpcomingShareMessage(opts: { bandName?: string | null; events: Eve
   return lines.join("\n").trim();
 }
 
-async function shareUpcomingNext6Months(params: { bandName?: string | null; events: EventRow[] }) {
+async function shareUpcomingNext6Months(params: {
+  bandName?: string | null;
+  events: EventRow[];
+}) {
   const message = buildUpcomingShareMessage(params);
   await Share.share({ message });
 }
@@ -899,24 +1050,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
-conflictPill: {
-  borderWidth: 1,
-  borderColor: "#F59E0B",
-  backgroundColor: "rgba(245, 158, 11, 0.12)",
-  paddingVertical: 8,
-  paddingHorizontal: 10,
-  borderRadius: 10,
-},
+  conflictPill: {
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+  },
 
-conflictPillActive: {
-  borderColor: "#D97706",
-},
+  conflictPillActive: {
+    borderColor: "#D97706",
+  },
 
-conflictPillText: {
-  color: "#B45309",
-  fontSize: 12,
-  fontWeight: "700",
-},
+  conflictPillText: {
+    color: "#B45309",
+    fontSize: 12,
+    fontWeight: "700",
+  },
   archivedBadge: {
     alignSelf: "flex-start",
     fontSize: 12,
@@ -1008,19 +1159,19 @@ conflictPillText: {
     fontWeight: "600",
     textTransform: "none",
   },
-conflictBadgeSmall: {
-  alignSelf: "flex-end",
-  marginBottom: 8,
-  paddingHorizontal: 10,
-  paddingVertical: 2,
-  borderRadius: 999,
-  borderWidth: 1,
-  borderColor: "#F59E0B",
-  backgroundColor: "rgba(245, 158, 11, 0.12)",
-  color: "#B45309",
-  fontSize: 11,
-  fontWeight: "700",
-},
+  conflictBadgeSmall: {
+    alignSelf: "flex-end",
+    marginBottom: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    color: "#B45309",
+    fontSize: 11,
+    fontWeight: "700",
+  },
   readinessDot: {
     width: 8,
     height: 8,

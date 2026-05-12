@@ -43,7 +43,11 @@ const CurrentMemberContext = createContext<CurrentMember>({
   refresh: async () => {},
 });
 
-export function CurrentMemberProvider({ children }: { children: React.ReactNode }) {
+export function CurrentMemberProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [loading, setLoading] = useState(true);
 
   const [authUserId, setAuthUserId] = useState<string | null>(null);
@@ -88,7 +92,7 @@ export function CurrentMemberProvider({ children }: { children: React.ReactNode 
           "can_view_band_docs",
           "can_view_band_and_crew",
           "can_view_settings",
-        ].join(",")
+        ].join(","),
       )
       .eq("auth_user_id", authId)
       .maybeSingle();
@@ -112,16 +116,16 @@ export function CurrentMemberProvider({ children }: { children: React.ReactNode 
     }
 
     const member_id = (bm as any)?.member_id ?? null;
-const band_id = (bm as any)?.band_id ?? null;
-const admin = !!(bm as any)?.is_admin;
+    const band_id = (bm as any)?.band_id ?? null;
+    const admin = !!(bm as any)?.is_admin;
 
-setMemberId(member_id);
-setBandId(band_id);
-setIsAdmin(admin);
+    setMemberId(member_id);
+    setBandId(band_id);
+    setIsAdmin(admin);
 
-if (band_id) {
-  savePushToken(authId, band_id);
-}
+    if (band_id) {
+      savePushToken(authId, band_id);
+    }
 
     // default to true if null (safety for older rows)
     setAdminModeEnabledState((bm as any)?.admin_mode_enabled ?? true);

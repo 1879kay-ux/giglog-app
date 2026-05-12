@@ -87,7 +87,12 @@ function colorForEvent(e: EventLite) {
 
   if (status.includes("confirm")) return "#16a34a";
   if (status.includes("cancel")) return "#dc2626";
-  if (status.includes("tbc") || status.includes("tent") || status.includes("offer")) return "#f59e0b";
+  if (
+    status.includes("tbc") ||
+    status.includes("tent") ||
+    status.includes("offer")
+  )
+    return "#f59e0b";
 
   return "#16a34a";
 }
@@ -106,14 +111,18 @@ export default function EventsCalendarScreen() {
 
   const todayKey = useMemo(() => ymd(new Date()), []);
   const [viewMode, setViewMode] = useState<ViewMode>("year");
-  const [anchorYear, setAnchorYear] = useState<Date>(() => new Date(new Date().getFullYear(), 0, 1));
+  const [anchorYear, setAnchorYear] = useState<Date>(
+    () => new Date(new Date().getFullYear(), 0, 1),
+  );
 
   const year = useMemo(() => anchorYear.getFullYear(), [anchorYear]);
 
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<EventLite[]>([]);
-const [unavailability, setUnavailability] = useState<UnavailabilityLite[]>([]);
-const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [unavailability, setUnavailability] = useState<UnavailabilityLite[]>(
+    [],
+  );
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [dayModalOpen, setDayModalOpen] = useState(false);
 
   const monthsInYear = useMemo(() => {
@@ -143,23 +152,24 @@ const [selectedDate, setSelectedDate] = useState<string | null>(null);
           event_venue_name,
           city
         )
-      `
+      `,
       )
       .gte("event_date", start)
       .lte("event_date", end)
-.neq("event_status", "Deleted")
-.order("event_date", { ascending: true });
+      .neq("event_status", "Deleted")
+      .order("event_date", { ascending: true });
 
     if (!error && data) setEvents(data as unknown as EventLite[]);
     else setEvents([]);
-const { data: userData } = await supabase.auth.getUser();
-const authUserId = userData?.user?.id ?? null;
+    const { data: userData } = await supabase.auth.getUser();
+    const authUserId = userData?.user?.id ?? null;
 
-if (authUserId) {
- if (authUserId) {
-    const { data: unavailableData } = await supabase
-      .from("member_unavailability")
-      .select(`
+    if (authUserId) {
+      if (authUserId) {
+        const { data: unavailableData } = await supabase
+          .from("member_unavailability")
+          .select(
+            `
   id,
   member_id,
   start_date,
@@ -167,126 +177,127 @@ if (authUserId) {
   band_members:member_id (
     display_name
   )
-`)
-      
-      .lte("start_date", end)
-      .gte("end_date", start);
+`,
+          )
 
-    setUnavailability((unavailableData ?? []) as UnavailabilityLite[]);
-  } else {
-    setUnavailability([]);
-  }
-} else {
-  setUnavailability([]);
-}
+          .lte("start_date", end)
+          .gte("end_date", start);
+
+        setUnavailability((unavailableData ?? []) as UnavailabilityLite[]);
+      } else {
+        setUnavailability([]);
+      }
+    } else {
+      setUnavailability([]);
+    }
     setLoading(false);
   }
 
   const eventsByDate = useMemo(() => {
-  const map: Record<string, EventLite[]> = {};
-  for (const e of events) {
-    if (!map[e.event_date]) map[e.event_date] = [];
-    map[e.event_date].push(e);
-  }
-  return map;
-}, [events]);
-
-const unavailableDates = useMemo(() => {
-  const set = new Set<string>();
-
-  for (const row of unavailability) {
-    const d = new Date(`${row.start_date}T12:00:00`);
-    const endDate = new Date(`${row.end_date}T12:00:00`);
-
-    while (d <= endDate) {
-      set.add(ymd(d));
-      d.setDate(d.getDate() + 1);
+    const map: Record<string, EventLite[]> = {};
+    for (const e of events) {
+      if (!map[e.event_date]) map[e.event_date] = [];
+      map[e.event_date].push(e);
     }
-  }
+    return map;
+  }, [events]);
 
-  return set;
-}, [unavailability]);
+  const unavailableDates = useMemo(() => {
+    const set = new Set<string>();
 
-const unavailableByDate = useMemo(() => {
-  const map: Record<string, string[]> = {};
+    for (const row of unavailability) {
+      const d = new Date(`${row.start_date}T12:00:00`);
+      const endDate = new Date(`${row.end_date}T12:00:00`);
 
-  for (const row of unavailability) {
-    const d = new Date(`${row.start_date}T12:00:00`);
-    const endDate = new Date(`${row.end_date}T12:00:00`);
-    const name = row.band_members?.display_name ?? "Unknown member";
-
-    while (d <= endDate) {
-      const key = ymd(d);
-      if (!map[key]) map[key] = [];
-      if (!map[key].includes(name)) map[key].push(name);
-      d.setDate(d.getDate() + 1);
+      while (d <= endDate) {
+        set.add(ymd(d));
+        d.setDate(d.getDate() + 1);
+      }
     }
-  }
 
-  return map;
-}, [unavailability]);
+    return set;
+  }, [unavailability]);
 
-const selectedEvents = useMemo(() => {
+  const unavailableByDate = useMemo(() => {
+    const map: Record<string, string[]> = {};
+
+    for (const row of unavailability) {
+      const d = new Date(`${row.start_date}T12:00:00`);
+      const endDate = new Date(`${row.end_date}T12:00:00`);
+      const name = row.band_members?.display_name ?? "Unknown member";
+
+      while (d <= endDate) {
+        const key = ymd(d);
+        if (!map[key]) map[key] = [];
+        if (!map[key].includes(name)) map[key].push(name);
+        d.setDate(d.getDate() + 1);
+      }
+    }
+
+    return map;
+  }, [unavailability]);
+
+  const selectedEvents = useMemo(() => {
     if (!selectedDate) return [];
     return eventsByDate[selectedDate] ?? [];
   }, [selectedDate, eventsByDate]);
 
   const selectedUnavailableMembers = useMemo(() => {
-  if (!selectedDate) return [];
-  return unavailableByDate[selectedDate] ?? [];
-}, [selectedDate, unavailableByDate]);
+    if (!selectedDate) return [];
+    return unavailableByDate[selectedDate] ?? [];
+  }, [selectedDate, unavailableByDate]);
 
   function onDayPress(dateKey: string) {
-  const dayEvents = eventsByDate[dateKey] ?? [];
-  const dayUnavailable = unavailableByDate[dateKey] ?? [];
+    const dayEvents = eventsByDate[dateKey] ?? [];
+    const dayUnavailable = unavailableByDate[dateKey] ?? [];
 
-  if (dayEvents.length === 0 && dayUnavailable.length === 0) return;
+    if (dayEvents.length === 0 && dayUnavailable.length === 0) return;
 
     if (dayEvents.length === 1 && dayUnavailable.length === 0) {
-  router.push(`/events/${dayEvents[0].event_id}`);
-  return;
-}
+      router.push(`/events/${dayEvents[0].event_id}`);
+      return;
+    }
 
     setSelectedDate(dateKey);
     setDayModalOpen(true);
   }
-async function shareUnavailabilitySummary() {
-  const grouped: Record<string, string[]> = {};
+  async function shareUnavailabilitySummary() {
+    const grouped: Record<string, string[]> = {};
 
-  for (const row of unavailability) {
-    const name = row.band_members?.display_name ?? "Unknown member";
+    for (const row of unavailability) {
+      const name = row.band_members?.display_name ?? "Unknown member";
 
-    if (!grouped[name]) grouped[name] = [];
+      if (!grouped[name]) grouped[name] = [];
 
-    const start = new Intl.DateTimeFormat("en-GB").format(
-  new Date(`${row.start_date}T12:00:00`)
-);
+      const start = new Intl.DateTimeFormat("en-GB").format(
+        new Date(`${row.start_date}T12:00:00`),
+      );
 
-const end = new Intl.DateTimeFormat("en-GB").format(
-  new Date(`${row.end_date}T12:00:00`)
-);
+      const end = new Intl.DateTimeFormat("en-GB").format(
+        new Date(`${row.end_date}T12:00:00`),
+      );
 
-grouped[name].push(`${start} → ${end}`);
-  }
+      grouped[name].push(`${start} → ${end}`);
+    }
 
-  let message = `GigLog Unavailability Summary – ${year}\n\n`;
+    let message = `GigLog Unavailability Summary – ${year}\n\n`;
 
-  Object.entries(grouped)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .forEach(([name, periods]) => {
-      message += `${name}\n`;
+    Object.entries(grouped)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .forEach(([name, periods]) => {
+        message += `${name}\n`;
 
-      periods.forEach((p) => {
-        message += `${p}\n`;
+        periods.forEach((p) => {
+          message += `${p}\n`;
+        });
+
+        message += `\n`;
       });
 
-      message += `\n`;
+    await Share.share({
+      message,
     });
-
-  await Share.share({
-    message,
-  });
-}
+  }
   function renderMonthGrid(monthStart: Date, compact: boolean) {
     const first = startOfMonth(monthStart);
     const last = endOfMonth(monthStart);
@@ -296,7 +307,8 @@ grouped[name].push(`${start} → ${end}`);
 
     const cells: Array<{ label: string; dateKey: string | null }> = [];
 
-    for (let i = 0; i < firstIndex; i++) cells.push({ label: "", dateKey: null });
+    for (let i = 0; i < firstIndex; i++)
+      cells.push({ label: "", dateKey: null });
 
     for (let day = 1; day <= daysInMonth; day++) {
       const d = new Date(first.getFullYear(), first.getMonth(), day);
@@ -308,7 +320,9 @@ grouped[name].push(`${start} → ${end}`);
     return (
       <View style={compact ? styles.monthCardCompact : styles.monthCard}>
         <View style={styles.monthHeaderRow}>
-          <Text style={compact ? styles.monthTitleCompact : styles.monthTitle}>{monthTitle(monthStart).toUpperCase()}</Text>
+          <Text style={compact ? styles.monthTitleCompact : styles.monthTitle}>
+            {monthTitle(monthStart).toUpperCase()}
+          </Text>
 
           {compact ? null : (
             <Pressable
@@ -339,7 +353,9 @@ grouped[name].push(`${start} → ${end}`);
             const hasEvents = !!dayEvents && dayEvents.length > 0;
             const isToday = c.dateKey && c.dateKey === todayKey;
             const isWeekend = c.dateKey ? isWeekendFromYmd(c.dateKey) : false;
-const isUnavailable = c.dateKey ? unavailableDates.has(c.dateKey) : false;
+            const isUnavailable = c.dateKey
+              ? unavailableDates.has(c.dateKey)
+              : false;
 
             return (
               <Pressable
@@ -353,23 +369,34 @@ const isUnavailable = c.dateKey ? unavailableDates.has(c.dateKey) : false;
                   compact ? styles.cellCompact : styles.cell,
                   isWeekend ? styles.cellWeekend : null,
                   isUnavailable ? styles.cellUnavailable : null,
-isToday ? styles.cellToday : null,
+                  isToday ? styles.cellToday : null,
                 ]}
               >
-                <Text style={compact ? styles.dayNumberCompact : styles.dayNumber}>{c.label}</Text>
+                <Text
+                  style={compact ? styles.dayNumberCompact : styles.dayNumber}
+                >
+                  {c.label}
+                </Text>
 
                 {/* YEAR: mini pill. MONTH: colored pills. */}
                 {compact ? (
                   hasEvents ? (
                     <View style={styles.miniPillRow}>
-                      <View style={[styles.miniPill, { backgroundColor: colorForEvent(dayEvents![0]) }]}>
+                      <View
+                        style={[
+                          styles.miniPill,
+                          { backgroundColor: colorForEvent(dayEvents![0]) },
+                        ]}
+                      >
                         <Text style={styles.miniPillText} numberOfLines={1}>
                           {pillLabel(dayEvents![0])}
                         </Text>
                       </View>
 
                       {dayEvents!.length > 1 ? (
-                        <Text style={styles.moreTextCompact}>+{dayEvents!.length - 1}</Text>
+                        <Text style={styles.moreTextCompact}>
+                          +{dayEvents!.length - 1}
+                        </Text>
                       ) : null}
                     </View>
                   ) : (
@@ -378,7 +405,13 @@ isToday ? styles.cellToday : null,
                 ) : hasEvents ? (
                   <View style={styles.pillsWrap}>
                     {dayEvents!.slice(0, 2).map((e) => (
-                      <View key={e.event_id} style={[styles.pill, { backgroundColor: colorForEvent(e) }]}>
+                      <View
+                        key={e.event_id}
+                        style={[
+                          styles.pill,
+                          { backgroundColor: colorForEvent(e) },
+                        ]}
+                      >
                         <Text style={styles.pillText} numberOfLines={1}>
                           {pillLabel(e)}
                         </Text>
@@ -386,7 +419,9 @@ isToday ? styles.cellToday : null,
                     ))}
 
                     {dayEvents!.length > 2 ? (
-                      <Text style={styles.morePillsText}>+{dayEvents!.length - 2}</Text>
+                      <Text style={styles.morePillsText}>
+                        +{dayEvents!.length - 2}
+                      </Text>
                     ) : null}
                   </View>
                 ) : (
@@ -431,59 +466,101 @@ isToday ? styles.cellToday : null,
           <ActivityIndicator size="large" color="#333" />
         </View>
       ) : (
-        <ScrollView style={styles.page} contentContainerStyle={{ paddingBottom: 24 }}>
+        <ScrollView
+          style={styles.page}
+          contentContainerStyle={{ paddingBottom: 24 }}
+        >
           {/* MODE + YEAR NAV */}
           <View style={styles.topRow}>
             <View style={styles.viewModePill}>
               <Pressable
                 onPress={() => setViewMode("year")}
-                style={[styles.viewModeBtn, viewMode === "year" ? styles.viewModeBtnActive : null]}
+                style={[
+                  styles.viewModeBtn,
+                  viewMode === "year" ? styles.viewModeBtnActive : null,
+                ]}
               >
-                <Text style={[styles.viewModeText, viewMode === "year" ? styles.viewModeTextActive : null]}>
+                <Text
+                  style={[
+                    styles.viewModeText,
+                    viewMode === "year" ? styles.viewModeTextActive : null,
+                  ]}
+                >
                   Year
                 </Text>
               </Pressable>
 
               <Pressable
                 onPress={() => setViewMode("month")}
-                style={[styles.viewModeBtn, viewMode === "month" ? styles.viewModeBtnActive : null]}
+                style={[
+                  styles.viewModeBtn,
+                  viewMode === "month" ? styles.viewModeBtnActive : null,
+                ]}
               >
-                <Text style={[styles.viewModeText, viewMode === "month" ? styles.viewModeTextActive : null]}>
+                <Text
+                  style={[
+                    styles.viewModeText,
+                    viewMode === "month" ? styles.viewModeTextActive : null,
+                  ]}
+                >
                   Months
                 </Text>
               </Pressable>
             </View>
 
             <View style={{ flex: 1 }} />
-<Pressable onPress={shareUnavailabilitySummary} style={styles.navBtn} hitSlop={10}>
-  <Ionicons name="share-outline" size={20} color="#111" />
-</Pressable>
+            <Pressable
+              onPress={shareUnavailabilitySummary}
+              style={styles.navBtn}
+              hitSlop={10}
+            >
+              <Ionicons name="share-outline" size={20} color="#111" />
+            </Pressable>
             <View style={styles.yearNav}>
-              <Pressable onPress={() => setAnchorYear((d) => addYears(d, -1))} style={styles.navBtn} hitSlop={10}>
+              <Pressable
+                onPress={() => setAnchorYear((d) => addYears(d, -1))}
+                style={styles.navBtn}
+                hitSlop={10}
+              >
                 <Ionicons name="chevron-back-outline" size={20} color="#111" />
               </Pressable>
 
               <Text style={styles.yearText}>{String(year)}</Text>
 
-              <Pressable onPress={() => setAnchorYear((d) => addYears(d, 1))} style={styles.navBtn} hitSlop={10}>
-                <Ionicons name="chevron-forward-outline" size={20} color="#111" />
+              <Pressable
+                onPress={() => setAnchorYear((d) => addYears(d, 1))}
+                style={styles.navBtn}
+                hitSlop={10}
+              >
+                <Ionicons
+                  name="chevron-forward-outline"
+                  size={20}
+                  color="#111"
+                />
               </Pressable>
             </View>
           </View>
 
-<View style={styles.legendRow}>
-  <Text style={styles.legendText}>
-    <Text style={{ color: "rgba(220, 38, 38, 0.55)" }}>■</Text> Band/Crew Unavailable ·{" "}
-    <Text style={{ color: "#16a34a" }}>■</Text> Event ·{" "}
-    <Text style={{ color: "#dc2626" }}>■</Text> Cancelled
-  </Text>
-</View>
+          <View style={styles.legendRow}>
+            <Text style={styles.legendText}>
+              <Text style={{ color: "rgba(220, 38, 38, 0.55)" }}>■</Text>{" "}
+              Band/Crew Unavailable ·{" "}
+              <Text style={{ color: "#16a34a" }}>■</Text> Event ·{" "}
+              <Text style={{ color: "#dc2626" }}>■</Text> Cancelled
+            </Text>
+          </View>
 
           {/* YEAR VIEW: 12 months, one screen */}
           {viewMode === "year" ? (
             <View style={styles.yearGrid}>
               {monthsInYear.map((m) => (
-                <View key={m.toISOString()} style={[styles.yearCell, { width: `${100 / columnsForYearGrid}%` as any }]}>
+                <View
+                  key={m.toISOString()}
+                  style={[
+                    styles.yearCell,
+                    { width: `${100 / columnsForYearGrid}%` as any },
+                  ]}
+                >
                   {renderMonthGrid(m, true)}
                 </View>
               ))}
@@ -507,19 +584,24 @@ isToday ? styles.cellToday : null,
         onRequestClose={() => setDayModalOpen(false)}
       >
         <View style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setDayModalOpen(false)} />
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setDayModalOpen(false)}
+          />
 
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{selectedDate ? `Events: ${selectedDate}` : "Events"}</Text>
-{selectedUnavailableMembers.length > 0 ? (
-  <View style={styles.unavailableMembersBox}>
-    <Text style={styles.unavailableMembersTitle}>Unavailable</Text>
+            <Text style={styles.modalTitle}>
+              {selectedDate ? `Events: ${selectedDate}` : "Events"}
+            </Text>
+            {selectedUnavailableMembers.length > 0 ? (
+              <View style={styles.unavailableMembersBox}>
+                <Text style={styles.unavailableMembersTitle}>Unavailable</Text>
 
-    <Text style={styles.unavailableMembersText}>
-      {selectedUnavailableMembers.join(", ")}
-    </Text>
-  </View>
-) : null}
+                <Text style={styles.unavailableMembersText}>
+                  {selectedUnavailableMembers.join(", ")}
+                </Text>
+              </View>
+            ) : null}
             {selectedEvents.map((e) => {
               const venueName = e.venues?.event_venue_name ?? "Unknown venue";
               const city = e.venues?.city ?? "";
@@ -534,7 +616,12 @@ isToday ? styles.cellToday : null,
                   }}
                   style={styles.modalRow}
                 >
-                  <View style={[styles.modalStripe, { backgroundColor: colorForEvent(e) }]} />
+                  <View
+                    style={[
+                      styles.modalStripe,
+                      { backgroundColor: colorForEvent(e) },
+                    ]}
+                  />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalVenue} numberOfLines={1}>
                       {venueName}
@@ -544,12 +631,19 @@ isToday ? styles.cellToday : null,
                       {meta}
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward-outline" size={20} color="#333" />
+                  <Ionicons
+                    name="chevron-forward-outline"
+                    size={20}
+                    color="#333"
+                  />
                 </Pressable>
               );
             })}
 
-            <Pressable onPress={() => setDayModalOpen(false)} style={styles.modalCloseBtn}>
+            <Pressable
+              onPress={() => setDayModalOpen(false)}
+              style={styles.modalCloseBtn}
+            >
               <Text style={styles.modalCloseText}>Close</Text>
             </Pressable>
           </View>
@@ -562,47 +656,47 @@ isToday ? styles.cellToday : null,
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: "#f5f5f5" },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
-legendRow: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  alignItems: "center",
-  gap: 12,
-  marginHorizontal: 12,
-  marginBottom: 8,
-},
+  legendRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 12,
+    marginBottom: 8,
+  },
 
-legendItem: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 6,
-},
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
 
-legendUnavailable: {
-  width: 14,
-  height: 14,
-  borderRadius: 4,
-  backgroundColor: "rgba(220, 38, 38, 0.12)",
-  borderWidth: 1,
-  borderColor: "#FCA5A5",
-},
+  legendUnavailable: {
+    width: 14,
+    height: 14,
+    borderRadius: 4,
+    backgroundColor: "rgba(220, 38, 38, 0.12)",
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+  },
 
-legendEvent: {
-  width: 14,
-  height: 14,
-  borderRadius: 4,
-  backgroundColor: "#16a34a",
-},
-legendCancelled: {
-  width: 14,
-  height: 14,
-  borderRadius: 4,
-  backgroundColor: "#dc2626",
-},
-legendText: {
-  fontSize: 12,
-  fontWeight: "700",
-  color: "#444",
-},
+  legendEvent: {
+    width: 14,
+    height: 14,
+    borderRadius: 4,
+    backgroundColor: "#16a34a",
+  },
+  legendCancelled: {
+    width: 14,
+    height: 14,
+    borderRadius: 4,
+    backgroundColor: "#dc2626",
+  },
+  legendText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#444",
+  },
   topRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -653,7 +747,12 @@ legendText: {
     borderWidth: 1,
     borderColor: "#eee",
   },
-  monthTitleCompact: { fontSize: 12, fontWeight: "900", color: "#111", marginBottom: 6 },
+  monthTitleCompact: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#111",
+    marginBottom: 6,
+  },
 
   monthCard: {
     backgroundColor: "#fff",
@@ -709,9 +808,8 @@ legendText: {
   cellToday: { borderWidth: 2, borderColor: colors.primary },
 
   cellUnavailable: {
-  backgroundColor: "rgba(220, 38, 38, 0.12)",
-},
-
+    backgroundColor: "rgba(220, 38, 38, 0.12)",
+  },
 
   dayNumber: { fontSize: 13, fontWeight: "900", color: "#111" },
   dayNumberCompact: { fontSize: 11, fontWeight: "900", color: "#111" },
@@ -737,7 +835,12 @@ legendText: {
     fontWeight: "900",
     textAlign: "center",
   },
-  moreTextCompact: { fontSize: 10, color: "#666", marginLeft: 1, fontWeight: "900" },
+  moreTextCompact: {
+    fontSize: 10,
+    color: "#666",
+    marginLeft: 1,
+    fontWeight: "900",
+  },
 
   // MONTH pills
   pillsWrap: {
@@ -765,27 +868,27 @@ legendText: {
     color: "#666",
   },
 
-unavailableMembersBox: {
-  borderWidth: 1,
-  borderColor: "#FCA5A5",
-  backgroundColor: "rgba(239, 68, 68, 0.08)",
-  borderRadius: 10,
-  padding: 10,
-  marginBottom: 10,
-},
+  unavailableMembersBox: {
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+    backgroundColor: "rgba(239, 68, 68, 0.08)",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+  },
 
-unavailableMembersTitle: {
-  color: "#DC2626",
-  fontWeight: "900",
-  fontSize: 12,
-  marginBottom: 4,
-},
+  unavailableMembersTitle: {
+    color: "#DC2626",
+    fontWeight: "900",
+    fontSize: 12,
+    marginBottom: 4,
+  },
 
-unavailableMembersText: {
-  color: "#7F1D1D",
-  fontWeight: "700",
-  fontSize: 13,
-},
+  unavailableMembersText: {
+    color: "#7F1D1D",
+    fontWeight: "700",
+    fontSize: 13,
+  },
 
   modalOverlay: {
     flex: 1,
@@ -798,7 +901,12 @@ unavailableMembersText: {
     borderRadius: 12,
     padding: 14,
   },
-  modalTitle: { fontSize: 14, fontWeight: "900", color: "#111", marginBottom: 10 },
+  modalTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: "#111",
+    marginBottom: 10,
+  },
 
   modalRow: {
     flexDirection: "row",

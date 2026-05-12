@@ -62,7 +62,7 @@ export const addVenue = async (venue: Venue): Promise<Venue> => {
 ------------------------------ */
 export const updateVenue = async (
   id: string,
-  updated: Venue
+  updated: Venue,
 ): Promise<Venue> => {
   const { data, error } = await supabase
     .from("venues")

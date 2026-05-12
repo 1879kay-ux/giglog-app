@@ -109,7 +109,9 @@ export default function AddBandMemberScreen() {
   }, [memberType, musicianRole, crewRole]);
 
   const toggleInstrument = (p: Instrument) => {
-    setInstruments((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
+    setInstruments((prev) =>
+      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p],
+    );
   };
 
   const addCustomInstrument = () => {
@@ -124,7 +126,8 @@ export default function AddBandMemberScreen() {
   };
 
   async function getCurrentBandId(): Promise<string | null> {
-    const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+    const { data: sessionData, error: sessionErr } =
+      await supabase.auth.getSession();
     if (sessionErr) {
       console.log("getSession error", sessionErr);
       return null;
@@ -170,25 +173,33 @@ export default function AddBandMemberScreen() {
       return;
     }
 
-    const finalMemberType: MemberType = CREW_ROLE_SET.has(role) ? "crew" : memberType;
+    const finalMemberType: MemberType = CREW_ROLE_SET.has(role)
+      ? "crew"
+      : memberType;
     const finalPositions = finalMemberType === "musician" ? instruments : [];
-    const finalPositionsOther = finalMemberType === "musician" ? customInstruments : [];
+    const finalPositionsOther =
+      finalMemberType === "musician" ? customInstruments : [];
 
     setSaving(true);
 
     try {
       const bandId = await getCurrentBandId();
       if (!bandId) {
-        Alert.alert("Error", "No band_id found for current user. Cannot create member.");
+        Alert.alert(
+          "Error",
+          "No band_id found for current user. Cannot create member.",
+        );
         return;
       }
 
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData?.session?.access_token;
-      if (!accessToken) throw new Error("No session token - please sign in again.");
+      if (!accessToken)
+        throw new Error("No session token - please sign in again.");
 
       const apikey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-      if (!apikey) throw new Error("Missing EXPO_PUBLIC_SUPABASE_ANON_KEY in app runtime");
+      if (!apikey)
+        throw new Error("Missing EXPO_PUBLIC_SUPABASE_ANON_KEY in app runtime");
 
       const url =
         `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/invite-band-member` +
@@ -233,7 +244,11 @@ export default function AddBandMemberScreen() {
       }
 
       if (!res.ok || !("ok" in data) || data.ok !== true) {
-        const msg = (data as any)?.details ?? (data as any)?.error ?? text ?? "Invite failed";
+        const msg =
+          (data as any)?.details ??
+          (data as any)?.error ??
+          text ??
+          "Invite failed";
         throw new Error(msg);
       }
 
@@ -263,7 +278,8 @@ export default function AddBandMemberScreen() {
 
       Alert.alert(
         "Invite sent",
-        data.note ?? (data.invite_sent ? "Invite email sent." : "Member created.")
+        data.note ??
+          (data.invite_sent ? "Invite email sent." : "Member created."),
       );
       router.back();
     } catch (e: any) {
@@ -288,9 +304,15 @@ export default function AddBandMemberScreen() {
       <Pressable
         onPress={props.onPress}
         disabled={props.disabled}
-        style={[styles.chip, on && styles.chipSelected, props.disabled ? { opacity: 0.5 } : null]}
+        style={[
+          styles.chip,
+          on && styles.chipSelected,
+          props.disabled ? { opacity: 0.5 } : null,
+        ]}
       >
-        <Text style={[styles.chipText, on && styles.chipTextSelected]}>{props.label}</Text>
+        <Text style={[styles.chipText, on && styles.chipTextSelected]}>
+          {props.label}
+        </Text>
       </Pressable>
     );
   };
@@ -299,220 +321,266 @@ export default function AddBandMemberScreen() {
     <>
       <Stack.Screen options={{ title: "Add Member" }} />
 
-<KeyboardAvoidingView
-  style={{ flex: 1 }}
-  behavior={Platform.OS === "ios" ? "padding" : undefined}
->
-  <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.label}>Name</Text>
-        <TextInput
-          value={displayName}
-          onChangeText={setDisplayName}
-          placeholder="e.g. Ian"
-          style={styles.input}
-        />
-
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder="e.g. ian@yourdomain.com"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          style={styles.input}
-        />
-
-        <Text style={styles.label}>Member Type</Text>
-        <View style={styles.chipWrap}>
-          {MEMBER_TYPES.map((t) => {
-            const selected = memberType === t;
-            return (
-              <Pressable
-                key={t}
-                onPress={() => {
-                  setMemberType(t);
-                  setRoleOther("");
-
-                  if (t === "musician") {
-                    setMusicianRole("Band");
-                    setCrewRole("Crew");
-                  } else {
-                    setCrewRole("Crew");
-                    setMusicianRole("Band");
-                    setInstruments([]);
-                    setCustomInstruments([]);
-                    setCustomInstrumentInput("");
-                  }
-                }}
-                style={[styles.chip, selected && styles.chipSelected]}
-              >
-                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                  {t === "musician" ? "Musician" : "Crew"}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <Text style={styles.label}>Role</Text>
-        <View style={styles.chipWrap}>
-          {rolesToRender.map((r) => {
-            const selected = selectedRole === r;
-            return (
-              <Pressable
-                key={r}
-                onPress={() => {
-                  if (memberType === "musician") setMusicianRole(r as MusicianRole);
-                  else setCrewRole(r as CrewRole);
-
-                  if (r !== "Other") setRoleOther("");
-                }}
-                style={[styles.chip, selected && styles.chipSelected]}
-              >
-                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{r}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {selectedRole === "Other" ? (
-          <>
-            <Text style={styles.label}>Role (Other)</Text>
-            <TextInput
-              value={roleOther}
-              onChangeText={setRoleOther}
-              placeholder="e.g. Playback Tech"
-              style={styles.input}
-            />
-          </>
-        ) : null}
-
-        {memberType === "musician" ? (
-          <>
-            <Text style={styles.label}>Instruments (multi-select)</Text>
-            <View style={styles.chipWrap}>
-              {INSTRUMENTS.map((p) => {
-                const selected = instruments.includes(p);
-                return (
-                  <Pressable
-                    key={p}
-                    onPress={() => toggleInstrument(p)}
-                    style={[styles.chip, selected && styles.chipSelected]}
-                  >
-                    <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{p}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <Text style={styles.label}>Custom instruments</Text>
-            <View style={styles.customRow}>
-              <TextInput
-                value={customInstrumentInput}
-                onChangeText={setCustomInstrumentInput}
-                placeholder="e.g. Percussion"
-                style={[styles.input, { flex: 1, marginTop: 0, marginBottom: 0 }]}
-              />
-              <Pressable style={styles.addButton} onPress={addCustomInstrument}>
-                <Text style={styles.addButtonText}>Add</Text>
-              </Pressable>
-            </View>
-
-            {customInstruments.length > 0 ? (
-              <View style={styles.customChipWrap}>
-                {customInstruments.map((p) => (
-                  <Pressable
-                    key={p}
-                    style={[styles.chip, { borderColor: "#009999" }]}
-                    onPress={() => removeCustomInstrument(p)}
-                  >
-                    <Text style={[styles.chipText, { color: "#009999" }]}>{p} ✕</Text>
-                  </Pressable>
-                ))}
-              </View>
-            ) : null}
-          </>
-        ) : null}
-
-        <View style={styles.toggleRow}>
-          <Pressable
-            onPress={() => setIsActive((v) => !v)}
-            style={[styles.toggle, isActive && styles.toggleOn]}
-          >
-            <Text style={[styles.toggleText, isActive && styles.toggleTextOn]}>
-              Active: {isActive ? "Yes" : "No"}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => {
-              if (!currentUserIsAdmin) return;
-              setIsAdmin((v) => !v);
-            }}
-            style={[styles.toggle, isAdmin && styles.toggleOn, !currentUserIsAdmin && { opacity: 0.5 }]}
-          >
-            <Text style={[styles.toggleText, isAdmin && styles.toggleTextOn]}>
-              Admin: {isAdmin ? "Yes" : "No"}
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* ACCESS CONTROLS */}
-        <Text style={[styles.label, { marginTop: 18 }]}>Access</Text>
-        <Text style={styles.hint}>These control which sections appear for this member.</Text>
-
-        <View style={[styles.chipWrap, { marginTop: 10 }]}>
-          <ToggleChip
-            label={`Settings: ${canViewSettings ? "On" : "Off"}`}
-            value={canViewSettings}
-            onPress={() => setCanViewSettings((v) => !v)}
-            disabled={!currentUserIsAdmin}
-          />
-          <ToggleChip
-            label={`Band & Crew: ${canViewBandAndCrew ? "On" : "Off"}`}
-            value={canViewBandAndCrew}
-            onPress={() => setCanViewBandAndCrew((v) => !v)}
-            disabled={!currentUserIsAdmin}
-          />
-          <ToggleChip
-            label={`Band Docs: ${canViewBandDocs ? "On" : "Off"}`}
-            value={canViewBandDocs}
-            onPress={() => setCanViewBandDocs((v) => !v)}
-            disabled={!currentUserIsAdmin}
-          />
-          <ToggleChip
-            label={`Finance: ${canViewFinance ? "On" : "Off"}`}
-            value={canViewFinance}
-            onPress={() => setCanViewFinance((v) => !v)}
-            disabled={!currentUserIsAdmin}
-          />
-        </View>
-
-        {!currentUserIsAdmin ? (
-          <Text style={[styles.hint, { marginTop: 8 }]}>Only admins can change access.</Text>
-        ) : null}
-
-        <Pressable
-          onPress={onSave}
-          disabled={saving || !currentUserIsAdmin}
-          style={[styles.saveButton, (saving || !currentUserIsAdmin) && { opacity: 0.7 }]}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
         >
-          {saving ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <ActivityIndicator />
-              <Text style={styles.saveButtonText}>Saving…</Text>
-            </View>
-          ) : (
-            <Text style={styles.saveButtonText}>Save & Invite</Text>
-          )}
-        </Pressable>
+          <Text style={styles.label}>Name</Text>
+          <TextInput
+            value={displayName}
+            onChangeText={setDisplayName}
+            placeholder="e.g. Ian"
+            style={styles.input}
+          />
 
-        <Text style={styles.note}>
-          Saving will create the member and send them an email invitation to join GigLog. They will
-          receive a link to activate their account.
-        </Text>
-  </ScrollView>
-</KeyboardAvoidingView>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="e.g. ian@yourdomain.com"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={styles.input}
+          />
+
+          <Text style={styles.label}>Member Type</Text>
+          <View style={styles.chipWrap}>
+            {MEMBER_TYPES.map((t) => {
+              const selected = memberType === t;
+              return (
+                <Pressable
+                  key={t}
+                  onPress={() => {
+                    setMemberType(t);
+                    setRoleOther("");
+
+                    if (t === "musician") {
+                      setMusicianRole("Band");
+                      setCrewRole("Crew");
+                    } else {
+                      setCrewRole("Crew");
+                      setMusicianRole("Band");
+                      setInstruments([]);
+                      setCustomInstruments([]);
+                      setCustomInstrumentInput("");
+                    }
+                  }}
+                  style={[styles.chip, selected && styles.chipSelected]}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selected && styles.chipTextSelected,
+                    ]}
+                  >
+                    {t === "musician" ? "Musician" : "Crew"}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.label}>Role</Text>
+          <View style={styles.chipWrap}>
+            {rolesToRender.map((r) => {
+              const selected = selectedRole === r;
+              return (
+                <Pressable
+                  key={r}
+                  onPress={() => {
+                    if (memberType === "musician")
+                      setMusicianRole(r as MusicianRole);
+                    else setCrewRole(r as CrewRole);
+
+                    if (r !== "Other") setRoleOther("");
+                  }}
+                  style={[styles.chip, selected && styles.chipSelected]}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selected && styles.chipTextSelected,
+                    ]}
+                  >
+                    {r}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {selectedRole === "Other" ? (
+            <>
+              <Text style={styles.label}>Role (Other)</Text>
+              <TextInput
+                value={roleOther}
+                onChangeText={setRoleOther}
+                placeholder="e.g. Playback Tech"
+                style={styles.input}
+              />
+            </>
+          ) : null}
+
+          {memberType === "musician" ? (
+            <>
+              <Text style={styles.label}>Instruments (multi-select)</Text>
+              <View style={styles.chipWrap}>
+                {INSTRUMENTS.map((p) => {
+                  const selected = instruments.includes(p);
+                  return (
+                    <Pressable
+                      key={p}
+                      onPress={() => toggleInstrument(p)}
+                      style={[styles.chip, selected && styles.chipSelected]}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          selected && styles.chipTextSelected,
+                        ]}
+                      >
+                        {p}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.label}>Custom instruments</Text>
+              <View style={styles.customRow}>
+                <TextInput
+                  value={customInstrumentInput}
+                  onChangeText={setCustomInstrumentInput}
+                  placeholder="e.g. Percussion"
+                  style={[
+                    styles.input,
+                    { flex: 1, marginTop: 0, marginBottom: 0 },
+                  ]}
+                />
+                <Pressable
+                  style={styles.addButton}
+                  onPress={addCustomInstrument}
+                >
+                  <Text style={styles.addButtonText}>Add</Text>
+                </Pressable>
+              </View>
+
+              {customInstruments.length > 0 ? (
+                <View style={styles.customChipWrap}>
+                  {customInstruments.map((p) => (
+                    <Pressable
+                      key={p}
+                      style={[styles.chip, { borderColor: "#009999" }]}
+                      onPress={() => removeCustomInstrument(p)}
+                    >
+                      <Text style={[styles.chipText, { color: "#009999" }]}>
+                        {p} ✕
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
+            </>
+          ) : null}
+
+          <View style={styles.toggleRow}>
+            <Pressable
+              onPress={() => setIsActive((v) => !v)}
+              style={[styles.toggle, isActive && styles.toggleOn]}
+            >
+              <Text
+                style={[styles.toggleText, isActive && styles.toggleTextOn]}
+              >
+                Active: {isActive ? "Yes" : "No"}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                if (!currentUserIsAdmin) return;
+                setIsAdmin((v) => !v);
+              }}
+              style={[
+                styles.toggle,
+                isAdmin && styles.toggleOn,
+                !currentUserIsAdmin && { opacity: 0.5 },
+              ]}
+            >
+              <Text style={[styles.toggleText, isAdmin && styles.toggleTextOn]}>
+                Admin: {isAdmin ? "Yes" : "No"}
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* ACCESS CONTROLS */}
+          <Text style={[styles.label, { marginTop: 18 }]}>Access</Text>
+          <Text style={styles.hint}>
+            These control which sections appear for this member.
+          </Text>
+
+          <View style={[styles.chipWrap, { marginTop: 10 }]}>
+            <ToggleChip
+              label={`Settings: ${canViewSettings ? "On" : "Off"}`}
+              value={canViewSettings}
+              onPress={() => setCanViewSettings((v) => !v)}
+              disabled={!currentUserIsAdmin}
+            />
+            <ToggleChip
+              label={`Band & Crew: ${canViewBandAndCrew ? "On" : "Off"}`}
+              value={canViewBandAndCrew}
+              onPress={() => setCanViewBandAndCrew((v) => !v)}
+              disabled={!currentUserIsAdmin}
+            />
+            <ToggleChip
+              label={`Band Docs: ${canViewBandDocs ? "On" : "Off"}`}
+              value={canViewBandDocs}
+              onPress={() => setCanViewBandDocs((v) => !v)}
+              disabled={!currentUserIsAdmin}
+            />
+            <ToggleChip
+              label={`Finance: ${canViewFinance ? "On" : "Off"}`}
+              value={canViewFinance}
+              onPress={() => setCanViewFinance((v) => !v)}
+              disabled={!currentUserIsAdmin}
+            />
+          </View>
+
+          {!currentUserIsAdmin ? (
+            <Text style={[styles.hint, { marginTop: 8 }]}>
+              Only admins can change access.
+            </Text>
+          ) : null}
+
+          <Pressable
+            onPress={onSave}
+            disabled={saving || !currentUserIsAdmin}
+            style={[
+              styles.saveButton,
+              (saving || !currentUserIsAdmin) && { opacity: 0.7 },
+            ]}
+          >
+            {saving ? (
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+              >
+                <ActivityIndicator />
+                <Text style={styles.saveButtonText}>Saving…</Text>
+              </View>
+            ) : (
+              <Text style={styles.saveButtonText}>Save & Invite</Text>
+            )}
+          </Pressable>
+
+          <Text style={styles.note}>
+            Saving will create the member and send them an email invitation to
+            join GigLog. They will receive a link to activate their account.
+          </Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </>
   );
 }
@@ -521,9 +589,21 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5" },
   content: { padding: 16, paddingBottom: Platform.OS === "ios" ? 180 : 140 },
 
-  label: { fontSize: 13, fontWeight: "700", color: "#333", marginTop: 12, marginBottom: 6 },
+  label: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#333",
+    marginTop: 12,
+    marginBottom: 6,
+  },
   hint: { fontSize: 12, fontWeight: "600", color: "#666" },
-  note: { marginTop: 10, fontSize: 12, fontWeight: "600", color: "#666", lineHeight: 16 },
+  note: {
+    marginTop: 10,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#666",
+    lineHeight: 16,
+  },
 
   input: {
     backgroundColor: "#fff",
@@ -557,7 +637,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   addButtonText: { color: "#fff", fontWeight: "800" },
-  customChipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
+  customChipWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 10,
+  },
 
   toggleRow: { flexDirection: "row", gap: 10, marginTop: 16 },
   toggle: {

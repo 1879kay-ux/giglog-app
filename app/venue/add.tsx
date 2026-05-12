@@ -53,7 +53,11 @@ export default function AddVenueScreen() {
         capacity_notes: venue.capacity_notes?.trim() || null,
       };
 
-      const { data, error } = await supabase.from("venues").insert(payload).select().single();
+      const { data, error } = await supabase
+        .from("venues")
+        .insert(payload)
+        .select()
+        .single();
 
       if (error) {
         console.log("❌ SUPABASE ERROR:", error);

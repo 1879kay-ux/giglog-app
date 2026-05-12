@@ -1,10 +1,15 @@
-import EditEventHeader from '@/components/events/EditEventHeader';
-import { Ionicons } from '@expo/vector-icons';
-import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import EditEventHeader from "@/components/events/EditEventHeader";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  Stack,
+  useFocusEffect,
+  useLocalSearchParams,
+  useRouter,
+} from "expo-router";
+import React, { useCallback, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-type SectionKey = 'details' | 'schedule' | 'documents' | 'finance';
+type SectionKey = "details" | "schedule" | "documents" | "finance";
 
 export default function EditEventMenuScreen() {
   const router = useRouter();
@@ -19,7 +24,7 @@ export default function EditEventMenuScreen() {
     useCallback(() => {
       if (!id) return;
       setRefreshKey((k) => k + 1);
-    }, [id])
+    }, [id]),
   );
 
   const go = (section: SectionKey) => {
@@ -29,7 +34,7 @@ export default function EditEventMenuScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Edit Event' }} />
+      <Stack.Screen options={{ title: "Edit Event" }} />
 
       {/* key forces remount so header reloads latest data */}
       {id ? <EditEventHeader key={`${id}-${refreshKey}`} eventId={id} /> : null}
@@ -37,10 +42,26 @@ export default function EditEventMenuScreen() {
       <View style={styles.container}>
         <Text style={styles.subtitle}>Choose what you want to edit</Text>
 
-        <MenuButton title="Details" icon="information-circle-outline" onPress={() => go('details')} />
-        <MenuButton title="Schedule" icon="time-outline" onPress={() => go('schedule')} />
-        <MenuButton title="Documents" icon="document-text-outline" onPress={() => go('documents')} />
-        <MenuButton title="Finance" icon="cash-outline" onPress={() => go('finance')} />
+        <MenuButton
+          title="Details"
+          icon="information-circle-outline"
+          onPress={() => go("details")}
+        />
+        <MenuButton
+          title="Schedule"
+          icon="time-outline"
+          onPress={() => go("schedule")}
+        />
+        <MenuButton
+          title="Documents"
+          icon="document-text-outline"
+          onPress={() => go("documents")}
+        />
+        <MenuButton
+          title="Finance"
+          icon="cash-outline"
+          onPress={() => go("finance")}
+        />
       </View>
     </>
   );
@@ -71,35 +92,35 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   subtitle: {
     fontSize: 14,
-    color: '#444',
+    color: "#444",
     marginBottom: 12,
   },
   button: {
-    backgroundColor: '#009999',
+    backgroundColor: "#009999",
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 12,
   },
   left: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   buttonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   chev: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
   },
 });

@@ -1,6 +1,6 @@
-import { supabase } from '@/lib/supabase';
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { supabase } from "@/lib/supabase";
+import React, { useEffect, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 type Props = { eventId: string };
 
@@ -18,11 +18,11 @@ type VenueRow = {
 
 function formatEventDate(dateString: string) {
   const d = new Date(dateString);
-  return d.toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+  return d.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
 }
 
@@ -41,9 +41,9 @@ export default function EditEventHeader({ eventId }: Props) {
       setLoading(true);
 
       const { data, error } = await supabase
-        .from('events')
-        .select('event_date,event_type,event_status,venue_id')
-        .eq('event_id', eventId)
+        .from("events")
+        .select("event_date,event_type,event_status,venue_id")
+        .eq("event_id", eventId)
         .single();
 
       if (!alive) return;
@@ -61,9 +61,9 @@ export default function EditEventHeader({ eventId }: Props) {
 
       if (row.venue_id) {
         const { data: v } = await supabase
-          .from('venues')
-          .select('event_venue_name,city')
-          .eq('venue_id', row.venue_id)
+          .from("venues")
+          .select("event_venue_name,city")
+          .eq("venue_id", row.venue_id)
           .single();
 
         if (!alive) return;
@@ -86,12 +86,16 @@ export default function EditEventHeader({ eventId }: Props) {
 
   return (
     <View style={styles.wrap}>
-      {eventDate ? <Text style={styles.date}>{formatEventDate(eventDate)}</Text> : null}
+      {eventDate ? (
+        <Text style={styles.date}>{formatEventDate(eventDate)}</Text>
+      ) : null}
       <Text style={styles.venue}>
-        {(venueName ?? 'Event')}{city ? `, ${city}` : ''}
+        {venueName ?? "Event"}
+        {city ? `, ${city}` : ""}
       </Text>
       <Text style={styles.meta}>
-        {(eventType ?? 'Event')}{eventStatus ? `, ${eventStatus}` : ''}
+        {eventType ?? "Event"}
+        {eventStatus ? `, ${eventStatus}` : ""}
       </Text>
     </View>
   );
@@ -102,27 +106,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: "#ddd",
   },
   date: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.4,
-    color: '#111',
-    textTransform: 'uppercase',
+    color: "#111",
+    textTransform: "uppercase",
     marginBottom: 4,
   },
   venue: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#111',
+    fontWeight: "800",
+    color: "#111",
     marginBottom: 2,
   },
   meta: {
     fontSize: 14,
-    color: '#444',
-    fontWeight: '600',
+    color: "#444",
+    fontWeight: "600",
   },
 });

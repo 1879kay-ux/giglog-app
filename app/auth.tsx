@@ -73,7 +73,9 @@ export default function AuthScreen() {
       if (error) throw error;
 
       setResetMode(true);
-      setStatus("Reset code sent. Check your email and enter the 6-digit code and new password.");
+      setStatus(
+        "Reset code sent. Check your email and enter the 6-digit code and new password.",
+      );
     } catch (e: any) {
       setErrorMsg(e?.message ?? "Unknown error");
     } finally {
@@ -121,7 +123,10 @@ export default function AuthScreen() {
       setResetCode("");
       setResetPassword("");
       setStatus("Password updated. You can now sign in.");
-      Alert.alert("Password updated", "You can now sign in with your new password.");
+      Alert.alert(
+        "Password updated",
+        "You can now sign in with your new password.",
+      );
     } catch (e: any) {
       setErrorMsg(e?.message ?? "Unknown error");
     } finally {
@@ -143,9 +148,14 @@ export default function AuthScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
     >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="always">
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="always"
+      >
         <View style={styles.card}>
-          <Text style={styles.title}>{resetMode ? "Reset password" : "Sign in"}</Text>
+          <Text style={styles.title}>
+            {resetMode ? "Reset password" : "Sign in"}
+          </Text>
 
           <Text style={styles.label}>Email</Text>
           <TextInput
@@ -184,10 +194,14 @@ export default function AuthScreen() {
                   onPress={() => setShowPassword((v) => !v)}
                   style={styles.showBtn}
                   accessibilityRole="button"
-                  accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                  accessibilityLabel={
+                    showPassword ? "Hide password" : "Show password"
+                  }
                   disabled={loading}
                 >
-                  <Text style={styles.showBtnText}>{showPassword ? "Hide" : "Show"}</Text>
+                  <Text style={styles.showBtnText}>
+                    {showPassword ? "Hide" : "Show"}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </>
@@ -222,10 +236,14 @@ export default function AuthScreen() {
                   onPress={() => setShowResetPassword((v) => !v)}
                   style={styles.showBtn}
                   accessibilityRole="button"
-                  accessibilityLabel={showResetPassword ? "Hide password" : "Show password"}
+                  accessibilityLabel={
+                    showResetPassword ? "Hide password" : "Show password"
+                  }
                   disabled={loading}
                 >
-                  <Text style={styles.showBtnText}>{showResetPassword ? "Hide" : "Show"}</Text>
+                  <Text style={styles.showBtnText}>
+                    {showResetPassword ? "Hide" : "Show"}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </>
@@ -236,25 +254,47 @@ export default function AuthScreen() {
 
           {!resetMode ? (
             <>
-              <TouchableOpacity style={styles.button} onPress={signInWithPassword} disabled={loading}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign in</Text>}
+              <TouchableOpacity
+                style={styles.button}
+                onPress={signInWithPassword}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Sign in</Text>
+                )}
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={sendPasswordResetCode} disabled={loading} style={styles.linkBtn}>
+              <TouchableOpacity
+                onPress={sendPasswordResetCode}
+                disabled={loading}
+                style={styles.linkBtn}
+              >
                 <Text style={styles.link}>Forgot password?</Text>
               </TouchableOpacity>
             </>
           ) : (
             <>
-              <TouchableOpacity style={styles.button} onPress={verifyCodeAndSetPassword} disabled={loading}>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={verifyCodeAndSetPassword}
+                disabled={loading}
+              >
                 {loading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.buttonText}>Verify code and update password</Text>
+                  <Text style={styles.buttonText}>
+                    Verify code and update password
+                  </Text>
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={cancelResetMode} disabled={loading} style={styles.linkBtn}>
+              <TouchableOpacity
+                onPress={cancelResetMode}
+                disabled={loading}
+                style={styles.linkBtn}
+              >
                 <Text style={styles.link}>Back to sign in</Text>
               </TouchableOpacity>
             </>
@@ -267,11 +307,22 @@ export default function AuthScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: "#fff" },
-  container: { flexGrow: 1, padding: 20, justifyContent: "center", paddingBottom: 40 },
+  container: {
+    flexGrow: 1,
+    padding: 20,
+    justifyContent: "center",
+    paddingBottom: 40,
+  },
   card: { width: "100%" },
   title: { fontSize: 22, fontWeight: "800", marginBottom: 12, color: "#111" },
 
-  label: { fontSize: 13, fontWeight: "700", color: "#444", marginTop: 10, marginBottom: 6 },
+  label: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#444",
+    marginTop: 10,
+    marginBottom: 6,
+  },
   input: {
     borderWidth: 1,
     borderColor: "#ddd",
@@ -294,8 +345,18 @@ const styles = StyleSheet.create({
   },
   showBtnText: { fontWeight: "800", color: "#009999" },
 
-  status: { marginTop: 12, color: "#666", textAlign: "center", fontWeight: "700" },
-  error: { marginTop: 12, color: "#b00020", fontWeight: "800", textAlign: "center" },
+  status: {
+    marginTop: 12,
+    color: "#666",
+    textAlign: "center",
+    fontWeight: "700",
+  },
+  error: {
+    marginTop: 12,
+    color: "#b00020",
+    fontWeight: "800",
+    textAlign: "center",
+  },
 
   button: {
     marginTop: 14,

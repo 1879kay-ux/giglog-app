@@ -21,10 +21,13 @@ export async function pickAndUploadBandLogo(bandId: string) {
   const blob = await fileResp.blob();
   const arrayBuffer = await blob.arrayBuffer();
 
-  const ext =
-    (asset.fileName?.split(".").pop() || blob.type.split("/").pop() || "jpg")
-      .toLowerCase()
-      .replace("jpeg", "jpg");
+  const ext = (
+    asset.fileName?.split(".").pop() ||
+    blob.type.split("/").pop() ||
+    "jpg"
+  )
+    .toLowerCase()
+    .replace("jpeg", "jpg");
 
   const objectPath = `${bandId}/logo.${ext}`;
 

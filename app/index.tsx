@@ -67,7 +67,7 @@ export default function HomeScreen() {
           band_name,
           logo_url
         )
-      `
+      `,
       )
       .eq("auth_user_id", userId)
       .maybeSingle();
@@ -91,7 +91,7 @@ export default function HomeScreen() {
   useFocusEffect(
     React.useCallback(() => {
       loadBandBranding();
-    }, [])
+    }, []),
   );
 
   useEffect(() => {
@@ -112,7 +112,7 @@ export default function HomeScreen() {
             event_venue_name,
             city
           )
-        `
+        `,
         )
         .gte("event_date", today)
         .neq("event_status", "Cancelled")
@@ -182,7 +182,11 @@ export default function HomeScreen() {
           <View style={styles.brandHeroAccent} />
 
           {logoUrl ? (
-            <Image source={{ uri: logoUrl }} style={styles.brandHeroImage} resizeMode="contain" />
+            <Image
+              source={{ uri: logoUrl }}
+              style={styles.brandHeroImage}
+              resizeMode="contain"
+            />
           ) : (
             <View style={styles.brandHeroFallback}>
               <Text style={styles.brandHeroFallbackText}>
@@ -202,7 +206,10 @@ export default function HomeScreen() {
         </View>
 
         <Pressable
-          style={({ pressed }) => [styles.nextEventCard, pressed ? styles.pressed : null]}
+          style={({ pressed }) => [
+            styles.nextEventCard,
+            pressed ? styles.pressed : null,
+          ]}
           onPress={() => {
             if (!nextEvent?.event_id) return;
             router.push(`/events/${nextEvent.event_id}`);
@@ -213,7 +220,9 @@ export default function HomeScreen() {
             <>
               <View style={styles.nextEventLeftAccent} />
               <View style={styles.nextEventContent}>
-                <Text style={styles.nextEventDate}>{nextEvent.event_date_label}</Text>
+                <Text style={styles.nextEventDate}>
+                  {nextEvent.event_date_label}
+                </Text>
                 <Text style={styles.nextEventVenue} numberOfLines={1}>
                   {nextEvent.venue_city_label}
                 </Text>
@@ -236,12 +245,24 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.grid}>
-          <NavTile label="Events" icon="calendar" onPress={() => router.push("/events")} />
+          <NavTile
+            label="Events"
+            icon="calendar"
+            onPress={() => router.push("/events")}
+          />
 
           {canViewBandAndCrew ? (
             <>
-              <NavTile label="Venues" icon="map-marker" onPress={() => router.push("/venue")} />
-              <NavTile label="Band & Crew" icon="users" onPress={() => router.push("/band")} />
+              <NavTile
+                label="Venues"
+                icon="map-marker"
+                onPress={() => router.push("/venue")}
+              />
+              <NavTile
+                label="Band & Crew"
+                icon="users"
+                onPress={() => router.push("/band")}
+              />
             </>
           ) : null}
 
@@ -253,7 +274,11 @@ export default function HomeScreen() {
             />
           ) : null}
 
-          <NavTile label="Profile" icon="user" onPress={() => router.push("/profile")} />
+          <NavTile
+            label="Profile"
+            icon="user"
+            onPress={() => router.push("/profile")}
+          />
         </View>
       </ScrollView>
     </>

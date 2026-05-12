@@ -6,14 +6,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface Venue {
@@ -59,7 +59,7 @@ export default function VenuesScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchVenues();
-    }, [])
+    }, []),
   );
 
   const handleVenuePress = (venueId: string) => {
@@ -67,17 +67,23 @@ export default function VenuesScreen() {
   };
 
   const filteredVenues = venues.filter((v) => {
-    const haystack = `${v.event_venue_name} ${v.city} ${v.postcode ?? ""}`.toLowerCase();
+    const haystack =
+      `${v.event_venue_name} ${v.city} ${v.postcode ?? ""}`.toLowerCase();
     return haystack.includes(search.toLowerCase());
   });
 
   const renderVenueCard = ({ item }: { item: Venue }) => (
-    <TouchableOpacity style={styles.card} onPress={() => handleVenuePress(item.venue_id)}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => handleVenuePress(item.venue_id)}
+    >
       <View style={styles.cardRow}>
         <View style={styles.content}>
           <Text style={styles.name}>{item.event_venue_name}</Text>
           <Text style={styles.city}>{item.city}</Text>
-          {item.postcode ? <Text style={styles.postcode}>{item.postcode}</Text> : null}
+          {item.postcode ? (
+            <Text style={styles.postcode}>{item.postcode}</Text>
+          ) : null}
         </View>
         <View style={styles.iconContainer}>
           <Ionicons name="chevron-forward-outline" size={24} color="#999" />

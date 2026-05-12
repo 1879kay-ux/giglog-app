@@ -6,12 +6,11 @@ import { Platform } from "react-native";
 
 export async function registerForPushNotificationsAsync() {
   if (!Device.isDevice) {
-  console.log("Push notifications skipped: not a physical device");
-  return null;
-}
+    console.log("Push notifications skipped: not a physical device");
+    return null;
+  }
 
-  const { status: existingStatus } =
-    await Notifications.getPermissionsAsync();
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
 
   let finalStatus = existingStatus;
 
@@ -56,7 +55,7 @@ export async function savePushToken(userId: string, bandId: string) {
     },
     {
       onConflict: "expo_push_token",
-    }
+    },
   );
 
   if (error) {

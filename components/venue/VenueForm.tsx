@@ -200,9 +200,14 @@ export default function VenueForm({
       <View style={styles.toggleRow}>
         <View style={{ flex: 1 }}>
           <Text style={styles.label}>Active</Text>
-          <Text style={styles.helperText}>Toggle off if venue is closed or inactive</Text>
+          <Text style={styles.helperText}>
+            Toggle off if venue is closed or inactive
+          </Text>
         </View>
-        <Switch value={!!form.is_active} onValueChange={(v) => update("is_active", v)} />
+        <Switch
+          value={!!form.is_active}
+          onValueChange={(v) => update("is_active", v)}
+        />
       </View>
 
       {/* SAVE BUTTON */}

@@ -4,7 +4,15 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Linking,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 type Props = {
   eventId: string;
@@ -65,7 +73,7 @@ export default function TravelSection({
         { text: "This event only", onPress: goEditEvent },
         { text: "Cancel", style: "cancel" },
       ],
-      { cancelable: true }
+      { cancelable: true },
     );
   };
 
@@ -104,12 +112,14 @@ export default function TravelSection({
       return () => {
         alive = false;
       };
-    }, [])
+    }, []),
   );
 
   const venueDest = useMemo(() => {
     return (
-      [clean(venueAddress), clean(venueCity), clean(venuePostcode)].filter(Boolean).join(", ") ||
+      [clean(venueAddress), clean(venueCity), clean(venuePostcode)]
+        .filter(Boolean)
+        .join(", ") ||
       clean(venuePostcode) ||
       ""
     );
@@ -117,30 +127,42 @@ export default function TravelSection({
 
   // effective departure = event override first, otherwise global default
   const effectiveDepartureAddress =
-    clean(departureAddress) ?? clean(defaults.default_departure_address) ?? null;
+    clean(departureAddress) ??
+    clean(defaults.default_departure_address) ??
+    null;
 
   const effectiveDeparturePostcode =
-    clean(departurePostcode) ?? clean(defaults.default_departure_postcode) ?? null;
+    clean(departurePostcode) ??
+    clean(defaults.default_departure_postcode) ??
+    null;
 
   const departureOrigin = useMemo(() => {
     return (
-      [effectiveDepartureAddress, effectiveDeparturePostcode].filter(Boolean).join(", ") ||
+      [effectiveDepartureAddress, effectiveDeparturePostcode]
+        .filter(Boolean)
+        .join(", ") ||
       effectiveDeparturePostcode ||
       ""
     );
   }, [effectiveDepartureAddress, effectiveDeparturePostcode]);
 
   async function openUrl(url: string) {
-  try {
-    await Linking.openURL(url);
-  } catch {
-    Alert.alert("Can't open maps", "Check the address/postcode and try again.");
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert(
+        "Can't open maps",
+        "Check the address/postcode and try again.",
+      );
+    }
   }
-}
 
   function openToVenue(app: "apple" | "google" | "waze") {
     if (!venueDest) {
-      Alert.alert("Venue location missing", "Add an address or postcode to the venue.");
+      Alert.alert(
+        "Venue location missing",
+        "Add an address or postcode to the venue.",
+      );
       return;
     }
 
@@ -160,24 +182,27 @@ export default function TravelSection({
     if (!departureOrigin) {
       Alert.alert(
         "Departure location not set",
-        "Set a default departure location, or set one just for this event."
+        "Set a default departure location, or set one just for this event.",
       );
       return;
     }
     if (!venueDest) {
-      Alert.alert("Venue location missing", "Add an address or postcode to the venue.");
+      Alert.alert(
+        "Venue location missing",
+        "Add an address or postcode to the venue.",
+      );
       return;
     }
 
     const o = enc(departureOrigin);
-const d = enc(venueDest);
+    const d = enc(venueDest);
 
-const url =
-  app === "apple"
-    ? `http://maps.apple.com/?saddr=${o}&daddr=${d}&dirflg=d`
-    : `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`;
+    const url =
+      app === "apple"
+        ? `http://maps.apple.com/?saddr=${o}&daddr=${d}&dirflg=d`
+        : `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`;
 
-openUrl(url);
+    openUrl(url);
   }
 
   const showingGlobalDefault =
@@ -193,18 +218,26 @@ openUrl(url);
           <Text style={styles.travelLabel}>Departure Location → Venue</Text>
 
           {canEdit ? (
-            <Pressable onPress={onPressEdit} hitSlop={10} style={styles.editPill}>
-              <Ionicons name="create-outline" size={16} color={colors.primary} />
+            <Pressable
+              onPress={onPressEdit}
+              hitSlop={10}
+              style={styles.editPill}
+            >
+              <Ionicons
+                name="create-outline"
+                size={16}
+                color={colors.primary}
+              />
               <Text style={styles.editPillText}>Edit</Text>
             </Pressable>
           ) : null}
         </View>
 
         <View style={styles.travelButtonRow}>
-  <Chip label="Apple" onPress={() => openFromDeparture("apple")} />
-  <Chip label="Google" onPress={() => openFromDeparture("google")} />
-  {/* Waze removed here: Waze deep links route from current location only */}
-</View>
+          <Chip label="Apple" onPress={() => openFromDeparture("apple")} />
+          <Chip label="Google" onPress={() => openFromDeparture("google")} />
+          {/* Waze removed here: Waze deep links route from current location only */}
+        </View>
 
         <View style={styles.locationBox}>
           <View style={styles.locationHeaderRow}>
@@ -222,8 +255,12 @@ openUrl(url);
             ) : null}
           </View>
 
-          <Text style={styles.locationText}>{effectiveDepartureAddress ?? "Not set"}</Text>
-          <Text style={styles.locationText}>{effectiveDeparturePostcode ?? ""}</Text>
+          <Text style={styles.locationText}>
+            {effectiveDepartureAddress ?? "Not set"}
+          </Text>
+          <Text style={styles.locationText}>
+            {effectiveDeparturePostcode ?? ""}
+          </Text>
         </View>
       </View>
 
@@ -289,7 +326,11 @@ openUrl(url);
 
 function Chip({ label, onPress }: { label: string; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={styles.chip} android_ripple={{ color: "#d9f0f0" }}>
+    <Pressable
+      onPress={onPress}
+      style={styles.chip}
+      android_ripple={{ color: "#d9f0f0" }}
+    >
       <Text style={styles.chipText}>{label}</Text>
     </Pressable>
   );

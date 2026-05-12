@@ -1,5 +1,7 @@
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
-import AccommodationSection, { type AccommodationRow } from "@/components/venue/AccommodationSection";
+import AccommodationSection, {
+  type AccommodationRow,
+} from "@/components/venue/AccommodationSection";
 import AvailabilitySection from "@/components/venue/AvailabilitySection";
 import DetailsSection from "@/components/venue/DetailsSection";
 import DocumentsSection from "@/components/venue/DocumentsSection";
@@ -9,7 +11,12 @@ import TravelSection from "@/components/venue/TravelSection";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import {
+  Stack,
+  useFocusEffect,
+  useLocalSearchParams,
+  useRouter,
+} from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -30,7 +37,10 @@ import {
 /* ---------------------------------------------------------
    ENABLE LAYOUT ANIMATION ON ANDROID
 --------------------------------------------------------- */
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
@@ -153,42 +163,44 @@ export default function EventDetailsScreen() {
   const canSeeFinance = isAdmin || canViewFinance;
 
   const params = useLocalSearchParams<{
-  id?: string | string[];
-  open?: string | string[];
-}>();
+    id?: string | string[];
+    open?: string | string[];
+  }>();
 
-const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
-const openParam = Array.isArray(params.open)
-  ? params.open[0]
-  : params.open;
+  const openParam = Array.isArray(params.open) ? params.open[0] : params.open;
 
   const [event, setEvent] = useState<EventRow | null>(null);
   const [finance, setFinance] = useState<EventFinanceRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCustomLineup, setHasCustomLineup] = useState(false);
-  const [accommodation, setAccommodation] = useState<AccommodationRow | null>(null);
+  const [accommodation, setAccommodation] = useState<AccommodationRow | null>(
+    null,
+  );
   const [currentMemberId, setCurrentMemberId] = useState<string>("");
-  const [hasAvailabilityConflict, setHasAvailabilityConflict] = useState(false); 
+  const [hasAvailabilityConflict, setHasAvailabilityConflict] = useState(false);
 
-  const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
-    details: false,
-    availability: false,
-    schedule: false,
-    documents: false,
-    travel: false,
-    finance: false,
-    accommodation: false,
-  });
+  const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>(
+    {
+      details: false,
+      availability: false,
+      schedule: false,
+      documents: false,
+      travel: false,
+      finance: false,
+      accommodation: false,
+    },
+  );
 
-useEffect(() => {
-  if (openParam === "availability") {
-    setOpenSections((prev) => ({
-      ...prev,
-      availability: true,
-    }));
-  }
-}, [openParam]);
+  useEffect(() => {
+    if (openParam === "availability") {
+      setOpenSections((prev) => ({
+        ...prev,
+        availability: true,
+      }));
+    }
+  }, [openParam]);
 
   const scrollRef = useRef<ScrollView | null>(null);
   const sectionPositions = useRef<Partial<Record<SectionKey, number>>>({});
@@ -212,16 +224,16 @@ useEffect(() => {
 
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
-setOpenSections((prev) => ({
-  details: false,
-  availability: false,
-  schedule: false,
-  documents: false,
-  travel: false,
-  finance: false,
-  accommodation: false,
-  [key]: !prev[key],
-}));
+      setOpenSections((prev) => ({
+        details: false,
+        availability: false,
+        schedule: false,
+        documents: false,
+        travel: false,
+        finance: false,
+        accommodation: false,
+        [key]: !prev[key],
+      }));
 
       if (willOpen) {
         requestAnimationFrame(() => {
@@ -229,7 +241,7 @@ setOpenSections((prev) => ({
         });
       }
     },
-    [openSections, scrollToSection]
+    [openSections, scrollToSection],
   );
 
   const resolveMemberId = useCallback(async (authUserId: string) => {
@@ -303,7 +315,7 @@ setOpenSections((prev) => ({
         departure_postcode,
 
         venue_id
-      `
+      `,
       )
       .eq("event_id", id)
       .single();
@@ -316,9 +328,16 @@ setOpenSections((prev) => ({
     }
 
     if (data?.venue_id) {
-      const { data: venueData } = await supabase.from("venues").select("*").eq("venue_id", data.venue_id).single();
+      const { data: venueData } = await supabase
+        .from("venues")
+        .select("*")
+        .eq("venue_id", data.venue_id)
+        .single();
 
-      setEvent({ ...(data as any), venues: venueData ? [venueData] : [] } as EventRow);
+      setEvent({
+        ...(data as any),
+        venues: venueData ? [venueData] : [],
+      } as EventRow);
     } else {
       setEvent((data as EventRow) ?? null);
     }
@@ -340,7 +359,7 @@ setOpenSections((prev) => ({
         other_costs,
         fee_notes,
         cost_notes
-      `
+      `,
       )
       .eq("event_id", id)
       .maybeSingle();
@@ -368,47 +387,47 @@ setOpenSections((prev) => ({
     setLoading(false);
   }, [id]);
 
- useFocusEffect(
-  useCallback(() => {
-    loadEvent();
-  }, [loadEvent])
-);
+  useFocusEffect(
+    useCallback(() => {
+      loadEvent();
+    }, [loadEvent]),
+  );
 
-useEffect(() => {
-  async function checkAvailabilityConflict() {
-    if (!event?.event_id || !event?.event_date || !currentMemberId) {
-      setHasAvailabilityConflict(false);
-      return;
+  useEffect(() => {
+    async function checkAvailabilityConflict() {
+      if (!event?.event_id || !event?.event_date || !currentMemberId) {
+        setHasAvailabilityConflict(false);
+        return;
+      }
+
+      const { data: av } = await supabase
+        .from("event_availability")
+        .select("status")
+        .eq("event_id", event.event_id)
+        .eq("member_id", currentMemberId)
+        .maybeSingle();
+
+      if (String(av?.status).toLowerCase() !== "available") {
+        setHasAvailabilityConflict(false);
+        return;
+      }
+
+      const { data: periods } = await supabase
+        .from("member_unavailability")
+        .select("id")
+        .eq("member_id", currentMemberId)
+        .lte("start_date", event.event_date)
+        .gte("end_date", event.event_date)
+        .limit(1);
+
+      setHasAvailabilityConflict((periods ?? []).length > 0);
     }
 
-    const { data: av } = await supabase
-      .from("event_availability")
-      .select("status")
-      .eq("event_id", event.event_id)
-      .eq("member_id", currentMemberId)
-      .maybeSingle();
+    checkAvailabilityConflict();
+  }, [event?.event_id, event?.event_date, currentMemberId]);
 
-    if (String(av?.status).toLowerCase() !== "available") {
-      setHasAvailabilityConflict(false);
-      return;
-    }
-
-    const { data: periods } = await supabase
-      .from("member_unavailability")
-      .select("id")
-      .eq("member_id", currentMemberId)
-      .lte("start_date", event.event_date)
-      .gte("end_date", event.event_date)
-      .limit(1);
-
-    setHasAvailabilityConflict((periods ?? []).length > 0);
-  }
-
-  checkAvailabilityConflict();
-}, [event?.event_id, event?.event_date, currentMemberId]);
-
-useEffect(() => {
-  let isMounted = true;
+  useEffect(() => {
+    let isMounted = true;
 
     async function init() {
       const { data, error } = await supabase.auth.getSession();
@@ -460,7 +479,9 @@ useEffect(() => {
     "";
 
   const departureOrigin =
-    [event?.departure_address, event?.departure_postcode].filter(Boolean).join(", ") ||
+    [event?.departure_address, event?.departure_postcode]
+      .filter(Boolean)
+      .join(", ") ||
     event?.departure_postcode ||
     "";
 
@@ -474,13 +495,19 @@ useEffect(() => {
       if (!can) throw new Error("cannot open");
       await Linking.openURL(url);
     } catch {
-      Alert.alert("Can't open maps", "Check the address/postcode and try again.");
+      Alert.alert(
+        "Can't open maps",
+        "Check the address/postcode and try again.",
+      );
     }
   }
 
   function openToVenue(app: "apple" | "google" | "waze") {
     if (!venueDest) {
-      Alert.alert("Venue location missing", "Add an address or postcode to the venue.");
+      Alert.alert(
+        "Venue location missing",
+        "Add an address or postcode to the venue.",
+      );
       return;
     }
 
@@ -490,19 +517,25 @@ useEffect(() => {
       app === "apple"
         ? `http://maps.apple.com/?daddr=${d}&dirflg=d`
         : app === "google"
-        ? `https://www.google.com/maps/dir/?api=1&destination=${d}&travelmode=driving`
-        : `https://waze.com/ul?q=${d}&navigate=yes`;
+          ? `https://www.google.com/maps/dir/?api=1&destination=${d}&travelmode=driving`
+          : `https://waze.com/ul?q=${d}&navigate=yes`;
 
     openUrl(url);
   }
 
   function openFromDeparture(app: "apple" | "google" | "waze") {
     if (!departureOrigin) {
-      Alert.alert("Departure location not set", "Add a departure address or postcode.");
+      Alert.alert(
+        "Departure location not set",
+        "Add a departure address or postcode.",
+      );
       return;
     }
     if (!venueDest) {
-      Alert.alert("Venue location missing", "Add an address or postcode to the venue.");
+      Alert.alert(
+        "Venue location missing",
+        "Add an address or postcode to the venue.",
+      );
       return;
     }
 
@@ -513,8 +546,8 @@ useEffect(() => {
       app === "apple"
         ? `http://maps.apple.com/?saddr=${o}&daddr=${d}&dirflg=d`
         : app === "google"
-        ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`
-        : `https://waze.com/ul?q=${d}&navigate=yes`;
+          ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`
+          : `https://waze.com/ul?q=${d}&navigate=yes`;
 
     openUrl(url);
   }
@@ -556,7 +589,9 @@ useEffect(() => {
         ) : (
           <>
             <View style={styles.eventSummary}>
-              <Text style={styles.eventSummaryDate}>{formatEventDate(event.event_date)}</Text>
+              <Text style={styles.eventSummaryDate}>
+                {formatEventDate(event.event_date)}
+              </Text>
 
               <Text style={styles.eventSummaryVenue}>
                 {venue?.event_venue_name}
@@ -591,31 +626,40 @@ useEffect(() => {
                 />
               </Section>
 
-<Section
-  sectionKey="availability"
-  title="Availability"
-  icon="checkmark-circle-outline"
-  open={openSections.availability}
-  onPress={() => toggleSection("availability")}
-  onLayoutY={handleSectionLayout}
->
-  {hasAvailabilityConflict ? (
-    <View style={styles.conflictWarning}>
-      <Ionicons name="warning-outline" size={18} color="#B45309" />
-      <Text style={styles.conflictWarningText}>
-        You are marked Available during an unavailable period. Please review your availability.
-      </Text>
-    </View>
-  ) : null}
+              <Section
+                sectionKey="availability"
+                title="Availability"
+                icon="checkmark-circle-outline"
+                open={openSections.availability}
+                onPress={() => toggleSection("availability")}
+                onLayoutY={handleSectionLayout}
+              >
+                {hasAvailabilityConflict ? (
+                  <View style={styles.conflictWarning}>
+                    <Ionicons
+                      name="warning-outline"
+                      size={18}
+                      color="#B45309"
+                    />
+                    <Text style={styles.conflictWarningText}>
+                      You are marked Available during an unavailable period.
+                      Please review your availability.
+                    </Text>
+                  </View>
+                ) : null}
 
-  <AvailabilitySection
-    key={openSections.availability ? `open-${event.event_id}` : `closed-${event.event_id}`}
-    eventId={event.event_id}
-    memberId={currentMemberId}
-    hasCustomLineup={hasCustomLineup}
-    canEdit={canEdit}
-  />
-</Section>
+                <AvailabilitySection
+                  key={
+                    openSections.availability
+                      ? `open-${event.event_id}`
+                      : `closed-${event.event_id}`
+                  }
+                  eventId={event.event_id}
+                  memberId={currentMemberId}
+                  hasCustomLineup={hasCustomLineup}
+                  canEdit={canEdit}
+                />
+              </Section>
 
               <Section
                 sectionKey="schedule"
@@ -713,8 +757,16 @@ useEffect(() => {
                     paidStatus={finance?.paid_status ?? null}
                     vanHire={event.van_hire}
                     fuel={event.fuel}
-                    accommodationCost={accommodation?.total_cost ?? finance?.accommodation_cost ?? null}
-                    accommodationCostSource={accommodation?.total_cost != null ? "accommodation" : "event"}
+                    accommodationCost={
+                      accommodation?.total_cost ??
+                      finance?.accommodation_cost ??
+                      null
+                    }
+                    accommodationCostSource={
+                      accommodation?.total_cost != null
+                        ? "accommodation"
+                        : "event"
+                    }
                     depCost={finance?.dep_cost ?? null}
                     driverCost={finance?.driver_cost ?? null}
                     fohEngCost={finance?.foh_eng_cost ?? null}
@@ -878,23 +930,23 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
   },
-conflictWarning: {
-  flexDirection: "row",
-  gap: 8,
-  borderWidth: 1,
-  borderColor: "#F59E0B",
-  backgroundColor: "rgba(245, 158, 11, 0.12)",
-  borderRadius: 10,
-  padding: 10,
-  marginBottom: 10,
-},
+  conflictWarning: {
+    flexDirection: "row",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+  },
 
-conflictWarningText: {
-  flex: 1,
-  color: "#B45309",
-  fontSize: 13,
-  fontWeight: "700",
-},
+  conflictWarningText: {
+    flex: 1,
+    color: "#B45309",
+    fontSize: 13,
+    fontWeight: "700",
+  },
   sectionContent: {
     marginTop: 6,
     backgroundColor: colors.cardBg,

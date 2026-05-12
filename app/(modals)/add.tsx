@@ -68,23 +68,23 @@ export default function AddVenueModal() {
   return (
     <>
       <Stack.Screen
-  options={{
-    title: "Add Venue",
-    headerTitleAlign: "center",
-    headerStyle: { backgroundColor: colors.primary },
-    headerTintColor: "#fff",
-    headerTitleStyle: { color: "#fff", fontWeight: "700" },
-    headerLeft: () => (
-      <Ionicons
-        name="arrow-back"
-        size={24}
-        color="#fff"
-        style={{ marginLeft: 16 }}
-        onPress={() => router.back()}
+        options={{
+          title: "Add Venue",
+          headerTitleAlign: "center",
+          headerStyle: { backgroundColor: colors.primary },
+          headerTintColor: "#fff",
+          headerTitleStyle: { color: "#fff", fontWeight: "700" },
+          headerLeft: () => (
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color="#fff"
+              style={{ marginLeft: 16 }}
+              onPress={() => router.back()}
+            />
+          ),
+        }}
       />
-    ),
-  }}
-/>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}

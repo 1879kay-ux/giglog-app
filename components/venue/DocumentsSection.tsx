@@ -6,7 +6,16 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Alert, Linking, Platform, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Linking,
+  Platform,
+  Pressable,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 type DocumentsSectionProps = {
   eventId: string;
@@ -68,7 +77,7 @@ export default function DocumentsSection({ eventId }: DocumentsSectionProps) {
           bucket: r.storage_bucket,
           path: r.storage_path,
           sub: r.doc_type ?? undefined,
-        }))
+        })),
       );
 
       setLoading(false);
@@ -97,22 +106,22 @@ export default function DocumentsSection({ eventId }: DocumentsSectionProps) {
   };
 
   const shareStorageDoc = async (d: StorageDocItem) => {
-  try {
-    const { data, error } = await supabase.storage
-      .from(d.bucket)
-      .createSignedUrl(d.path, SIGNED_URL_TTL); // 7 days (configured in lib/storage)
+    try {
+      const { data, error } = await supabase.storage
+        .from(d.bucket)
+        .createSignedUrl(d.path, SIGNED_URL_TTL); // 7 days (configured in lib/storage)
 
-    if (error || !data?.signedUrl) {
-      throw new Error(error?.message || "Failed to create signed URL");
+      if (error || !data?.signedUrl) {
+        throw new Error(error?.message || "Failed to create signed URL");
+      }
+
+      await Share.share({
+        message: data.signedUrl,
+      });
+    } catch (e: any) {
+      Alert.alert("Can't share document", e?.message ?? "Please try again.");
     }
-
-    await Share.share({
-      message: data.signedUrl,
-    });
-  } catch (e: any) {
-    Alert.alert("Can't share document", e?.message ?? "Please try again.");
-  }
-};
+  };
 
   const HeaderRight = canEdit ? (
     <Pressable onPress={goEdit} hitSlop={10} style={styles.headerBtn}>
@@ -128,7 +137,11 @@ export default function DocumentsSection({ eventId }: DocumentsSectionProps) {
       {isEmpty ? (
         <View style={styles.emptyWrap}>
           <View style={styles.emptyIcon}>
-            <Ionicons name="documents-outline" size={22} color={colors.primary} />
+            <Ionicons
+              name="documents-outline"
+              size={22}
+              color={colors.primary}
+            />
           </View>
 
           <View style={{ flex: 1 }}>
@@ -149,36 +162,42 @@ export default function DocumentsSection({ eventId }: DocumentsSectionProps) {
               >
                 <View style={styles.rowLeft}>
                   <View style={styles.docIcon}>
-                    <Ionicons name="document-text-outline" size={16} color={colors.primary} />
+                    <Ionicons
+                      name="document-text-outline"
+                      size={16}
+                      color={colors.primary}
+                    />
                   </View>
 
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>{d.label}</Text>
                     {!!d.sub && (
-  <View style={styles.docTypePill}>
-    <Text style={styles.docTypePillText}>
-      {d.sub.charAt(0).toUpperCase() + d.sub.slice(1)}
-    </Text>
-  </View>
-)}
+                      <View style={styles.docTypePill}>
+                        <Text style={styles.docTypePillText}>
+                          {d.sub.charAt(0).toUpperCase() + d.sub.slice(1)}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </View>
 
                 <Pressable
-  onPress={(e) => {
-    e.stopPropagation();
-    shareStorageDoc(d);
-  }}
-  hitSlop={10}
-  style={styles.shareBtn}
->
-  <Ionicons name="share-outline" size={18} color="#7a7a7a" />
-</Pressable>
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    shareStorageDoc(d);
+                  }}
+                  hitSlop={10}
+                  style={styles.shareBtn}
+                >
+                  <Ionicons name="share-outline" size={18} color="#7a7a7a" />
+                </Pressable>
               </Pressable>
             );
           })}
 
-          {loading ? <Text style={styles.loadingText}>Loading documents…</Text> : null}
+          {loading ? (
+            <Text style={styles.loadingText}>Loading documents…</Text>
+          ) : null}
         </View>
       )}
     </InfoCard>
@@ -262,30 +281,30 @@ const styles = StyleSheet.create({
     color: "#111",
   },
   docTypePill: {
-  alignSelf: "flex-start",
-  backgroundColor: "#E6F7F7",
-  borderWidth: 1,
-  borderColor: "#0F766E",
-  paddingHorizontal: 6,
-  paddingVertical: Platform.OS === "android" ? 1 : 2,
-  borderRadius: 999,
-  marginTop: 3,
-},
+    alignSelf: "flex-start",
+    backgroundColor: "#E6F7F7",
+    borderWidth: 1,
+    borderColor: "#0F766E",
+    paddingHorizontal: 6,
+    paddingVertical: Platform.OS === "android" ? 1 : 2,
+    borderRadius: 999,
+    marginTop: 3,
+  },
 
-docTypePillText: {
-  fontSize: 10,
-  fontWeight: "800",
-  color: "#0F766E",
-  textTransform: "capitalize",
-},
+  docTypePillText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#0F766E",
+    textTransform: "capitalize",
+  },
   loadingText: {
     marginTop: 8,
     fontSize: 12,
     color: "#666",
   },
   shareBtn: {
-  paddingHorizontal: 6,
-  paddingVertical: 6,
-  borderRadius: 10,
-},
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
 });

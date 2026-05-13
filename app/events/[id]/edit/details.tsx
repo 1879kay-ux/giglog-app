@@ -307,21 +307,27 @@ export default function EditEventDetailsScreen() {
     const statusChanged = event.event_status !== eventStatus;
 
     if (dateChanged || statusChanged) {
-      try {
-        await supabase.functions.invoke("send-push-notification", {
-          body: {
-            title: "GigSynq event updated",
-            body: `${eventType} updated for ${formatEventDate(eventDate)}. Status: ${eventStatus}.`,
-            data: {
-              type: "event_updated",
-              event_id: id,
-            },
-          },
-        });
-      } catch (notifyError) {
-        console.log("Event update push notification error:", notifyError);
-      }
-    }
+  try {
+    const isCancelled = eventStatus === "Cancelled";
+
+    await supabase.functions.invoke("send-push-notification", {
+      body: {
+        title: isCancelled
+          ? "GigSynq event cancelled"
+          : "GigSynq event updated",
+        body: isCancelled
+          ? `${eventType} for ${formatEventDate(eventDate)} has been cancelled.`
+          : `${eventType} updated for ${formatEventDate(eventDate)}. Status: ${eventStatus}.`,
+        data: {
+          type: isCancelled ? "event_cancelled" : "event_updated",
+          event_id: id,
+        },
+      },
+    });
+  } catch (notifyError) {
+    console.log("Event update push notification error:", notifyError);
+  }
+}
 
     router.back();
   }

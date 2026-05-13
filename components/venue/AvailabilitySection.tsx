@@ -411,13 +411,7 @@ export default function AvailabilitySection({
                 <Text style={styles.editLineupPillText}>Edit Lineup</Text>
               </Pressable>
 
-              <Pressable
-                onPress={sendAvailabilityReminder}
-                hitSlop={10}
-                style={styles.reminderPill}
-              >
-                <Text style={styles.reminderPillText}>Remind Awaiting</Text>
-              </Pressable>
+              
             </View>
           ) : (
             <View />
@@ -459,6 +453,19 @@ export default function AvailabilitySection({
           Counts are for members expected to respond.
         </Text>
       </InfoCard>
+
+                  {canEdit ? (
+        <Pressable
+          onPress={sendAvailabilityReminder}
+          hitSlop={10}
+          style={[styles.reminderPill, { alignSelf: "flex-start", marginBottom: 12 }]}
+        >
+          <Text style={styles.reminderPillText}>
+            Remind Awaiting
+            {summary?.awaiting_count ? ` (${summary.awaiting_count})` : ""}
+          </Text>
+        </Pressable>
+      ) : null}
 
       {/* MUSICIANS */}
       <InfoCard title="Musicians">

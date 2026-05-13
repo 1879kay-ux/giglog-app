@@ -39,3 +39,12 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Supabase local/temp files
+supabase/.temp/
+
+# Local database exports
+*.sql
+
+# Environment files
+.env

@@ -49,7 +49,7 @@ export default function HomeScreen() {
   const canViewBandDocs = !!cm?.canViewBandDocs;
   const canViewSettings = !!cm?.canViewSettings;
 
-  const [bandName, setBandName] = useState<string>("GigLog");
+  const [bandName, setBandName] = useState<string>("GigSynq");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [nextEvent, setNextEvent] = useState<NextEvent | null>(null);
 
@@ -80,7 +80,7 @@ export default function HomeScreen() {
     const row = data as unknown as BandBrandingQueryRow | null;
     const bandObj = Array.isArray(row?.bands) ? row?.bands?.[0] : row?.bands;
 
-    setBandName(bandObj?.band_name ?? "GigLog");
+    setBandName(bandObj?.band_name ?? "GigSynq");
     setLogoUrl(bandObj?.logo_url ?? null);
   }
 
@@ -160,7 +160,7 @@ export default function HomeScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "GigLog",
+          title: "GigSynq",
           headerRight: () =>
             canViewSettings ? (
               <Link href="./settings" asChild>
@@ -196,7 +196,7 @@ export default function HomeScreen() {
           )}
 
           <Text style={styles.brandHeroName} numberOfLines={2}>
-            {bandName || "GigLog"}
+            {bandName || "GigSynq"}
           </Text>
         </View>
 

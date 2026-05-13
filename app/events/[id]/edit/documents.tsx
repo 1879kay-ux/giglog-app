@@ -201,7 +201,7 @@ export default function EditEventDocumentsScreen() {
       try {
         await supabase.functions.invoke("send-push-notification", {
           body: {
-            title: "GigLog document added",
+            title: "GigSynq document added",
             body: `${selectedDocType.charAt(0).toUpperCase() + selectedDocType.slice(1)}: ${
               file.name ?? "A document"
             } has been added to ${eventLabel}.`,

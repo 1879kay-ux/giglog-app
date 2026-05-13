@@ -293,7 +293,7 @@ export default function BandDocumentsEditScreen() {
       try {
         await supabase.functions.invoke("send-push-notification", {
           body: {
-            title: "GigLog band document added",
+            title: "GigSynq band document added",
             body: `${selectedDocType.charAt(0).toUpperCase() + selectedDocType.slice(1)}: ${
               file.name ?? "A document"
             } has been added to band documents.`,

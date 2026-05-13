@@ -950,7 +950,7 @@ function buildUpcomingShareMessage(opts: {
     );
   }
   lines.push("");
-  lines.push("Shared via GigLog");
+  lines.push("Shared via GigSynq");
 
   return lines.join("\n").trim();
 }

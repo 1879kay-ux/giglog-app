@@ -280,7 +280,7 @@ export default function EventsCalendarScreen() {
       grouped[name].push(`${start} → ${end}`);
     }
 
-    let message = `GigLog Unavailability Summary – ${year}\n\n`;
+    let message = `GigSynq Unavailability Summary – ${year}\n\n`;
 
     Object.entries(grouped)
       .sort(([a], [b]) => a.localeCompare(b))

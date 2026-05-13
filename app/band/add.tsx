@@ -577,7 +577,7 @@ export default function AddBandMemberScreen() {
 
           <Text style={styles.note}>
             Saving will create the member and send them an email invitation to
-            join GigLog. They will receive a link to activate their account.
+            join GigSynq. They will receive a link to activate their account.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

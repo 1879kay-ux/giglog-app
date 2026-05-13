@@ -310,7 +310,7 @@ export default function EditEventDetailsScreen() {
       try {
         await supabase.functions.invoke("send-push-notification", {
           body: {
-            title: "GigLog event updated",
+            title: "GigSynq event updated",
             body: `${eventType} updated for ${formatEventDate(eventDate)}. Status: ${eventStatus}.`,
             data: {
               type: "event_updated",

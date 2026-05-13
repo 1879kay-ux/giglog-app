@@ -39,6 +39,7 @@ type VenueRow = {
 
 type EventRow = {
   event_id: string;
+  band_id: string;
   event_date: string;
   venue_id: string | null;
 
@@ -182,8 +183,8 @@ export default function EditEventDetailsScreen() {
     const { data: eventData, error: eventErr } = await supabase
       .from("events")
       .select(
-        "event_id,event_date,venue_id,event_type,event_status,event_notes,promoter_contact_name,promoter_contact_phone,promoter_contact_email",
-      )
+  "event_id,band_id,event_date,venue_id,event_type,event_status,event_notes,promoter_contact_name,promoter_contact_phone,promoter_contact_email",
+)
       .eq("event_id", id)
       .single();
 
@@ -222,7 +223,75 @@ export default function EditEventDetailsScreen() {
 
     setLoading(false);
   }
+  async function resetAvailabilityForDateChange() {
+    if (!id || !event) return;
 
+    const { count } = await supabase
+      .from("event_members")
+      .select("*", { count: "exact", head: true })
+      .eq("event_id", id);
+
+    let expectedMemberIds: string[] = [];
+
+    if ((count ?? 0) > 0) {
+      const { data: customMembers, error: customErr } = await supabase
+        .from("event_members")
+        .select("member_id")
+        .eq("event_id", id);
+
+      if (customErr) throw customErr;
+
+      expectedMemberIds =
+        customMembers?.map((row: any) => row.member_id).filter(Boolean) ?? [];
+    } else {
+      const { data: coreMembers, error: coreErr } = await supabase
+        .from("band_members")
+        .select("member_id")
+        .eq("band_id", event.band_id)
+        .eq("is_active", true)
+        .eq("is_dep", false)
+        .eq("member_type", "musician")
+        .eq("band_role", "Band");
+
+      if (coreErr) throw coreErr;
+
+      expectedMemberIds =
+        coreMembers?.map((row: any) => row.member_id).filter(Boolean) ?? [];
+    }
+
+    if (expectedMemberIds.length === 0) return;
+
+    const { data: unavailableMembers, error: unavailableErr } = await supabase
+      .from("member_unavailability")
+      .select("member_id")
+      .in("member_id", expectedMemberIds)
+      .lte("start_date", eventDate)
+      .gte("end_date", eventDate);
+
+    if (unavailableErr) throw unavailableErr;
+
+    const unavailableIds = new Set(
+      unavailableMembers?.map((row: any) => row.member_id) ?? [],
+    );
+
+    const rows = expectedMemberIds.map((member_id) => {
+      const unavailable = unavailableIds.has(member_id);
+
+      return {
+        event_id: id,
+        member_id,
+        status: unavailable ? "unavailable" : "awaiting",
+        availability_status: unavailable ? "unavailable" : "awaiting",
+        status_source: unavailable ? "unavailability_period" : "manual",
+      };
+    });
+
+    const { error: upsertErr } = await supabase
+      .from("event_availability")
+      .upsert(rows, { onConflict: "event_id,member_id" });
+
+    if (upsertErr) throw upsertErr;
+  }
   async function onSave() {
     if (!id) return;
 
@@ -305,6 +374,9 @@ export default function EditEventDetailsScreen() {
 
     const dateChanged = event.event_date !== eventDate;
     const statusChanged = event.event_status !== eventStatus;
+    if (dateChanged) {
+  await resetAvailabilityForDateChange();
+}
 
     if (dateChanged || statusChanged) {
   try {

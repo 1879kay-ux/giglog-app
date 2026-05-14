@@ -94,8 +94,23 @@ export default function EditEventDocumentsScreen() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   const [docs, setDocs] = useState<EventDocRow[]>([]);
+
+  const docTypeOptions: { key: EventDocType; label: string }[] = [
+    { key: "tech", label: "Tech" },
+    { key: "rider", label: "Rider" },
+    { key: "setlist", label: "Set list" },
+    { key: "contracts", label: "Contracts" },
+    { key: "other", label: "Other" },
+  ];
+
+  function updateLocal(docId: string, patch: Partial<EventDocRow>) {
+    setDocs((prev) =>
+      prev.map((d) => (d.doc_id === docId ? { ...d, ...patch } : d)),
+    );
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -208,6 +223,7 @@ export default function EditEventDocumentsScreen() {
             data: {
               type: "event_document_added",
               event_id: id,
+              open: "documents",
             },
           },
         });
@@ -220,6 +236,26 @@ export default function EditEventDocumentsScreen() {
     } catch (e: any) {
       setUploading(false);
       Alert.alert("Upload failed", e?.message ?? "Please try again.");
+    }
+  }
+
+  async function saveDocType(doc: EventDocRow) {
+    try {
+      setSavingId(doc.doc_id);
+
+      const { error } = await supabase
+        .from("event_documents")
+        .update({
+          doc_type: doc.doc_type ?? "other",
+        })
+        .eq("doc_id", doc.doc_id);
+
+      if (error) throw error;
+      Alert.alert("Saved", "Document type updated.");
+    } catch (e: any) {
+      Alert.alert("Save failed", e?.message ?? "Please try again.");
+    } finally {
+      setSavingId(null);
     }
   }
 
@@ -304,6 +340,7 @@ export default function EditEventDocumentsScreen() {
               {docs.map((d, idx) => {
                 const last = idx === docs.length - 1;
                 const size = formatBytes(d.size_bytes);
+
                 return (
                   <View
                     key={d.doc_id}
@@ -317,19 +354,44 @@ export default function EditEventDocumentsScreen() {
                           color={colors.primary}
                         />
                       </View>
+
                       <View style={{ flex: 1 }}>
                         <Text style={styles.docTitle} numberOfLines={2}>
                           {d.title}
                         </Text>
+
                         <View style={styles.metaRow}>
-                          {d.doc_type ? (
-                            <View style={styles.docTypePill}>
-                              <Text style={styles.docTypePillText}>
-                                {d.doc_type.charAt(0).toUpperCase() +
-                                  d.doc_type.slice(1)}
-                              </Text>
-                            </View>
-                          ) : null}
+                          <View style={styles.typeRow}>
+                            {docTypeOptions.map((opt) => {
+                              const selected =
+                                (d.doc_type ?? "other") === opt.key;
+
+                              return (
+                                <Pressable
+                                  key={opt.key}
+                                  onPress={() =>
+                                    updateLocal(d.doc_id, {
+                                      doc_type: opt.key,
+                                    })
+                                  }
+                                  style={[
+                                    styles.docTypePill,
+                                    selected && styles.docTypePillSelected,
+                                  ]}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.docTypePillText,
+                                      selected &&
+                                        styles.docTypePillTextSelected,
+                                    ]}
+                                  >
+                                    {opt.label}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })}
+                          </View>
 
                           {size ? (
                             <Text style={styles.docMeta}>{size}</Text>
@@ -338,21 +400,30 @@ export default function EditEventDocumentsScreen() {
                       </View>
                     </View>
 
-                    <Pressable
-                      onPress={() => onDelete(d)}
-                      disabled={deletingId === d.doc_id}
-                      style={[
-                        styles.deleteBtn,
-                        deletingId === d.doc_id && { opacity: 0.6 },
-                      ]}
-                      hitSlop={10}
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={18}
-                        color={colors.danger ?? "#DC2626"}
-                      />
-                    </Pressable>
+                   <View style={styles.actionRow}>
+  <Pressable
+    onPress={() => saveDocType(d)}
+    disabled={savingId === d.doc_id}
+    style={[styles.saveTypeBtn, savingId === d.doc_id && { opacity: 0.6 }]}
+  >
+    <Ionicons
+  name={savingId === d.doc_id ? "checkmark-outline" : "save-outline"}
+  size={16}
+  color="#fff"
+/>
+    <Text style={styles.saveTypeBtnText}>
+  {savingId === d.doc_id ? "Saving..." : "Save"}
+</Text>
+  </Pressable>
+
+  <Pressable
+    onPress={() => onDelete(d)}
+    disabled={deletingId === d.doc_id}
+    style={[styles.deleteTypeBtn, deletingId === d.doc_id && { opacity: 0.6 }]}
+  >
+    <Ionicons name="trash-outline" size={16} color={colors.danger ?? "#DC2626"} />
+  </Pressable>
+</View>
                   </View>
                 );
               })}
@@ -467,32 +538,71 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 2,
   },
-
+  typeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    flex: 1,
+  },
   docTypePill: {
-    backgroundColor: "#E6F7F7",
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: "#0F766E",
+    borderColor: "#D1D5DB",
     paddingHorizontal: 6,
     paddingVertical: Platform.OS === "android" ? 1 : 2,
     borderRadius: 999,
   },
-
+  docTypePillSelected: {
+    backgroundColor: "#E6F7F7",
+    borderColor: "#0F766E",
+  },
   docTypePillText: {
     fontSize: 10,
     fontWeight: "800",
-    color: "#0F766E",
+    color: "#666",
     textTransform: "capitalize",
   },
-
+  docTypePillTextSelected: {
+    color: "#0F766E",
+  },
   docMeta: {
     fontSize: 12,
     color: "#666",
   },
-  deleteBtn: {
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  iconBtn: {
     paddingHorizontal: 6,
     paddingVertical: 6,
     borderRadius: 10,
   },
+  saveTypeBtn: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6,
+  backgroundColor: colors.primary,
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 10,
+},
+
+saveTypeBtnText: {
+  color: "#fff",
+  fontSize: 12,
+  fontWeight: "800",
+},
+
+deleteTypeBtn: {
+  width: 34,
+  height: 34,
+  borderRadius: 10,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "rgba(220,38,38,0.08)",
+},
   doneButton: {
     backgroundColor: colors.button,
     borderRadius: 12,

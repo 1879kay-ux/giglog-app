@@ -372,13 +372,14 @@ export default function EditEventDetailsScreen() {
       return;
     }
 
-    const dateChanged = event.event_date !== eventDate;
-    const statusChanged = event.event_status !== eventStatus;
-    if (dateChanged) {
+   const dateChanged = event.event_date !== eventDate;
+const statusChanged = event.event_status !== eventStatus;
+
+if (dateChanged) {
   await resetAvailabilityForDateChange();
 }
 
-    if (dateChanged || statusChanged) {
+if (dateChanged || statusChanged) {
   try {
     const isCancelled = eventStatus === "Cancelled";
 
@@ -388,8 +389,10 @@ export default function EditEventDetailsScreen() {
           ? "GigSynq event cancelled"
           : "GigSynq event updated",
         body: isCancelled
-          ? `${eventType} for ${formatEventDate(eventDate)} has been cancelled.`
-          : `${eventType} updated for ${formatEventDate(eventDate)}. Status: ${eventStatus}.`,
+          ? `${eventType} at ${venue?.event_venue_name ?? "Venue"}${venue?.city ? `, ${venue.city}` : ""} on ${formatEventDate(eventDate)} has been cancelled.`
+          : dateChanged
+            ? `${eventType} at ${venue?.event_venue_name ?? "Venue"}${venue?.city ? `, ${venue.city}` : ""} has changed date to ${formatEventDate(eventDate)}.`
+            : `${eventType} at ${venue?.event_venue_name ?? "Venue"}${venue?.city ? `, ${venue.city}` : ""} status changed to ${eventStatus}.`,
         data: {
           type: isCancelled ? "event_cancelled" : "event_updated",
           event_id: id,

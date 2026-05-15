@@ -46,5 +46,11 @@
   "unavailability.emptyTitle": "Aún no hay períodos no disponibles",
   "unavailability.emptyText": "Añade vacaciones, bloqueos de trabajo o fechas en las que no puedes tocar.",
   "unavailability.unavailable": "No disponible",
-  "unavailability.delete": "Eliminar"
+  "unavailability.delete": "Eliminar",
+  "addVenue.title": "Agregar recinto",
+  "addVenue.venueName": "Nombre del recinto",
+  "addVenue.city": "Ciudad",
+  "addVenue.postcode": "Código postal",
+  "addVenue.notes": "Notas",
+  "addVenue.saveButton": "Guardar recinto"
 }

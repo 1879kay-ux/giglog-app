@@ -46,5 +46,11 @@
   "unavailability.emptyTitle": "No unavailable periods yet",
   "unavailability.emptyText": "Add holidays, work blocks or dates you can’t gig.",
   "unavailability.unavailable": "Unavailable",
-  "unavailability.delete": "Delete"
+  "unavailability.delete": "Delete",
+  "addVenue.title": "Add Venue",
+  "addVenue.venueName": "Venue Name",
+  "addVenue.city": "City",
+  "addVenue.postcode": "Postcode",
+  "addVenue.notes": "Notes",
+  "addVenue.saveButton": "Save Venue"
 }

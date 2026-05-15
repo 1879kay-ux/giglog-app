@@ -5,6 +5,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -24,6 +25,7 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 
 export default function AddVenueModal() {
+  const { t } = useTranslation();
   const router = useRouter();
 
   const [name, setName] = useState("");
@@ -69,7 +71,7 @@ export default function AddVenueModal() {
     <>
       <Stack.Screen
         options={{
-          title: "Add Venue",
+          title: t("addVenue.title"),
           headerTitleAlign: "center",
           headerStyle: { backgroundColor: colors.primary },
           headerTintColor: "#fff",
@@ -100,7 +102,7 @@ export default function AddVenueModal() {
         >
           {/* NAME */}
           <Text style={styles.label}>
-            Venue Name <Text style={styles.required}>*</Text>
+            {t("addVenue.venueName")} <Text style={styles.required}>*</Text>
           </Text>
           <TextInput
             style={styles.input}
@@ -112,7 +114,7 @@ export default function AddVenueModal() {
 
           {/* CITY */}
           <Text style={styles.label}>
-            City <Text style={styles.required}>*</Text>
+            {t("addVenue.city")} <Text style={styles.required}>*</Text>
           </Text>
           <TextInput
             style={styles.input}
@@ -123,7 +125,7 @@ export default function AddVenueModal() {
           />
 
           {/* POSTCODE */}
-          <Text style={styles.label}>Postcode</Text>
+          <Text style={styles.label}>{t("addVenue.postcode")}</Text>
           <TextInput
             style={styles.input}
             value={postcode}
@@ -133,7 +135,7 @@ export default function AddVenueModal() {
           />
 
           {/* NOTES */}
-          <Text style={styles.label}>Notes</Text>
+          <Text style={styles.label}>{t("addVenue.notes")}</Text>
           <TextInput
             style={[styles.input, { height: 100 }]}
             value={notes}
@@ -146,7 +148,7 @@ export default function AddVenueModal() {
           {/* SAVE BUTTON */}
           <TouchableOpacity style={styles.saveButton} onPress={saveVenue}>
             <Ionicons name="save-outline" size={20} color="#fff" />
-            <Text style={styles.saveButtonText}>Save Venue</Text>
+            <Text style={styles.saveButtonText}>{t("addVenue.saveButton")}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

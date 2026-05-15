@@ -2,5 +2,21 @@
   "common.save": "Save",
   "common.cancel": "Cancel",
   "settings.language": "Language",
-  "settings.title": "Settings"
+  "settings.title": "Settings",
+  "settings.band": "Band",
+  "settings.bandHint": "Update your band name and logo.",
+  "settings.bandName": "Band name",
+  "settings.saveBandName": "Save band name",
+  "settings.changeBandLogo": "Change band logo",
+  "settings.adminOnlyBandEdit": "Only band admins can edit band details.",
+  "settings.travel": "Travel",
+  "settings.travelHint": "Default departure for all events.",
+  "settings.defaultDeparture": "Default departure",
+  "settings.editDefaultDeparture": "Edit default departure",
+  "settings.adminOnlyTravelEdit": "Only band admins can edit travel defaults.",
+  "settings.admin": "Admin",
+  "settings.adminMode": "Admin Mode",
+  "settings.adminModeHint": "Show or hide edit controls. Only affects your account.",
+  "settings.adminModeOff": "Admin Mode is off. Edit buttons are hidden.",
+  "settings.noAdminSettings": "No admin settings available."
 }

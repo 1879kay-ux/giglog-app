@@ -2,5 +2,21 @@
   "common.save": "Guardar",
   "common.cancel": "Cancelar",
   "settings.language": "Idioma",
-  "settings.title": "Configuración"
+  "settings.title": "Configuración",
+  "settings.band": "Banda",
+  "settings.bandHint": "Actualiza el nombre y el logo de tu banda.",
+  "settings.bandName": "Nombre de la banda",
+  "settings.saveBandName": "Guardar nombre de banda",
+  "settings.changeBandLogo": "Cambiar logo de banda",
+  "settings.adminOnlyBandEdit": "Solo los administradores pueden editar los detalles de la banda.",
+  "settings.travel": "Viajes",
+  "settings.travelHint": "Salida predeterminada para todos los eventos.",
+  "settings.defaultDeparture": "Salida predeterminada",
+  "settings.editDefaultDeparture": "Editar salida predeterminada",
+  "settings.adminOnlyTravelEdit": "Solo los administradores pueden editar los ajustes de viaje.",
+  "settings.admin": "Administración",
+  "settings.adminMode": "Modo administrador",
+  "settings.adminModeHint": "Muestra u oculta los controles de edición. Solo afecta a tu cuenta.",
+  "settings.adminModeOff": "El modo administrador está desactivado. Los botones de edición están ocultos.",
+  "settings.noAdminSettings": "No hay ajustes de administrador disponibles."
 }

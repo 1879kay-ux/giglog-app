@@ -229,10 +229,10 @@ export default function SettingsScreen() {
 
         {/* BAND */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Band</Text>
-          <Text style={styles.hint}>Update your band name and logo.</Text>
+          <Text style={styles.cardTitle}>{t("settings.band")}</Text>
+          <Text style={styles.hint}>{t("settings.bandHint")}</Text>
 
-          <Text style={[styles.label, { marginTop: 10 }]}>Band name</Text>
+          <Text style={[styles.label, { marginTop: 10 }]}>{t("settings.bandName")}</Text>
           <TextInput
             value={bandName}
             onChangeText={setBandName}
@@ -257,7 +257,7 @@ export default function SettingsScreen() {
                 disabled={savingBandName}
               >
                 <Text style={styles.secondaryBtnText}>
-                  {savingBandName ? "Saving..." : "Save band name"}
+                  {savingBandName ? "Saving..." : t("settings.saveBandName")}
                 </Text>
               </Pressable>
 
@@ -268,23 +268,23 @@ export default function SettingsScreen() {
                   pressed && { opacity: 0.85 },
                 ]}
               >
-                <Text style={styles.primaryBtnText}>Change band logo</Text>
+                <Text style={styles.primaryBtnText}>{t("settings.changeBandLogo")}</Text>
               </Pressable>
             </>
           ) : (
             <Text style={[styles.hint, { marginTop: 10 }]}>
-              Only band admins can edit band details.
+              {t("settings.adminOnlyBandEdit")}
             </Text>
           )}
         </View>
 
         {/* TRAVEL */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Travel</Text>
-          <Text style={styles.hint}>Default departure for all events.</Text>
+          <Text style={styles.cardTitle}>{t("settings.travel")}</Text>
+          <Text style={styles.hint}>{t("settings.travelHint")}</Text>
 
           <View style={styles.infoBox}>
-            <Text style={styles.infoLabel}>Default departure</Text>
+            <Text style={styles.infoLabel}>{t("settings.defaultDeparture")}</Text>
             <Text style={styles.infoText}>{defaultAddr ?? "Not set"}</Text>
             <Text style={styles.infoText}>{defaultPc ?? ""}</Text>
           </View>
@@ -297,11 +297,11 @@ export default function SettingsScreen() {
                 pressed && { opacity: 0.85 },
               ]}
             >
-              <Text style={styles.linkBtnText}>Edit default departure</Text>
+              <Text style={styles.linkBtnText}>{t("settings.editDefaultDeparture")}</Text>
             </Pressable>
           ) : (
             <Text style={[styles.hint, { marginTop: 10 }]}>
-              Only band admins can edit travel defaults.
+              {t("settings.adminOnlyTravelEdit")}
             </Text>
           )}
         </View>
@@ -309,13 +309,13 @@ export default function SettingsScreen() {
         {/* ADMIN */}
         {isAdmin ? (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Admin</Text>
+            <Text style={styles.cardTitle}>{t("settings.admin")}</Text>
 
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.label}>Admin Mode</Text>
+                <Text style={styles.label}>{t("settings.adminMode")}</Text>
                 <Text style={styles.hint}>
-                  Show or hide edit controls. Only affects your account.
+                  {t("settings.adminModeHint")}
                 </Text>
               </View>
 
@@ -329,15 +329,15 @@ export default function SettingsScreen() {
             {!adminModeEnabled ? (
               <View style={styles.warnBox}>
                 <Text style={styles.warnText}>
-                  Admin Mode is off. Edit buttons are hidden.
+                  {t("settings.adminModeOff")}
                 </Text>
               </View>
             ) : null}
           </View>
         ) : (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Admin</Text>
-            <Text style={styles.hint}>No admin settings available.</Text>
+            <Text style={styles.cardTitle}>{t("settings.admin")}</Text>
+            <Text style={styles.hint}>{t("settings.noAdminSettings")}</Text>
           </View>
         )}
       </View>

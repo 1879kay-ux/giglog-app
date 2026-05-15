@@ -1,4 +1,5 @@
 import { CurrentMemberProvider } from "@/components/auth/CurrentMemberContext";
+import "@/lib/i18n";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import * as Notifications from "expo-notifications";

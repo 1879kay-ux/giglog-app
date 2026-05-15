@@ -394,9 +394,10 @@ if (dateChanged || statusChanged) {
             ? `${eventType} at ${venue?.event_venue_name ?? "Venue"}${venue?.city ? `, ${venue.city}` : ""} has changed date to ${formatEventDate(eventDate)}.`
             : `${eventType} at ${venue?.event_venue_name ?? "Venue"}${venue?.city ? `, ${venue.city}` : ""} status changed to ${eventStatus}.`,
         data: {
-          type: isCancelled ? "event_cancelled" : "event_updated",
-          event_id: id,
-        },
+  type: isCancelled ? "event_cancelled" : "event_updated",
+  event_id: id,
+  open: "availability",
+},
       },
     });
   } catch (notifyError) {

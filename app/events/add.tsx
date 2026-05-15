@@ -261,11 +261,12 @@ export default function AddEventScreen() {
         await supabase.functions.invoke("send-push-notification", {
           body: {
             title: "New GigSynq event",
-            body: `${eventType} added for ${formatDisplayDate(eventDate)}. Please confirm availability.`,
+body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `, ${selectedVenue.city}` : ""} added for ${formatDisplayDate(eventDate)}. Please confirm availability.`,
             data: {
-              type: "event_created",
-              event_id: data.event_id,
-            },
+  type: "event_created",
+  event_id: data.event_id,
+  open: "availability",
+},
           },
         });
       } catch (notifyError) {

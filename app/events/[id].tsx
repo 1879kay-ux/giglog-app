@@ -194,13 +194,13 @@ export default function EventDetailsScreen() {
   );
 
   useEffect(() => {
-    if (openParam === "availability") {
-      setOpenSections((prev) => ({
-        ...prev,
-        availability: true,
-      }));
-    }
-  }, [openParam]);
+  if (openParam === "availability" || openParam === "documents") {
+    setOpenSections((prev) => ({
+      ...prev,
+      [openParam]: true,
+    }));
+  }
+}, [openParam]);
 
   const scrollRef = useRef<ScrollView | null>(null);
   const sectionPositions = useRef<Partial<Record<SectionKey, number>>>({});

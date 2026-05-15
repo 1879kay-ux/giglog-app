@@ -35,6 +35,8 @@
   "profile.updatePassword": "Update password",
   "profile.passwordHint": "Tip: set this once and you can ignore email reset links.",
   "profile.signOut": "Sign out",
+  "profile.placeholderNewPassword": "New password",
+  "profile.placeholderRepeatPassword": "Repeat new password",
   "unavailability.title": "Unavailable Periods",
   "unavailability.infoText": "Add holidays, work commitments, or any dates you cannot gig.",
   "unavailability.addSectionTitle": "Add unavailable period",
@@ -52,5 +54,9 @@
   "addVenue.city": "City",
   "addVenue.postcode": "Postcode",
   "addVenue.notes": "Notes",
-  "addVenue.saveButton": "Save Venue"
+  "addVenue.saveButton": "Save Venue",
+  "venue.placeholderName": "Venue name",
+  "venue.placeholderCity": "City",
+  "venue.placeholderPostcode": "Postcode",
+  "venue.placeholderNotes": "Notes about the venue"
 }

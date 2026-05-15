@@ -35,6 +35,8 @@
   "profile.updatePassword": "Actualizar contraseña",
   "profile.passwordHint": "Consejo: configúralo una vez y podrás ignorar los enlaces de restablecimiento por correo.",
   "profile.signOut": "Cerrar sesión",
+  "profile.placeholderNewPassword": "Nueva contraseña",
+  "profile.placeholderRepeatPassword": "Repetir nueva contraseña",
   "unavailability.title": "Períodos no disponibles",
   "unavailability.infoText": "Añade vacaciones, compromisos de trabajo o cualquier fecha en la que no puedas tocar.",
   "unavailability.addSectionTitle": "Agregar período no disponible",
@@ -52,5 +54,9 @@
   "addVenue.city": "Ciudad",
   "addVenue.postcode": "Código postal",
   "addVenue.notes": "Notas",
-  "addVenue.saveButton": "Guardar recinto"
+  "addVenue.saveButton": "Guardar recinto",
+  "venue.placeholderName": "Nombre del recinto",
+  "venue.placeholderCity": "Ciudad",
+  "venue.placeholderPostcode": "Código postal",
+  "venue.placeholderNotes": "Notas sobre el recinto"
 }

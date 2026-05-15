@@ -139,7 +139,7 @@ export default function ProfileScreen() {
           <TextInput
             value={newPassword}
             onChangeText={setNewPassword}
-            placeholder="New password"
+            placeholder={t("profile.placeholderNewPassword")}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
             autoCorrect={false}
@@ -150,7 +150,7 @@ export default function ProfileScreen() {
           <TextInput
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            placeholder="Repeat new password"
+            placeholder={t("profile.placeholderRepeatPassword")}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
             autoCorrect={false}

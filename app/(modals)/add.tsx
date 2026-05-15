@@ -108,7 +108,7 @@ export default function AddVenueModal() {
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="Venue name"
+            placeholder={t("venue.placeholderName")}
             placeholderTextColor={colors.textMuted}
           />
 
@@ -120,7 +120,7 @@ export default function AddVenueModal() {
             style={styles.input}
             value={city}
             onChangeText={setCity}
-            placeholder="City"
+            placeholder={t("venue.placeholderCity")}
             placeholderTextColor={colors.textMuted}
           />
 
@@ -130,7 +130,7 @@ export default function AddVenueModal() {
             style={styles.input}
             value={postcode}
             onChangeText={setPostcode}
-            placeholder="Postcode"
+            placeholder={t("venue.placeholderPostcode")}
             placeholderTextColor={colors.textMuted}
           />
 
@@ -140,7 +140,7 @@ export default function AddVenueModal() {
             style={[styles.input, { height: 100 }]}
             value={notes}
             onChangeText={setNotes}
-            placeholder="Notes about the venue"
+            placeholder={t("venue.placeholderNotes")}
             placeholderTextColor={colors.textMuted}
             multiline
           />

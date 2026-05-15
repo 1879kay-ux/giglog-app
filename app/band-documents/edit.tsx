@@ -294,12 +294,11 @@ export default function BandDocumentsEditScreen() {
         await supabase.functions.invoke("send-push-notification", {
           body: {
             title: "GigSynq band document added",
-            body: `${selectedDocType.charAt(0).toUpperCase() + selectedDocType.slice(1)}: ${
-              file.name ?? "A document"
-            } has been added to band documents.`,
+            body: `${selectedDocType.charAt(0).toUpperCase() + selectedDocType.slice(1)} document added: ${file.name ?? "A document"}.`,
             data: {
-              type: "band_document_added",
-            },
+  type: "band_document_added",
+  open: "band_documents",
+},
           },
         });
       } catch (notifyError) {

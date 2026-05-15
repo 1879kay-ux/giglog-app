@@ -29,13 +29,20 @@ export default function RootLayout() {
 
         const eventId = data?.event_id;
 
-        if (typeof eventId === "string" && eventId.length > 0) {
-          router.push({
-            pathname: `/events/${eventId}`,
-            params:
-              data?.open === "availability" ? { open: "availability" } : {},
-          });
-        }
+        if (data?.open === "band_documents") {
+  router.push("/band-documents");
+  return;
+}
+
+if (typeof eventId === "string" && eventId.length > 0) {
+  router.push({
+    pathname: `/events/${eventId}`,
+    params:
+      data?.open === "availability" || data?.open === "documents"
+        ? { open: data.open as string }
+        : {},
+  });
+}
       },
     );
 

@@ -1,5 +1,6 @@
 {
   "common.save": "Save",
   "common.cancel": "Cancel",
-  "settings.language": "Language"
+  "settings.language": "Language",
+  "settings.title": "Settings"
 }

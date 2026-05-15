@@ -1,8 +1,10 @@
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
+import i18n from "@/lib/i18n";
 import { supabase } from "@/lib/supabase";
 import { pickAndUploadBandLogo } from "@/lib/uploadBandLogo";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Pressable,
@@ -25,6 +27,7 @@ function clean(v?: string | null) {
 }
 
 export default function SettingsScreen() {
+    const { t } = useTranslation();
   const { loading, isAdmin, adminModeEnabled, setAdminModeEnabled } =
     useCurrentMember() as any;
   const canAdminEdit = !!isAdmin && !!adminModeEnabled;
@@ -194,9 +197,36 @@ export default function SettingsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Settings" }} />
+      <Stack.Screen options={{ title: t("settings.title") }} />
 
       <View style={styles.container}>
+        {/* LANGUAGE */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{t("settings.language")}</Text>
+
+          <View style={styles.row}>
+            <Pressable
+              onPress={() => i18n.changeLanguage("en")}
+              style={({ pressed }) => [
+                styles.linkBtn,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Text style={styles.linkBtnText}>English</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => i18n.changeLanguage("es")}
+              style={({ pressed }) => [
+                styles.linkBtn,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Text style={styles.linkBtnText}>Español</Text>
+            </Pressable>
+          </View>
+        </View>
+
         {/* BAND */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Band</Text>

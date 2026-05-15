@@ -5,6 +5,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +17,7 @@ import {
 } from "react-native";
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
 
   const [email, setEmail] = useState<string>("");
@@ -88,7 +90,7 @@ export default function ProfileScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "Profile",
+          title: t("profile.title"),
           headerTitleAlign: "center",
           headerStyle: { backgroundColor: colors.primary },
           headerTitleStyle: { color: "#fff", fontWeight: "700", fontSize: 18 },
@@ -122,9 +124,9 @@ export default function ProfileScreen() {
           <Ionicons name="calendar-outline" size={24} color={colors.primary} />
 
           <View style={{ flex: 1 }}>
-            <Text style={styles.availabilityTitle}>Unavailable Periods</Text>
+            <Text style={styles.availabilityTitle}>{t("profile.unavailablePeriods")}</Text>
             <Text style={styles.availabilitySubtitle}>
-              Add holidays, work blocks or dates you can’t gig
+              {t("profile.unavailablePeriodsSubtitle")}
             </Text>
           </View>
 
@@ -132,7 +134,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         <View style={styles.card}>
-          <Text style={styles.label}>Change password</Text>
+          <Text style={styles.label}>{t("profile.changePassword")}</Text>
 
           <TextInput
             value={newPassword}
@@ -158,7 +160,7 @@ export default function ProfileScreen() {
           />
 
           {mismatch ? (
-            <Text style={styles.errorText}>Passwords do not match.</Text>
+            <Text style={styles.errorText}>{t("profile.passwordsDoNotMatch")}</Text>
           ) : null}
 
           <TouchableOpacity
@@ -170,7 +172,7 @@ export default function ProfileScreen() {
             }
           >
             <Text style={styles.showBtnText}>
-              {showPassword ? "Hide" : "Show"}
+              {showPassword ? t("profile.hide") : t("profile.show")}
             </Text>
           </TouchableOpacity>
 
@@ -185,17 +187,17 @@ export default function ProfileScreen() {
             {savingPassword ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.primaryBtnText}>Update password</Text>
+              <Text style={styles.primaryBtnText}>{t("profile.updatePassword")}</Text>
             )}
           </TouchableOpacity>
 
           <Text style={styles.hint}>
-            Tip: set this once and you can ignore email reset links.
+            {t("profile.passwordHint")}
           </Text>
         </View>
 
         <TouchableOpacity style={styles.signOutBtn} onPress={signOut}>
-          <Text style={styles.signOutText}>Sign out</Text>
+          <Text style={styles.signOutText}>{t("profile.signOut")}</Text>
         </TouchableOpacity>
       </View>
     </>

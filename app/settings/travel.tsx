@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -28,6 +29,7 @@ function clean(v?: string | null) {
 type StatusKind = "ok" | "error";
 
 export default function TravelDefaultsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -110,7 +112,7 @@ export default function TravelDefaultsScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "Default departure",
+          title: t("travel.screenTitle"),
           headerTitleAlign: "center",
           headerStyle: { backgroundColor: colors.primary },
           headerTintColor: "#fff",
@@ -127,9 +129,9 @@ export default function TravelDefaultsScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.card}>
-            <Text style={styles.title}>Default departure location</Text>
+            <Text style={styles.title}>{t("travel.cardTitle")}</Text>
             <Text style={styles.sub}>
-              Used for all events unless you override it on a specific event.
+              {t("travel.cardSub")}
             </Text>
 
             {loading ? (
@@ -139,7 +141,7 @@ export default function TravelDefaultsScreen() {
               </View>
             ) : (
               <>
-                <Text style={styles.label}>Departure address</Text>
+                <Text style={styles.label}>{t("travel.departureAddress")}</Text>
                 <TextInput
                   style={styles.input}
                   value={address}
@@ -148,7 +150,7 @@ export default function TravelDefaultsScreen() {
                   placeholderTextColor={colors.textMuted}
                 />
 
-                <Text style={styles.label}>Departure postcode</Text>
+                <Text style={styles.label}>{t("travel.departurePostcode")}</Text>
                 <TextInput
                   style={styles.input}
                   value={postcode}
@@ -184,7 +186,7 @@ export default function TravelDefaultsScreen() {
             disabled={saving || loading}
           >
             <Text style={styles.saveText}>
-              {saving ? "Saving…" : "Save defaults"}
+              {saving ? "Saving…" : t("travel.saveDefaults")}
             </Text>
           </Pressable>
         </ScrollView>

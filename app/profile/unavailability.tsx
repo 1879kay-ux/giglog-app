@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Stack } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -31,6 +32,7 @@ function toDisplayDate(date: Date | string) {
 }
 
 export default function UnavailabilityScreen() {
+  const { t } = useTranslation();
   const cm: any = useCurrentMember();
 
   const memberId =
@@ -101,7 +103,7 @@ export default function UnavailabilityScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Unavailable Periods" }} />
+      <Stack.Screen options={{ title: t("unavailability.title") }} />
 
       <View style={styles.container}>
         <View style={styles.infoCard}>
@@ -111,14 +113,14 @@ export default function UnavailabilityScreen() {
             color={colors.primary}
           />
           <Text style={styles.infoText}>
-            Add holidays, work commitments, or any dates you cannot gig.
+            {t("unavailability.infoText")}
           </Text>
         </View>
 
         <View style={styles.formCard}>
-          <Text style={styles.sectionTitle}>Add unavailable period</Text>
+          <Text style={styles.sectionTitle}>{t("unavailability.addSectionTitle")}</Text>
 
-          <Text style={styles.label}>Start Date</Text>
+          <Text style={styles.label}>{t("unavailability.startDate")}</Text>
           <Pressable
             style={styles.dateInput}
             onPress={() => setShowPicker("start")}
@@ -131,7 +133,7 @@ export default function UnavailabilityScreen() {
             <Text style={styles.dateInputText}>{toDisplayDate(startDate)}</Text>
           </Pressable>
 
-          <Text style={styles.label}>End Date</Text>
+          <Text style={styles.label}>{t("unavailability.endDate")}</Text>
           <Pressable
             style={styles.dateInput}
             onPress={() => setShowPicker("end")}
@@ -168,16 +170,16 @@ export default function UnavailabilityScreen() {
               style={styles.doneBtn}
               onPress={() => setShowPicker(null)}
             >
-              <Text style={styles.doneBtnText}>Done</Text>
+              <Text style={styles.doneBtnText}>{t("unavailability.done")}</Text>
             </Pressable>
           ) : null}
 
           <Pressable style={styles.addBtn} onPress={handleAdd}>
-            <Text style={styles.addBtnText}>Add Unavailability</Text>
+            <Text style={styles.addBtnText}>{t("unavailability.addButton")}</Text>
           </Pressable>
         </View>
 
-        <Text style={styles.sectionTitle}>Upcoming unavailable periods</Text>
+        <Text style={styles.sectionTitle}>{t("unavailability.upcomingTitle")}</Text>
 
         <FlatList
           data={items}
@@ -189,9 +191,9 @@ export default function UnavailabilityScreen() {
                 size={28}
                 color="#9CA3AF"
               />
-              <Text style={styles.emptyTitle}>No unavailable periods yet</Text>
+              <Text style={styles.emptyTitle}>{t("unavailability.emptyTitle")}</Text>
               <Text style={styles.emptyText}>
-                Add holidays, work blocks or dates you can’t gig.
+                {t("unavailability.emptyText")}
               </Text>
             </View>
           }
@@ -202,11 +204,11 @@ export default function UnavailabilityScreen() {
                   {toDisplayDate(item.start_date)} →{" "}
                   {toDisplayDate(item.end_date)}
                 </Text>
-                <Text style={styles.cardSubText}>Unavailable</Text>
+                <Text style={styles.cardSubText}>{t("unavailability.unavailable")}</Text>
               </View>
 
               <Pressable onPress={() => handleDelete(item.id)}>
-                <Text style={styles.deleteText}>Delete</Text>
+                <Text style={styles.deleteText}>{t("unavailability.delete")}</Text>
               </Pressable>
             </View>
           )}

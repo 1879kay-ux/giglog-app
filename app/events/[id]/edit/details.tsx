@@ -2,27 +2,28 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  Stack,
-  useFocusEffect,
-  useLocalSearchParams,
-  useRouter,
+    Stack,
+    useFocusEffect,
+    useLocalSearchParams,
+    useRouter,
 } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    ActivityIndicator,
+    Alert,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import { Calendar } from "react-native-calendars";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type VenueRow = {
   venue_id: string;
@@ -125,6 +126,7 @@ function ChipGroup({
 }
 
 export default function EditEventDetailsScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -146,6 +148,7 @@ export default function EditEventDetailsScreen() {
   const [promoterPhone, setPromoterPhone] = useState("");
   const [promoterEmail, setPromoterEmail] = useState("");
   const [notes, setNotes] = useState("");
+  const stickyFooterHeight = 92 + insets.bottom;
 
   const typeOptions: ChipOption[] = useMemo(
     () => [
@@ -603,14 +606,6 @@ if (dateChanged || statusChanged) {
         />
       </View>
 
-      {/* SAVE */}
-      <TouchableOpacity
-        style={styles.saveButton}
-        onPress={onSave}
-        disabled={saving}
-      >
-        <Text style={styles.saveButtonText}>{saving ? "Saving…" : "Save"}</Text>
-      </TouchableOpacity>
     </>
   );
 
@@ -620,12 +615,15 @@ if (dateChanged || statusChanged) {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         {Platform.OS === "web" ? (
           <ScrollView
-            contentContainerStyle={[styles.container, { paddingBottom: 180 }]}
+            contentContainerStyle={[
+              styles.container,
+              { paddingBottom: stickyFooterHeight + 140 },
+            ]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -637,7 +635,10 @@ if (dateChanged || statusChanged) {
             accessible={false}
           >
             <ScrollView
-              contentContainerStyle={[styles.container, { paddingBottom: 180 }]}
+              contentContainerStyle={[
+                styles.container,
+                { paddingBottom: stickyFooterHeight + 140 },
+              ]}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
@@ -645,6 +646,21 @@ if (dateChanged || statusChanged) {
             </ScrollView>
           </TouchableWithoutFeedback>
         )}
+
+        <View
+          style={[
+            styles.stickyFooter,
+            { paddingBottom: Math.max(insets.bottom, 10) },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={onSave}
+            disabled={saving}
+          >
+            <Text style={styles.saveButtonText}>{saving ? "Saving…" : "Save"}</Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </>
   );
@@ -813,6 +829,14 @@ const styles = StyleSheet.create({
   multiline: {
     height: 110,
     textAlignVertical: "top",
+  },
+
+  stickyFooter: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.pageBg,
+    paddingHorizontal: 16,
+    paddingTop: 10,
   },
 
   saveButton: {

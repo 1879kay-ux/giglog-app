@@ -3,17 +3,18 @@ import { colors } from "@/theme/colors";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type EventFinanceRow = {
   income_guarantee: number | null;
@@ -82,6 +83,7 @@ function cleanText(v: string) {
 }
 
 export default function EditEventFinanceScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -107,6 +109,7 @@ export default function EditEventFinanceScreen() {
 
   const [feeNotes, setFeeNotes] = useState("");
   const [costNotes, setCostNotes] = useState("");
+  const stickyFooterHeight = 92 + insets.bottom;
 
   const numericFields = useMemo(
     () => [
@@ -359,11 +362,16 @@ export default function EditEventFinanceScreen() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         <ScrollView
-          contentContainerStyle={styles.container}
+          contentContainerStyle={[
+            styles.container,
+            { paddingBottom: stickyFooterHeight + 140 },
+          ]}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Finance</Text>
@@ -441,6 +449,14 @@ export default function EditEventFinanceScreen() {
             <RowNumber label="Shares" value={shares} onChange={setShares} />
           </View>
 
+        </ScrollView>
+
+        <View
+          style={[
+            styles.stickyFooter,
+            { paddingBottom: Math.max(insets.bottom, 10) },
+          ]}
+        >
           <TouchableOpacity
             style={styles.saveButton}
             onPress={onSave}
@@ -450,7 +466,7 @@ export default function EditEventFinanceScreen() {
               {saving ? "Saving…" : "Save"}
             </Text>
           </TouchableOpacity>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </>
   );
@@ -576,8 +592,15 @@ const styles = StyleSheet.create({
 
   container: {
     padding: 16,
-    paddingBottom: Platform.OS === "ios" ? 180 : 140,
     backgroundColor: colors.pageBg,
+  },
+
+  stickyFooter: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.pageBg,
+    paddingHorizontal: 16,
+    paddingTop: 10,
   },
 
   card: {

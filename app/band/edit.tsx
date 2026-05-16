@@ -18,6 +18,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const MEMBER_TYPES = ["musician", "crew"] as const;
 type MemberType = (typeof MEMBER_TYPES)[number];
@@ -77,6 +78,7 @@ type BandMemberRow = {
 };
 
 export default function EditBandMemberScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -124,6 +126,7 @@ export default function EditBandMemberScreen() {
   const [canViewBandAndCrew, setCanViewBandAndCrew] = useState(false);
   const [canViewBandDocs, setCanViewBandDocs] = useState(false);
   const [canViewFinance, setCanViewFinance] = useState(false);
+  const stickyFooterHeight = 92 + insets.bottom;
 
   const role = useMemo(() => {
     return memberType === "musician" ? musicianRole : crewRole;
@@ -433,11 +436,17 @@ export default function EditBandMemberScreen() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         <ScrollView
           style={styles.container}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: stickyFooterHeight + 140 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <Text style={styles.label}>{t("bandEdit.name")}</Text>
           <TextInput
@@ -657,16 +666,6 @@ export default function EditBandMemberScreen() {
             />
           </View>
 
-          <Pressable
-            onPress={onSave}
-            disabled={saving}
-            style={[styles.saveButton, saving && { opacity: 0.7 }]}
-          >
-            <Text style={styles.saveButtonText}>
-              {saving ? "Saving…" : t("bandEdit.saveChanges")}
-            </Text>
-          </Pressable>
-
           {isActive ? (
             <Pressable
               onPress={() => setActiveRow(false)}
@@ -685,6 +684,23 @@ export default function EditBandMemberScreen() {
             </Pressable>
           )}
         </ScrollView>
+
+        <View
+          style={[
+            styles.stickyFooter,
+            { paddingBottom: Math.max(insets.bottom, 10) },
+          ]}
+        >
+          <Pressable
+            onPress={onSave}
+            disabled={saving}
+            style={[styles.saveButton, saving && { opacity: 0.7 }]}
+          >
+            <Text style={styles.saveButtonText}>
+              {saving ? "Saving…" : t("bandEdit.saveChanges")}
+            </Text>
+          </Pressable>
+        </View>
       </KeyboardAvoidingView>
     </>
   );
@@ -694,7 +710,15 @@ const styles = StyleSheet.create({
   loading: { flex: 1, justifyContent: "center", alignItems: "center" },
 
   container: { flex: 1, backgroundColor: "#f5f5f5" },
-  content: { padding: 16, paddingBottom: Platform.OS === "ios" ? 180 : 140 },
+  content: { padding: 16 },
+
+  stickyFooter: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: "#f5f5f5",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
 
   label: {
     fontSize: 13,

@@ -249,5 +249,18 @@
   "bandAdd.off": "Off",
   "bandAdd.onlyAdminsCanChangeAccess": "Only admins can change access.",
   "bandAdd.saveAndInvite": "Save & Invite",
-  "bandAdd.note": "Saving will create the member and send them an email invitation to join GigSynq. They will receive a link to activate their account."
+  "bandAdd.note": "Saving will create the member and send them an email invitation to join GigSynq. They will receive a link to activate their account.",
+  "bandAdd.alert.notAllowedTitle": "Not allowed",
+  "bandAdd.alert.onlyAdminsCanInvite": "Only admins can invite new members.",
+  "bandAdd.alert.missingNameTitle": "Missing name",
+  "bandAdd.alert.pleaseEnterDisplayName": "Please enter a display name.",
+  "bandAdd.alert.missingEmailTitle": "Missing email",
+  "bandAdd.alert.pleaseEnterEmailAddress": "Please enter an email address.",
+  "bandAdd.alert.missingRoleTitle": "Missing role",
+  "bandAdd.alert.pleaseEnterRoleOther": "Please enter a value for Role (Other).",
+  "bandAdd.alert.errorTitle": "Error",
+  "bandAdd.alert.noBandIdFoundForCurrentUser": "No band_id found for current user. Cannot create member.",
+  "bandAdd.alert.inviteSentTitle": "Invite sent",
+  "bandAdd.alert.inviteEmailSent": "Invite email sent.",
+  "bandAdd.alert.memberCreated": "Member created."
 }

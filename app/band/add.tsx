@@ -2,17 +2,18 @@ import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { supabase } from "@/lib/supabase";
 import { Stack, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 
 const MEMBER_TYPES = ["musician", "crew"] as const;
@@ -74,6 +75,7 @@ type InviteResponse =
 
 export default function AddBandMemberScreen() {
   const router = useRouter();
+  const { i18n } = useTranslation();
 
   const cm: any = useCurrentMember();
   const currentUserIsAdmin = !!cm?.isAdmin;
@@ -152,24 +154,36 @@ export default function AddBandMemberScreen() {
 
   const onSave = async () => {
     if (!currentUserIsAdmin) {
-      Alert.alert("Not allowed", "Only admins can invite new members.");
+      Alert.alert(
+        i18n.t("bandAdd.alert.notAllowedTitle"),
+        i18n.t("bandAdd.alert.onlyAdminsCanInvite"),
+      );
       return;
     }
 
     const name = displayName.trim();
     if (!name) {
-      Alert.alert("Missing name", "Please enter a display name.");
+      Alert.alert(
+        i18n.t("bandAdd.alert.missingNameTitle"),
+        i18n.t("bandAdd.alert.pleaseEnterDisplayName"),
+      );
       return;
     }
 
     const emailClean = email.trim();
     if (!emailClean) {
-      Alert.alert("Missing email", "Please enter an email address.");
+      Alert.alert(
+        i18n.t("bandAdd.alert.missingEmailTitle"),
+        i18n.t("bandAdd.alert.pleaseEnterEmailAddress"),
+      );
       return;
     }
 
     if (role === "Other" && !roleOther.trim()) {
-      Alert.alert("Missing role", "Please enter a value for Role (Other).");
+      Alert.alert(
+        i18n.t("bandAdd.alert.missingRoleTitle"),
+        i18n.t("bandAdd.alert.pleaseEnterRoleOther"),
+      );
       return;
     }
 
@@ -186,8 +200,8 @@ export default function AddBandMemberScreen() {
       const bandId = await getCurrentBandId();
       if (!bandId) {
         Alert.alert(
-          "Error",
-          "No band_id found for current user. Cannot create member.",
+          i18n.t("bandAdd.alert.errorTitle"),
+          i18n.t("bandAdd.alert.noBandIdFoundForCurrentUser"),
         );
         return;
       }
@@ -277,14 +291,16 @@ export default function AddBandMemberScreen() {
       if (patchErr) throw new Error(patchErr.message);
 
       Alert.alert(
-        "Invite sent",
+        i18n.t("bandAdd.alert.inviteSentTitle"),
         data.note ??
-          (data.invite_sent ? "Invite email sent." : "Member created."),
+          (data.invite_sent
+            ? i18n.t("bandAdd.alert.inviteEmailSent")
+            : i18n.t("bandAdd.alert.memberCreated")),
       );
       router.back();
     } catch (e: any) {
       console.log("invite member error", e);
-      Alert.alert("Error", String(e?.message ?? e));
+      Alert.alert(i18n.t("bandAdd.alert.errorTitle"), String(e?.message ?? e));
     } finally {
       setSaving(false);
     }
@@ -319,7 +335,7 @@ export default function AddBandMemberScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Add Member" }} />
+      <Stack.Screen options={{ title: i18n.t("bandAdd.title") }} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -329,25 +345,25 @@ export default function AddBandMemberScreen() {
           style={styles.container}
           contentContainerStyle={styles.content}
         >
-          <Text style={styles.label}>Name</Text>
+          <Text style={styles.label}>{i18n.t("bandAdd.name")}</Text>
           <TextInput
             value={displayName}
             onChangeText={setDisplayName}
-            placeholder="e.g. Ian"
+            placeholder={i18n.t("bandAdd.placeholderName")}
             style={styles.input}
           />
 
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>{i18n.t("bandAdd.email")}</Text>
           <TextInput
             value={email}
             onChangeText={setEmail}
-            placeholder="e.g. ian@yourdomain.com"
+            placeholder={i18n.t("bandAdd.placeholderEmail")}
             autoCapitalize="none"
             keyboardType="email-address"
             style={styles.input}
           />
 
-          <Text style={styles.label}>Member Type</Text>
+          <Text style={styles.label}>{i18n.t("bandAdd.memberType")}</Text>
           <View style={styles.chipWrap}>
             {MEMBER_TYPES.map((t) => {
               const selected = memberType === t;
@@ -377,14 +393,16 @@ export default function AddBandMemberScreen() {
                       selected && styles.chipTextSelected,
                     ]}
                   >
-                    {t === "musician" ? "Musician" : "Crew"}
+                    {t === "musician"
+                      ? i18n.t("bandAdd.typeMusician")
+                      : i18n.t("bandAdd.typeCrew")}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
 
-          <Text style={styles.label}>Role</Text>
+          <Text style={styles.label}>{i18n.t("bandAdd.role")}</Text>
           <View style={styles.chipWrap}>
             {rolesToRender.map((r) => {
               const selected = selectedRole === r;
@@ -406,7 +424,27 @@ export default function AddBandMemberScreen() {
                       selected && styles.chipTextSelected,
                     ]}
                   >
-                    {r}
+                    {r === "Band"
+                      ? i18n.t("bandAdd.roleBand")
+                      : r === "Dep Musician"
+                        ? i18n.t("bandAdd.roleDepMusician")
+                        : r === "Crew"
+                          ? i18n.t("bandAdd.roleCrew")
+                          : r === "Tour Manager"
+                            ? i18n.t("bandAdd.roleTourManager")
+                            : r === "Merch"
+                              ? i18n.t("bandAdd.roleMerch")
+                              : r === "FoH Engineer"
+                                ? i18n.t("bandAdd.roleFohEngineer")
+                                : r === "Monitor Engineer"
+                                  ? i18n.t("bandAdd.roleMonitorEngineer")
+                                  : r === "Lighting"
+                                    ? i18n.t("bandAdd.roleLighting")
+                                    : r === "Tech"
+                                      ? i18n.t("bandAdd.roleTech")
+                                      : r === "Other"
+                                        ? i18n.t("bandAdd.roleOtherOption")
+                                        : r}
                   </Text>
                 </Pressable>
               );
@@ -415,11 +453,11 @@ export default function AddBandMemberScreen() {
 
           {selectedRole === "Other" ? (
             <>
-              <Text style={styles.label}>Role (Other)</Text>
+              <Text style={styles.label}>{i18n.t("bandAdd.roleOther")}</Text>
               <TextInput
                 value={roleOther}
                 onChangeText={setRoleOther}
-                placeholder="e.g. Playback Tech"
+                placeholder={i18n.t("bandAdd.placeholderRoleOther")}
                 style={styles.input}
               />
             </>
@@ -427,7 +465,7 @@ export default function AddBandMemberScreen() {
 
           {memberType === "musician" ? (
             <>
-              <Text style={styles.label}>Instruments (multi-select)</Text>
+              <Text style={styles.label}>{i18n.t("bandAdd.instruments")}</Text>
               <View style={styles.chipWrap}>
                 {INSTRUMENTS.map((p) => {
                   const selected = instruments.includes(p);
@@ -443,19 +481,41 @@ export default function AddBandMemberScreen() {
                           selected && styles.chipTextSelected,
                         ]}
                       >
-                        {p}
+                        {p === "Lead Vox"
+                          ? i18n.t("bandAdd.instrumentLeadVox")
+                          : p === "Backing Vox"
+                            ? i18n.t("bandAdd.instrumentBackingVox")
+                            : p === "Drums"
+                              ? i18n.t("bandAdd.instrumentDrums")
+                              : p === "Bass"
+                                ? i18n.t("bandAdd.instrumentBass")
+                                : p === "Lead Guitar"
+                                  ? i18n.t("bandAdd.instrumentLeadGuitar")
+                                  : p === "Guitar"
+                                    ? i18n.t("bandAdd.instrumentGuitar")
+                                    : p === "Rhythm Guitar"
+                                      ? i18n.t("bandAdd.instrumentRhythmGuitar")
+                                      : p === "Keyboards"
+                                        ? i18n.t("bandAdd.instrumentKeyboards")
+                                        : p === "Saxophone"
+                                          ? i18n.t("bandAdd.instrumentSaxophone")
+                                          : p === "Trumpet"
+                                            ? i18n.t("bandAdd.instrumentTrumpet")
+                                            : p === "Trombone"
+                                              ? i18n.t("bandAdd.instrumentTrombone")
+                                              : p}
                       </Text>
                     </Pressable>
                   );
                 })}
               </View>
 
-              <Text style={styles.label}>Custom instruments</Text>
+              <Text style={styles.label}>{i18n.t("bandAdd.customInstruments")}</Text>
               <View style={styles.customRow}>
                 <TextInput
                   value={customInstrumentInput}
                   onChangeText={setCustomInstrumentInput}
-                  placeholder="e.g. Percussion"
+                  placeholder={i18n.t("bandAdd.placeholderCustomInstrument")}
                   style={[
                     styles.input,
                     { flex: 1, marginTop: 0, marginBottom: 0 },
@@ -465,7 +525,7 @@ export default function AddBandMemberScreen() {
                   style={styles.addButton}
                   onPress={addCustomInstrument}
                 >
-                  <Text style={styles.addButtonText}>Add</Text>
+                  <Text style={styles.addButtonText}>{i18n.t("bandAdd.add")}</Text>
                 </Pressable>
               </View>
 
@@ -495,7 +555,11 @@ export default function AddBandMemberScreen() {
               <Text
                 style={[styles.toggleText, isActive && styles.toggleTextOn]}
               >
-                Active: {isActive ? "Yes" : "No"}
+                {i18n.t("bandAdd.activeToggle", {
+                  value: isActive
+                    ? i18n.t("bandAdd.yes")
+                    : i18n.t("bandAdd.no"),
+                })}
               </Text>
             </Pressable>
 
@@ -511,38 +575,58 @@ export default function AddBandMemberScreen() {
               ]}
             >
               <Text style={[styles.toggleText, isAdmin && styles.toggleTextOn]}>
-                Admin: {isAdmin ? "Yes" : "No"}
+                {i18n.t("bandAdd.adminToggle", {
+                  value: isAdmin
+                    ? i18n.t("bandAdd.yes")
+                    : i18n.t("bandAdd.no"),
+                })}
               </Text>
             </Pressable>
           </View>
 
           {/* ACCESS CONTROLS */}
-          <Text style={[styles.label, { marginTop: 18 }]}>Access</Text>
+          <Text style={[styles.label, { marginTop: 18 }]}>{i18n.t("bandAdd.access")}</Text>
           <Text style={styles.hint}>
-            These control which sections appear for this member.
+            {i18n.t("bandAdd.accessHint")}
           </Text>
 
           <View style={[styles.chipWrap, { marginTop: 10 }]}>
             <ToggleChip
-              label={`Settings: ${canViewSettings ? "On" : "Off"}`}
+              label={i18n.t("bandAdd.settingsToggle", {
+                value: canViewSettings
+                  ? i18n.t("bandAdd.on")
+                  : i18n.t("bandAdd.off"),
+              })}
               value={canViewSettings}
               onPress={() => setCanViewSettings((v) => !v)}
               disabled={!currentUserIsAdmin}
             />
             <ToggleChip
-              label={`Band & Crew: ${canViewBandAndCrew ? "On" : "Off"}`}
+              label={i18n.t("bandAdd.bandCrewToggle", {
+                value: canViewBandAndCrew
+                  ? i18n.t("bandAdd.on")
+                  : i18n.t("bandAdd.off"),
+              })}
               value={canViewBandAndCrew}
               onPress={() => setCanViewBandAndCrew((v) => !v)}
               disabled={!currentUserIsAdmin}
             />
             <ToggleChip
-              label={`Band Docs: ${canViewBandDocs ? "On" : "Off"}`}
+              label={i18n.t("bandAdd.bandDocsToggle", {
+                value: canViewBandDocs
+                  ? i18n.t("bandAdd.on")
+                  : i18n.t("bandAdd.off"),
+              })}
               value={canViewBandDocs}
               onPress={() => setCanViewBandDocs((v) => !v)}
               disabled={!currentUserIsAdmin}
             />
             <ToggleChip
-              label={`Finance: ${canViewFinance ? "On" : "Off"}`}
+              label={i18n.t("bandAdd.financeToggle", {
+                value: canViewFinance
+                  ? i18n.t("bandAdd.on")
+                  : i18n.t("bandAdd.off"),
+              })}
               value={canViewFinance}
               onPress={() => setCanViewFinance((v) => !v)}
               disabled={!currentUserIsAdmin}
@@ -551,7 +635,7 @@ export default function AddBandMemberScreen() {
 
           {!currentUserIsAdmin ? (
             <Text style={[styles.hint, { marginTop: 8 }]}>
-              Only admins can change access.
+              {i18n.t("bandAdd.onlyAdminsCanChangeAccess")}
             </Text>
           ) : null}
 
@@ -571,13 +655,12 @@ export default function AddBandMemberScreen() {
                 <Text style={styles.saveButtonText}>Saving…</Text>
               </View>
             ) : (
-              <Text style={styles.saveButtonText}>Save & Invite</Text>
+              <Text style={styles.saveButtonText}>{i18n.t("bandAdd.saveAndInvite")}</Text>
             )}
           </Pressable>
 
           <Text style={styles.note}>
-            Saving will create the member and send them an email invitation to
-            join GigSynq. They will receive a link to activate their account.
+            {i18n.t("bandAdd.note")}
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

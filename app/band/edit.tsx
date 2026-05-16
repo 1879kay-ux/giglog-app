@@ -4,18 +4,19 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 const MEMBER_TYPES = ["musician", "crew"] as const;
@@ -77,6 +78,7 @@ type BandMemberRow = {
 
 export default function EditBandMemberScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -345,10 +347,39 @@ export default function EditBandMemberScreen() {
 
   const rolesToRender = memberType === "musician" ? MUSICIAN_ROLES : CREW_ROLES;
 
+  const roleLabel = (r: string) => {
+    if (r === "Band") return t("bandEdit.roleBand");
+    if (r === "Dep Musician") return t("bandEdit.roleDepMusician");
+    if (r === "Crew") return t("bandEdit.roleCrew");
+    if (r === "Tour Manager") return t("bandEdit.roleTourManager");
+    if (r === "Merch") return t("bandEdit.roleMerch");
+    if (r === "FoH Engineer") return t("bandEdit.roleFohEngineer");
+    if (r === "Monitor Engineer") return t("bandEdit.roleMonitorEngineer");
+    if (r === "Lighting") return t("bandEdit.roleLighting");
+    if (r === "Tech") return t("bandEdit.roleTech");
+    if (r === "Other") return t("bandEdit.roleOtherOption");
+    return r;
+  };
+
+  const instrumentLabel = (p: string) => {
+    if (p === "Lead Vox") return t("bandEdit.instrumentLeadVox");
+    if (p === "Backing Vox") return t("bandEdit.instrumentBackingVox");
+    if (p === "Drums") return t("bandEdit.instrumentDrums");
+    if (p === "Bass") return t("bandEdit.instrumentBass");
+    if (p === "Lead Guitar") return t("bandEdit.instrumentLeadGuitar");
+    if (p === "Guitar") return t("bandEdit.instrumentGuitar");
+    if (p === "Rhythm Guitar") return t("bandEdit.instrumentRhythmGuitar");
+    if (p === "Keyboards") return t("bandEdit.instrumentKeyboards");
+    if (p === "Saxophone") return t("bandEdit.instrumentSaxophone");
+    if (p === "Trumpet") return t("bandEdit.instrumentTrumpet");
+    if (p === "Trombone") return t("bandEdit.instrumentTrombone");
+    return p;
+  };
+
   if (!gateChecked || loading) {
     return (
       <>
-        <Stack.Screen options={{ title: "Edit Member" }} />
+        <Stack.Screen options={{ title: t("bandEdit.title") }} />
         <View style={styles.loading}>
           <ActivityIndicator size="large" />
         </View>
@@ -384,7 +415,7 @@ export default function EditBandMemberScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "Edit Member",
+          title: t("bandEdit.title"),
           headerTitleAlign: "center",
           headerStyle: { backgroundColor: colors.primary },
           headerTitleStyle: { color: "#fff", fontWeight: "700" },
@@ -408,14 +439,14 @@ export default function EditBandMemberScreen() {
           style={styles.container}
           contentContainerStyle={styles.content}
         >
-          <Text style={styles.label}>Name</Text>
+          <Text style={styles.label}>{t("bandEdit.name")}</Text>
           <TextInput
             value={displayName}
             onChangeText={setDisplayName}
             style={styles.input}
           />
 
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>{t("bandEdit.email")}</Text>
           <TextInput
             value={email}
             onChangeText={setEmail}
@@ -424,18 +455,18 @@ export default function EditBandMemberScreen() {
             style={styles.input}
           />
 
-          <Text style={styles.label}>Member Type</Text>
+          <Text style={styles.label}>{t("bandEdit.memberType")}</Text>
           <View style={styles.chipWrap}>
-            {MEMBER_TYPES.map((t) => {
-              const selected = memberType === t;
+            {MEMBER_TYPES.map((mt) => {
+              const selected = memberType === mt;
               return (
                 <Pressable
-                  key={t}
+                  key={mt}
                   onPress={() => {
-                    setMemberType(t);
+                    setMemberType(mt);
                     setRoleOther("");
 
-                    if (t === "musician") {
+                    if (mt === "musician") {
                       setMusicianRole("Band");
                       setCrewRole("Crew");
                     } else {
@@ -454,14 +485,16 @@ export default function EditBandMemberScreen() {
                       selected && styles.chipTextSelected,
                     ]}
                   >
-                    {t === "musician" ? "Musician" : "Crew"}
+                    {mt === "musician"
+                      ? t("bandEdit.typeMusician")
+                      : t("bandEdit.typeCrew")}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
 
-          <Text style={styles.label}>Role</Text>
+          <Text style={styles.label}>{t("bandEdit.role")}</Text>
           <View style={styles.chipWrap}>
             {rolesToRender.map((r) => {
               const selected = role === r;
@@ -483,7 +516,7 @@ export default function EditBandMemberScreen() {
                       selected && styles.chipTextSelected,
                     ]}
                   >
-                    {r}
+                    {roleLabel(r)}
                   </Text>
                 </Pressable>
               );
@@ -492,11 +525,11 @@ export default function EditBandMemberScreen() {
 
           {role === "Other" ? (
             <>
-              <Text style={styles.label}>Role (Other)</Text>
+              <Text style={styles.label}>{t("bandEdit.roleOther")}</Text>
               <TextInput
                 value={roleOther}
                 onChangeText={setRoleOther}
-                placeholder="e.g. Playback Tech"
+                placeholder={t("bandEdit.placeholderRoleOther")}
                 style={styles.input}
               />
             </>
@@ -504,7 +537,7 @@ export default function EditBandMemberScreen() {
 
           {memberType === "musician" ? (
             <>
-              <Text style={styles.label}>Instruments (multi-select)</Text>
+              <Text style={styles.label}>{t("bandEdit.instruments")}</Text>
               <View style={styles.chipWrap}>
                 {INSTRUMENTS.map((p) => {
                   const selected = instruments.includes(p);
@@ -520,19 +553,19 @@ export default function EditBandMemberScreen() {
                           selected && styles.chipTextSelected,
                         ]}
                       >
-                        {p}
+                        {instrumentLabel(p)}
                       </Text>
                     </Pressable>
                   );
                 })}
               </View>
 
-              <Text style={styles.label}>Custom instruments</Text>
+              <Text style={styles.label}>{t("bandEdit.customInstruments")}</Text>
               <View style={styles.customRow}>
                 <TextInput
                   value={customInstrumentInput}
                   onChangeText={setCustomInstrumentInput}
-                  placeholder="e.g. Percussion"
+                  placeholder={t("bandEdit.placeholderCustomInstrument")}
                   style={[
                     styles.input,
                     { flex: 1, marginTop: 0, marginBottom: 0 },
@@ -542,7 +575,7 @@ export default function EditBandMemberScreen() {
                   style={styles.addButton}
                   onPress={addCustomInstrument}
                 >
-                  <Text style={styles.addButtonText}>Add</Text>
+                  <Text style={styles.addButtonText}>{t("bandEdit.add")}</Text>
                 </Pressable>
               </View>
 
@@ -572,41 +605,53 @@ export default function EditBandMemberScreen() {
               style={[styles.toggle, isAdmin && styles.toggleOn]}
             >
               <Text style={[styles.toggleText, isAdmin && styles.toggleTextOn]}>
-                Admin: {isAdmin ? "Yes" : "No"}
+                {t("bandEdit.adminToggle", {
+                  value: isAdmin ? t("bandEdit.yes") : t("bandEdit.no"),
+                })}
               </Text>
             </Pressable>
 
             <View style={[styles.toggle, { opacity: 0.9 }]}>
               <Text style={styles.toggleText}>
-                Status: {isActive ? "Active" : "Inactive"}
+                {t("bandEdit.statusToggle", {
+                  value: isActive ? t("bandEdit.active") : t("bandEdit.inactive"),
+                })}
               </Text>
             </View>
           </View>
 
           {/* ACCESS CONTROLS */}
-          <Text style={[styles.label, { marginTop: 18 }]}>Access</Text>
+          <Text style={[styles.label, { marginTop: 18 }]}>{t("bandEdit.access")}</Text>
           <Text style={styles.hint}>
-            These control which sections appear for this member.
+            {t("bandEdit.accessHint")}
           </Text>
 
           <View style={[styles.chipWrap, { marginTop: 10 }]}>
             <ToggleChip
-              label={`Settings: ${canViewSettings ? "On" : "Off"}`}
+              label={t("bandEdit.settingsToggle", {
+                value: canViewSettings ? t("bandEdit.on") : t("bandEdit.off"),
+              })}
               value={canViewSettings}
               onPress={() => setCanViewSettings((v) => !v)}
             />
             <ToggleChip
-              label={`Band & Crew: ${canViewBandAndCrew ? "On" : "Off"}`}
+              label={t("bandEdit.bandCrewToggle", {
+                value: canViewBandAndCrew ? t("bandEdit.on") : t("bandEdit.off"),
+              })}
               value={canViewBandAndCrew}
               onPress={() => setCanViewBandAndCrew((v) => !v)}
             />
             <ToggleChip
-              label={`Band Docs: ${canViewBandDocs ? "On" : "Off"}`}
+              label={t("bandEdit.bandDocsToggle", {
+                value: canViewBandDocs ? t("bandEdit.on") : t("bandEdit.off"),
+              })}
               value={canViewBandDocs}
               onPress={() => setCanViewBandDocs((v) => !v)}
             />
             <ToggleChip
-              label={`Finance: ${canViewFinance ? "On" : "Off"}`}
+              label={t("bandEdit.financeToggle", {
+                value: canViewFinance ? t("bandEdit.on") : t("bandEdit.off"),
+              })}
               value={canViewFinance}
               onPress={() => setCanViewFinance((v) => !v)}
             />
@@ -618,7 +663,7 @@ export default function EditBandMemberScreen() {
             style={[styles.saveButton, saving && { opacity: 0.7 }]}
           >
             <Text style={styles.saveButtonText}>
-              {saving ? "Saving…" : "Save Changes"}
+              {saving ? "Saving…" : t("bandEdit.saveChanges")}
             </Text>
           </Pressable>
 
@@ -628,7 +673,7 @@ export default function EditBandMemberScreen() {
               disabled={saving}
               style={[styles.dangerButton, saving && { opacity: 0.7 }]}
             >
-              <Text style={styles.dangerButtonText}>Deactivate Member</Text>
+              <Text style={styles.dangerButtonText}>{t("bandEdit.deactivateMember")}</Text>
             </Pressable>
           ) : (
             <Pressable
@@ -636,7 +681,7 @@ export default function EditBandMemberScreen() {
               disabled={saving}
               style={[styles.activateButton, saving && { opacity: 0.7 }]}
             >
-              <Text style={styles.activateButtonText}>Reactivate Member</Text>
+              <Text style={styles.activateButtonText}>{t("bandEdit.reactivateMember")}</Text>
             </Pressable>
           )}
         </ScrollView>

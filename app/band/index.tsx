@@ -2,13 +2,14 @@ import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { supabase } from "@/lib/supabase";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 
 type BandMemberRow = {
@@ -47,6 +48,7 @@ function isCrewMember(m: BandMemberRow) {
 
 export default function BandMembersScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const {
     isAdmin,
     adminModeEnabled,
@@ -59,8 +61,11 @@ export default function BandMembersScreen() {
   const [showInactive, setShowInactive] = useState(false);
 
   const title = useMemo(
-    () => (showInactive ? "Band & Crew (All)" : "Band & Crew"),
-    [showInactive],
+    () =>
+      showInactive
+        ? t("bandMembers.titleAll")
+        : t("bandMembers.titleActive"),
+    [showInactive, t],
   );
 
   const loadMembers = useCallback(async () => {
@@ -111,13 +116,15 @@ export default function BandMembersScreen() {
 
     const roleDisplay =
       item.band_role === "Other"
-        ? item.band_role_other?.trim() || "Other"
+        ? item.band_role_other?.trim() || t("bandMembers.other")
         : (item.band_role ?? "").trim();
 
-    const statusLabel = item.is_active ? "" : "Inactive";
+    const statusLabel = item.is_active ? "" : t("bandMembers.inactive");
 
     const crewLike = isCrewMember(item);
-    const typeLabel = crewLike ? "Crew" : "Musician";
+    const typeLabel = crewLike
+      ? t("bandMembers.typeCrew")
+      : t("bandMembers.typeMusician");
 
     return (
       <Pressable
@@ -129,7 +136,9 @@ export default function BandMembersScreen() {
       >
         <View style={styles.left}>
           <View style={styles.nameRow}>
-            <Text style={styles.name}>{item.display_name ?? "Unnamed"}</Text>
+            <Text style={styles.name}>
+              {item.display_name ?? t("bandMembers.unnamed")}
+            </Text>
             {statusLabel ? (
               <Text style={styles.inactiveTag}>{statusLabel}</Text>
             ) : null}
@@ -163,13 +172,13 @@ export default function BandMembersScreen() {
 
             {!!item.is_dep ? (
               <View style={styles.depTag}>
-                <Text style={styles.depTagText}>Dep</Text>
+                <Text style={styles.depTagText}>{t("bandMembers.dep")}</Text>
               </View>
             ) : null}
 
             {!!item.is_admin ? (
               <View style={styles.adminTag}>
-                <Text style={styles.adminTagText}>Admin</Text>
+                <Text style={styles.adminTagText}>{t("bandMembers.admin")}</Text>
               </View>
             ) : null}
           </View>
@@ -185,7 +194,9 @@ export default function BandMembersScreen() {
       <View style={styles.container}>
         <View style={styles.headerRow}>
           <Text style={styles.subtitle}>
-            {showInactive ? "All members" : "Active members"}
+            {showInactive
+              ? t("bandMembers.subtitleAllMembers")
+              : t("bandMembers.subtitleActiveMembers")}
           </Text>
 
           <View style={styles.headerActions}>
@@ -202,7 +213,9 @@ export default function BandMembersScreen() {
                   showInactive && styles.filterButtonTextOn,
                 ]}
               >
-                {showInactive ? "Hide inactive" : "Show inactive"}
+                {showInactive
+                  ? t("bandMembers.hideInactive")
+                  : t("bandMembers.showInactive")}
               </Text>
             </Pressable>
 
@@ -211,7 +224,7 @@ export default function BandMembersScreen() {
                 style={styles.addButton}
                 onPress={() => router.push("/band/add" as any)}
               >
-                <Text style={styles.addButtonText}>+ Add</Text>
+                <Text style={styles.addButtonText}>{t("bandMembers.add")}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -223,9 +236,9 @@ export default function BandMembersScreen() {
           </View>
         ) : (
           <View style={{ flex: 1 }}>
-            <Text style={styles.sectionTitle}>Musicians</Text>
+            <Text style={styles.sectionTitle}>{t("bandMembers.sectionMusicians")}</Text>
             {musicians.length === 0 ? (
-              <Text style={styles.empty}>No musicians found.</Text>
+              <Text style={styles.empty}>{t("bandMembers.emptyMusicians")}</Text>
             ) : (
               <FlatList
                 data={musicians}
@@ -235,9 +248,11 @@ export default function BandMembersScreen() {
               />
             )}
 
-            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Crew</Text>
+            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>
+              {t("bandMembers.sectionCrew")}
+            </Text>
             {crew.length === 0 ? (
-              <Text style={styles.empty}>No crew found.</Text>
+              <Text style={styles.empty}>{t("bandMembers.emptyCrew")}</Text>
             ) : (
               <FlatList
                 data={crew}

@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -23,6 +24,7 @@ type BandDocRow = {
 
 export default function BandDocumentsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -67,7 +69,10 @@ export default function BandDocumentsScreen() {
       setDocs((data ?? []) as BandDocRow[]);
     } catch (e: any) {
       console.log("band docs load error", e);
-      Alert.alert("Error", e?.message ?? "Failed to load documents");
+      Alert.alert(
+        t("bandDocs.alert.errorTitle"),
+        e?.message ?? t("bandDocs.alert.failedToLoadDocuments"),
+      );
       setDocs([]);
     } finally {
       setLoading(false);
@@ -104,7 +109,7 @@ export default function BandDocumentsScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "Band Docs",
+          title: t("bandDocs.title"),
           headerLeft: () => (
             <Pressable
               onPress={() => router.back()}
@@ -131,7 +136,7 @@ export default function BandDocumentsScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.sectionHeader}>
           <View>
-            <Text style={styles.sectionTitle}>Documents</Text>
+            <Text style={styles.sectionTitle}>{t("bandDocs.sectionTitle")}</Text>
             <Text style={styles.sectionSub}>{docs.length}</Text>
           </View>
 
@@ -144,7 +149,7 @@ export default function BandDocumentsScreen() {
               ]}
             >
               <Ionicons name="create-outline" size={16} color="#0F766E" />
-              <Text style={styles.editBtnText}>Edit</Text>
+              <Text style={styles.editBtnText}>{t("bandDocs.edit")}</Text>
             </Pressable>
           ) : (
             <View style={{ width: 72 }} />
@@ -157,9 +162,9 @@ export default function BandDocumentsScreen() {
           </View>
         ) : docs.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No documents yet</Text>
+            <Text style={styles.emptyTitle}>{t("bandDocs.emptyTitle")}</Text>
             <Text style={styles.emptyText}>
-              Upload band docs like tech specs, riders, set lists.
+              {t("bandDocs.emptyText")}
             </Text>
           </View>
         ) : (
@@ -180,7 +185,7 @@ export default function BandDocumentsScreen() {
                     <Text style={styles.docTitle} numberOfLines={1}>
                       {item.title ?? "Untitled"}
                     </Text>
-                    <Text style={styles.docHint}>Tap to open</Text>
+                    <Text style={styles.docHint}>{t("bandDocs.tapToOpen")}</Text>
                   </View>
 
                   <View style={styles.docRowRight}>
@@ -209,7 +214,7 @@ export default function BandDocumentsScreen() {
         )}
 
         <Text style={styles.footerNote}>
-          Sharing creates a temporary link that expires automatically.
+          {t("bandDocs.footerNote")}
         </Text>
       </ScrollView>
     </>

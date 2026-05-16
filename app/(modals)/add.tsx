@@ -7,14 +7,14 @@ import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
 } from "react-native";
 
 export const unstable_settings = {
@@ -35,7 +35,10 @@ export default function AddVenueModal() {
 
   async function saveVenue() {
     if (!name.trim() || !city.trim()) {
-      Alert.alert("Missing Information", "Name and City are required.");
+      Alert.alert(
+        t("addVenue.alert.missingInformationTitle"),
+        t("addVenue.alert.nameAndCityRequired"),
+      );
       return;
     }
 
@@ -54,7 +57,7 @@ export default function AddVenueModal() {
 
     if (error) {
       console.log(error);
-      Alert.alert("Error", error.message);
+      Alert.alert(t("addVenue.alert.errorTitle"), error.message);
       return;
     }
 

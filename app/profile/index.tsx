@@ -7,13 +7,13 @@ import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 export default function ProfileScreen() {
@@ -36,14 +36,17 @@ export default function ProfileScreen() {
 
   async function changePassword() {
     if (newPassword.length < 8) {
-      Alert.alert("Password too short", "Use at least 8 characters.");
+      Alert.alert(
+        t("profile.alert.passwordTooShortTitle"),
+        t("profile.alert.useAtLeast8Chars"),
+      );
       return;
     }
 
     if (newPassword !== confirmPassword) {
       Alert.alert(
-        "Passwords do not match",
-        "Please retype the same password twice.",
+        t("profile.alert.passwordsDoNotMatchTitle"),
+        t("profile.alert.pleaseRetypePasswordTwice"),
       );
       return;
     }
@@ -59,14 +62,14 @@ export default function ProfileScreen() {
       setConfirmPassword("");
       setShowPassword(false);
 
-      Alert.alert("Done", "Password updated. Use it next time you sign in.", [
+      Alert.alert(t("profile.alert.doneTitle"), t("profile.alert.passwordUpdatedMessage"), [
         {
-          text: "OK",
+          text: t("profile.alert.okButton"),
           onPress: () => router.replace("/"),
         },
       ]);
     } catch (e: any) {
-      Alert.alert("Failed", e?.message ?? "Unknown error");
+      Alert.alert(t("profile.alert.failedTitle"), e?.message ?? t("profile.alert.unknownError"));
     } finally {
       setSavingPassword(false);
     }
@@ -75,7 +78,7 @@ export default function ProfileScreen() {
   async function signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      Alert.alert("Error", error.message);
+      Alert.alert(t("profile.alert.errorTitle"), error.message);
       return;
     }
     // auth gate should redirect to /auth

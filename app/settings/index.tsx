@@ -6,13 +6,13 @@ import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
+    Alert,
+    Pressable,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 
 type AppSettingsRow = {
@@ -129,7 +129,10 @@ export default function SettingsScreen() {
     try {
       await setAdminModeEnabled(next);
     } catch (e: any) {
-      Alert.alert("Update failed", e?.message ?? "Could not update setting.");
+      Alert.alert(
+        t("settings.alert.updateFailedTitle"),
+        e?.message ?? t("settings.alert.couldNotUpdateSetting"),
+      );
     } finally {
       setSaving(false);
     }
@@ -140,13 +143,19 @@ export default function SettingsScreen() {
       if (!canAdminEdit) return;
 
       if (!bandId) {
-        Alert.alert("No band", "bandId not found.");
+        Alert.alert(
+          t("settings.alert.noBandTitle"),
+          t("settings.alert.bandIdNotFound"),
+        );
         return;
       }
 
       const nextName = bandName.trim();
       if (!nextName) {
-        Alert.alert("Missing name", "Please enter a band name.");
+        Alert.alert(
+          t("settings.alert.missingNameTitle"),
+          t("settings.alert.pleaseEnterBandName"),
+        );
         return;
       }
 
@@ -159,9 +168,9 @@ export default function SettingsScreen() {
 
       if (error) throw error;
 
-      Alert.alert("Saved", "Band name updated.");
+      Alert.alert(t("settings.alert.savedTitle"), t("settings.alert.bandNameUpdated"));
     } catch (e: any) {
-      Alert.alert("Save failed", e?.message ?? String(e));
+      Alert.alert(t("settings.alert.saveFailedTitle"), e?.message ?? String(e));
     } finally {
       setSavingBandName(false);
     }
@@ -172,7 +181,10 @@ export default function SettingsScreen() {
       if (!canAdminEdit) return;
 
       if (!bandId) {
-        Alert.alert("No band", "No band_id found.");
+        Alert.alert(
+          t("settings.alert.noBandTitle"),
+          t("settings.alert.noBandIdFound"),
+        );
         return;
       }
 
@@ -188,7 +200,7 @@ export default function SettingsScreen() {
 
       router.replace("/");
     } catch (e: any) {
-      Alert.alert("Upload failed", e?.message ?? String(e));
+      Alert.alert(t("settings.alert.uploadFailedTitle"), e?.message ?? String(e));
     }
   };
 

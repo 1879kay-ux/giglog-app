@@ -6,16 +6,17 @@ import * as DocumentPicker from "expo-document-picker";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 
 type DocType = "tech" | "rider" | "setlist" | "contracts" | "other";
@@ -41,7 +42,7 @@ function cap(s: string) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
-async function pickDocType(): Promise<DocType | null> {
+async function pickDocType(t: (key: string) => string): Promise<DocType | null> {
   if (Platform.OS === "web") {
     const selected = window.prompt(
       "Document type: tech, rider, setlist, contracts, other",
@@ -55,19 +56,20 @@ async function pickDocType(): Promise<DocType | null> {
   }
 
   return new Promise((resolve) => {
-    Alert.alert("Document type", "Choose document type", [
-      { text: "Tech", onPress: () => resolve("tech") },
-      { text: "Rider", onPress: () => resolve("rider") },
-      { text: "Set list", onPress: () => resolve("setlist") },
-      { text: "Contracts", onPress: () => resolve("contracts") },
-      { text: "Other", onPress: () => resolve("other") },
-      { text: "Cancel", style: "cancel", onPress: () => resolve(null) },
+    Alert.alert(t("bandDocsEdit.alert.documentTypeTitle"), t("bandDocsEdit.alert.documentTypeMessage"), [
+      { text: t("bandDocsEdit.typeTech"), onPress: () => resolve("tech") },
+      { text: t("bandDocsEdit.typeRider"), onPress: () => resolve("rider") },
+      { text: t("bandDocsEdit.typeSetlist"), onPress: () => resolve("setlist") },
+      { text: t("bandDocsEdit.typeContracts"), onPress: () => resolve("contracts") },
+      { text: t("bandDocsEdit.typeOther"), onPress: () => resolve("other") },
+      { text: t("common.cancel"), style: "cancel", onPress: () => resolve(null) },
     ]);
   });
 }
 
 export default function BandDocumentsEditScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -114,7 +116,7 @@ export default function BandDocumentsEditScreen() {
       setDocs((data ?? []) as BandDocRow[]);
     } catch (e: any) {
       console.log("band docs edit load error", e);
-      Alert.alert("Error", e?.message ?? "Failed to load documents");
+      Alert.alert(t("bandDocsEdit.alert.errorTitle"), e?.message ?? t("bandDocsEdit.alert.failedToLoadDocuments"));
       setDocs([]);
       setBandId(null);
     } finally {
@@ -130,13 +132,13 @@ export default function BandDocumentsEditScreen() {
 
   const docTypeOptions: { key: DocType; label: string }[] = useMemo(
     () => [
-      { key: "tech", label: "Tech" },
-      { key: "rider", label: "Rider" },
-      { key: "setlist", label: "Set list" },
-      { key: "contracts", label: "Contracts" },
-      { key: "other", label: "Other" },
+      { key: "tech", label: t("bandDocsEdit.typeTech") },
+      { key: "rider", label: t("bandDocsEdit.typeRider") },
+      { key: "setlist", label: t("bandDocsEdit.typeSetlist") },
+      { key: "contracts", label: t("bandDocsEdit.typeContracts") },
+      { key: "other", label: t("bandDocsEdit.typeOther") },
     ],
-    [],
+    [t],
   );
 
   function updateLocal(docId: string, patch: Partial<BandDocRow>) {
@@ -159,7 +161,7 @@ export default function BandDocumentsEditScreen() {
       if (error) throw error;
     } catch (e: any) {
       console.log("save doc error", e);
-      Alert.alert("Error", e?.message ?? "Failed to save");
+      Alert.alert(t("bandDocsEdit.alert.errorTitle"), e?.message ?? t("bandDocsEdit.alert.failedToSave"));
     } finally {
       setSavingId(null);
     }
@@ -185,7 +187,7 @@ export default function BandDocumentsEditScreen() {
       setDocs((prev) => prev.filter((d) => d.doc_id !== doc.doc_id));
     } catch (e: any) {
       console.log("delete doc error", e);
-      Alert.alert("Delete failed", e?.message ?? "Failed to delete");
+      Alert.alert(t("bandDocsEdit.alert.deleteFailedTitle"), e?.message ?? t("bandDocsEdit.alert.failedToDelete"));
     } finally {
       setDeletingId(null);
     }
@@ -202,12 +204,12 @@ export default function BandDocumentsEditScreen() {
       await WebBrowser.openBrowserAsync(data.signedUrl);
     } catch (e: any) {
       console.log("open doc error", e);
-      Alert.alert("Open failed", e?.message ?? "Could not open document");
+      Alert.alert(t("bandDocsEdit.alert.openFailedTitle"), e?.message ?? t("bandDocsEdit.alert.couldNotOpenDocument"));
     }
   }
   async function uploadNew() {
     if (!bandId) {
-      Alert.alert("Upload failed", "No band found for this user.");
+      Alert.alert(t("bandDocsEdit.alert.uploadFailedTitle"), t("bandDocsEdit.alert.noBandFoundForUser"));
       return;
     }
 
@@ -219,18 +221,18 @@ export default function BandDocumentsEditScreen() {
       });
 
       if (res.canceled) {
-        Alert.alert("Upload", "Cancelled.");
+        Alert.alert(t("bandDocsEdit.alert.uploadTitle"), t("bandDocsEdit.alert.cancelled"));
         return;
       }
 
       const file = res.assets?.[0];
       if (!file) {
-        Alert.alert("Upload failed", "No file returned from picker.");
+        Alert.alert(t("bandDocsEdit.alert.uploadFailedTitle"), t("bandDocsEdit.alert.noFileFromPicker"));
         return;
       }
 
       const filename = file.name || "document";
-      const selectedDocType = await pickDocType();
+      const selectedDocType = await pickDocType(t);
 
       if (!selectedDocType) {
         setUploading(false);
@@ -263,7 +265,7 @@ export default function BandDocumentsEditScreen() {
 
       if (upErr) {
         console.log("UPLOAD ERROR:", upErr);
-        Alert.alert("Upload failed", upErr.message);
+        Alert.alert(t("bandDocsEdit.alert.uploadFailedTitle"), upErr.message);
         return;
       }
 
@@ -286,7 +288,7 @@ export default function BandDocumentsEditScreen() {
 
       if (insErr) {
         console.log("INSERT ERROR:", insErr);
-        Alert.alert("Upload saved file, but DB insert failed", insErr.message);
+        Alert.alert(t("bandDocsEdit.alert.uploadSavedDbInsertFailed"), insErr.message);
         return;
       }
 
@@ -306,10 +308,10 @@ export default function BandDocumentsEditScreen() {
       }
 
       router.back();
-      Alert.alert("Uploaded", filename);
+      Alert.alert(t("bandDocsEdit.alert.uploadedTitle"), filename);
     } catch (e: any) {
       console.log("upload doc error", e);
-      Alert.alert("Upload failed", e?.message ?? "Could not upload document");
+      Alert.alert(t("bandDocsEdit.alert.uploadFailedTitle"), e?.message ?? t("bandDocsEdit.alert.couldNotUploadDocument"));
     } finally {
       setUploading(false);
     }
@@ -319,7 +321,7 @@ export default function BandDocumentsEditScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "Edit Band Docs",
+          title: t("bandDocsEdit.title"),
           headerStyle: { backgroundColor: "#0D9488" },
           headerTintColor: "#fff",
           headerLeft: () => (
@@ -336,7 +338,7 @@ export default function BandDocumentsEditScreen() {
 
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.topRow}>
-          <Text style={styles.h1}>Documents</Text>
+          <Text style={styles.h1}>{t("bandDocsEdit.sectionTitle")}</Text>
 
           <Pressable
             onPress={uploadNew}
@@ -356,7 +358,7 @@ export default function BandDocumentsEditScreen() {
                   size={16}
                   color="#0F766E"
                 />
-                <Text style={styles.primaryBtnText}>Upload</Text>
+                <Text style={styles.primaryBtnText}>{t("bandDocsEdit.upload")}</Text>
               </>
             )}
           </Pressable>
@@ -368,9 +370,9 @@ export default function BandDocumentsEditScreen() {
           </View>
         ) : docs.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No documents yet</Text>
+            <Text style={styles.emptyTitle}>{t("bandDocsEdit.emptyTitle")}</Text>
             <Text style={styles.emptyText}>
-              Upload your first doc using the Upload button.
+              {t("bandDocsEdit.emptyText")}
             </Text>
           </View>
         ) : (
@@ -380,7 +382,7 @@ export default function BandDocumentsEditScreen() {
                 <TextInput
                   value={d.title ?? ""}
                   onChangeText={(t) => updateLocal(d.doc_id, { title: t })}
-                  placeholder="Document title"
+                  placeholder={t("bandDocsEdit.placeholderTitle")}
                   style={styles.input}
                   placeholderTextColor="#999"
                   editable={false}
@@ -430,7 +432,7 @@ export default function BandDocumentsEditScreen() {
                   ) : (
                     <>
                       <Ionicons name="save-outline" size={16} color="#0F766E" />
-                      <Text style={styles.actionBtnText}>Save</Text>
+                      <Text style={styles.actionBtnText}>{t("bandDocsEdit.save")}</Text>
                     </>
                   )}
                 </Pressable>
@@ -453,7 +455,7 @@ export default function BandDocumentsEditScreen() {
                         size={16}
                         color="#B42318"
                       />
-                      <Text style={styles.dangerBtnText}>Delete</Text>
+                      <Text style={styles.dangerBtnText}>{t("bandDocsEdit.delete")}</Text>
                     </>
                   )}
                 </Pressable>
@@ -467,7 +469,7 @@ export default function BandDocumentsEditScreen() {
         )}
 
         <Text style={styles.footerNote}>
-          Tip: keep file names simple. Paths are case-sensitive.
+          {t("bandDocsEdit.footerNote")}
         </Text>
       </ScrollView>
     </>

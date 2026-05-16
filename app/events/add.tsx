@@ -5,20 +5,21 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
-  Alert,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import { supabase } from "@/lib/supabase";
@@ -53,6 +54,7 @@ function formatDisplayDate(isoDate: string) {
 
 export default function AddEventScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { isAdmin, loading: memberLoading } = useCurrentMember();
 
   const [eventType, setEventType] = useState<string | null>(null);
@@ -127,13 +129,16 @@ export default function AddEventScreen() {
     console.log("AUTH user id:", userData?.user?.id);
 
     if (userErr) {
-      Alert.alert("Error", userErr.message);
+      Alert.alert(t("eventsAdd.alert.errorTitle"), userErr.message);
       return;
     }
 
     const user = userData.user;
     if (!user) {
-      Alert.alert("Not signed in", "Please sign in.");
+      Alert.alert(
+        t("eventsAdd.alert.notSignedInTitle"),
+        t("eventsAdd.alert.pleaseSignIn"),
+      );
       return;
     }
 
@@ -144,13 +149,16 @@ export default function AddEventScreen() {
       .maybeSingle();
 
     if (bmErr) {
-      Alert.alert("Error", bmErr.message);
+      Alert.alert(t("eventsAdd.alert.errorTitle"), bmErr.message);
       return;
     }
 
     const resolvedBandId = (bm as any)?.band_id ?? null;
     if (!resolvedBandId) {
-      Alert.alert("Setup needed", "No band membership found for your user.");
+      Alert.alert(
+        t("eventsAdd.alert.setupNeededTitle"),
+        t("eventsAdd.alert.noBandMembershipForUser"),
+      );
       return;
     }
 
@@ -162,7 +170,10 @@ export default function AddEventScreen() {
       .order("event_venue_name", { ascending: true });
 
     if (error) {
-      Alert.alert("Error", `Could not load venues.\n\n${error.message}`);
+      Alert.alert(
+        t("eventsAdd.alert.errorTitle"),
+        `${t("eventsAdd.alert.couldNotLoadVenues")}\n\n${error.message}`,
+      );
       return;
     }
 

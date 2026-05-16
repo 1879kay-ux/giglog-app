@@ -1,9 +1,9 @@
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import {
-  addMemberUnavailability,
-  deleteMemberUnavailability,
-  listMemberUnavailability,
-  MemberUnavailability,
+    addMemberUnavailability,
+    deleteMemberUnavailability,
+    listMemberUnavailability,
+    MemberUnavailability,
 } from "@/lib/memberUnavailability";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,14 +12,14 @@ import { Stack } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 
 function toDbDate(date: Date) {
@@ -75,7 +75,7 @@ export default function UnavailabilityScreen() {
     });
 
     if (error) {
-      Alert.alert("Error", error.message);
+      Alert.alert(t("unavailability.alert.errorTitle"), error.message);
       return;
     }
 
@@ -86,7 +86,7 @@ export default function UnavailabilityScreen() {
     const { error } = await deleteMemberUnavailability(id);
 
     if (error) {
-      Alert.alert("Error", error.message);
+      Alert.alert(t("unavailability.alert.errorTitle"), error.message);
       return;
     }
 

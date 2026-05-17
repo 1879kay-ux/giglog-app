@@ -8,15 +8,15 @@ import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 type DocType = "tech" | "rider" | "setlist" | "contracts" | "other";
@@ -76,8 +76,9 @@ export default function BandDocumentsEditScreen() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  const [bandId, setBandId] = useState<string | null>(null);
+    const [bandId, setBandId] = useState<string | null>(null);
   const [docs, setDocs] = useState<BandDocRow[]>([]);
+  const [typePickerDoc, setTypePickerDoc] = useState<BandDocRow | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -166,7 +167,11 @@ export default function BandDocumentsEditScreen() {
       setSavingId(null);
     }
   }
-
+  async function changeDocType(doc: BandDocRow, docType: DocType) {
+    updateLocal(doc.doc_id, { doc_type: docType });
+    setTypePickerDoc(null);
+    await saveRow({ ...doc, doc_type: docType });
+  }
   async function deleteRow(doc: BandDocRow) {
     setDeletingId(doc.doc_id);
     try {
@@ -378,70 +383,51 @@ export default function BandDocumentsEditScreen() {
         ) : (
           docs.map((d) => (
             <View key={d.doc_id} style={styles.card}>
-              <Pressable onPress={() => openDoc(d)}>
-                <TextInput
-                  value={d.title ?? ""}
-                  onChangeText={(t) => updateLocal(d.doc_id, { title: t })}
-                  placeholder={t("bandDocsEdit.placeholderTitle")}
-                  style={styles.input}
-                  placeholderTextColor="#999"
-                  editable={false}
-                />
-              </Pressable>
+                            <View style={styles.docHeaderRow}>
+                <Pressable onPress={() => openDoc(d)} style={styles.docIcon}>
+                  <Ionicons name="document-text-outline" size={24} color="#0F766E" />
+                </Pressable>
 
-              <View style={styles.typeRow}>
-                {docTypeOptions.map((opt) => {
-                  const selected = (d.doc_type ?? "other") === opt.key;
-                  return (
-                    <Pressable
-                      key={opt.key}
-                      onPress={() =>
-                        updateLocal(d.doc_id, { doc_type: opt.key })
-                      }
-                      style={({ pressed }) => [
-                        styles.typePill,
-                        selected && styles.typePillSelected,
-                        pressed && styles.pressed,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.typePillText,
-                          selected && styles.typePillTextSelected,
-                        ]}
-                      >
-                        {opt.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+                <Pressable onPress={() => openDoc(d)} style={styles.docTitleWrap}>
+                  <Text style={styles.docTitle} numberOfLines={2}>
+                    {d.title || t("bandDocsEdit.placeholderTitle")}
+                  </Text>
+                </Pressable>
               </View>
 
-              <View style={styles.actionsRow}>
-                <Pressable
-                  onPress={() => saveRow(d)}
-                  disabled={savingId === d.doc_id}
+                            <Pressable
+                onPress={() => setTypePickerDoc(d)}
+                style={({ pressed }) => [
+                  styles.typeBadge,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.typeBadgeText}>
+                  {docTypeOptions.find((opt) => opt.key === (d.doc_type ?? "other"))?.label}
+                </Text>
+                <Ionicons name="chevron-down" size={14} color="#0F766E" />
+              </Pressable>
+
+                <View style={styles.actionsRowCompact}>
+                                <Pressable
+                  onPress={() => openDoc(d)}
                   style={({ pressed }) => [
-                    styles.actionBtn,
-                    savingId === d.doc_id && styles.btnDisabled,
+                    styles.iconBtn,
                     pressed && styles.pressed,
                   ]}
                 >
-                  {savingId === d.doc_id ? (
-                    <ActivityIndicator />
-                  ) : (
-                    <>
-                      <Ionicons name="save-outline" size={16} color="#0F766E" />
-                      <Text style={styles.actionBtnText}>{t("bandDocsEdit.save")}</Text>
-                    </>
-                  )}
+                  <Ionicons
+                    name="download-outline"
+                    size={20}
+                    color="#0F766E"
+                  />
                 </Pressable>
 
                 <Pressable
                   onPress={() => deleteRow(d)}
                   disabled={deletingId === d.doc_id}
                   style={({ pressed }) => [
-                    styles.dangerBtn,
+                    styles.deleteIconBtn,
                     deletingId === d.doc_id && styles.btnDisabled,
                     pressed && styles.pressed,
                   ]}
@@ -449,14 +435,11 @@ export default function BandDocumentsEditScreen() {
                   {deletingId === d.doc_id ? (
                     <ActivityIndicator />
                   ) : (
-                    <>
-                      <Ionicons
-                        name="trash-outline"
-                        size={16}
-                        color="#B42318"
-                      />
-                      <Text style={styles.dangerBtnText}>{t("bandDocsEdit.delete")}</Text>
-                    </>
+                    <Ionicons
+                      name="trash-outline"
+                      size={20}
+                      color="#B42318"
+                    />
                   )}
                 </Pressable>
               </View>
@@ -472,6 +455,62 @@ export default function BandDocumentsEditScreen() {
           {t("bandDocsEdit.footerNote")}
         </Text>
       </ScrollView>
+            <Modal
+        visible={!!typePickerDoc}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setTypePickerDoc(null)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setTypePickerDoc(null)}
+        >
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+
+            <Text style={styles.modalTitle}>
+              Change Document Type
+            </Text>
+
+            {typePickerDoc &&
+              docTypeOptions.map((opt) => {
+                const selected =
+                  (typePickerDoc.doc_type ?? "other") === opt.key;
+
+                return (
+                  <Pressable
+                    key={opt.key}
+                    onPress={() =>
+                      changeDocType(typePickerDoc, opt.key)
+                    }
+                    style={({ pressed }) => [
+                      styles.modalOption,
+                      selected && styles.modalOptionSelected,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        selected && styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+
+                    {selected && (
+                      <Ionicons
+                        name="checkmark"
+                        size={18}
+                        color="#0F766E"
+                      />
+                    )}
+                  </Pressable>
+                );
+              })}
+          </View>
+        </Pressable>
+      </Modal>
     </>
   );
 }
@@ -484,7 +523,136 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  docHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
 
+  docIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "rgba(13,148,136,0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  docTitleWrap: {
+    flex: 1,
+  },
+
+  docTitle: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: "#111",
+  },
+    typeBadge: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: "rgba(13,148,136,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(13,148,136,0.20)",
+  },
+
+  typeBadgeText: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#0F766E",
+  },
+
+  actionsRowCompact: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 12,
+  },
+
+  iconBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(13,148,136,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(13,148,136,0.20)",
+  },
+
+  deleteIconBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(180,35,24,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(180,35,24,0.18)",
+  },
+    modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.30)",
+  },
+
+  modalSheet: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 28,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+
+  modalHandle: {
+    alignSelf: "center",
+    width: 44,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: "#D0D5DD",
+    marginBottom: 18,
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#111",
+    marginBottom: 14,
+  },
+
+  modalOption: {
+    minHeight: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+    backgroundColor: "#fff",
+  },
+
+  modalOptionSelected: {
+    backgroundColor: "rgba(13,148,136,0.10)",
+    borderColor: "rgba(13,148,136,0.25)",
+  },
+
+  modalOptionText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#333",
+  },
+
+  modalOptionTextSelected: {
+    color: "#0F766E",
+  },
   container: {
     paddingHorizontal: 16,
     paddingTop: 14,

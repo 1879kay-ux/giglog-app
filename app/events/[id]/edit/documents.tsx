@@ -7,6 +7,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -96,7 +97,8 @@ export default function EditEventDocumentsScreen() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
 
-  const [docs, setDocs] = useState<EventDocRow[]>([]);
+   const [docs, setDocs] = useState<EventDocRow[]>([]);
+  const [typePickerDoc, setTypePickerDoc] = useState<EventDocRow | null>(null);
 
   const docTypeOptions: { key: EventDocType; label: string }[] = [
     { key: "tech", label: "Tech" },
@@ -258,7 +260,11 @@ export default function EditEventDocumentsScreen() {
       setSavingId(null);
     }
   }
-
+  async function changeDocType(doc: EventDocRow, docType: EventDocType) {
+    updateLocal(doc.doc_id, { doc_type: docType });
+    setTypePickerDoc(null);
+    await saveDocType({ ...doc, doc_type: docType });
+  }
   async function onDelete(doc: EventDocRow) {
     if (!id) return;
 
@@ -361,37 +367,24 @@ export default function EditEventDocumentsScreen() {
                         </Text>
 
                         <View style={styles.metaRow}>
-                          <View style={styles.typeRow}>
-                            {docTypeOptions.map((opt) => {
-                              const selected =
-                                (d.doc_type ?? "other") === opt.key;
+                         <Pressable
+  onPress={() => setTypePickerDoc(d)}
+  style={styles.typeBadge}
+>
+  <Text style={styles.typeBadgeText}>
+    {
+      docTypeOptions.find(
+        (opt) => opt.key === (d.doc_type ?? "other"),
+      )?.label
+    }
+  </Text>
 
-                              return (
-                                <Pressable
-                                  key={opt.key}
-                                  onPress={() =>
-                                    updateLocal(d.doc_id, {
-                                      doc_type: opt.key,
-                                    })
-                                  }
-                                  style={[
-                                    styles.docTypePill,
-                                    selected && styles.docTypePillSelected,
-                                  ]}
-                                >
-                                  <Text
-                                    style={[
-                                      styles.docTypePillText,
-                                      selected &&
-                                        styles.docTypePillTextSelected,
-                                    ]}
-                                  >
-                                    {opt.label}
-                                  </Text>
-                                </Pressable>
-                              );
-                            })}
-                          </View>
+  <Ionicons
+    name="chevron-down"
+    size={14}
+    color="#0F766E"
+  />
+</Pressable>
 
                           {size ? (
                             <Text style={styles.docMeta}>{size}</Text>
@@ -401,20 +394,7 @@ export default function EditEventDocumentsScreen() {
                     </View>
 
                    <View style={styles.actionRow}>
-  <Pressable
-    onPress={() => saveDocType(d)}
-    disabled={savingId === d.doc_id}
-    style={[styles.saveTypeBtn, savingId === d.doc_id && { opacity: 0.6 }]}
-  >
-    <Ionicons
-  name={savingId === d.doc_id ? "checkmark-outline" : "save-outline"}
-  size={16}
-  color="#fff"
-/>
-    <Text style={styles.saveTypeBtnText}>
-  {savingId === d.doc_id ? "Saving..." : "Save"}
-</Text>
-  </Pressable>
+  
 
   <Pressable
     onPress={() => onDelete(d)}
@@ -438,6 +418,62 @@ export default function EditEventDocumentsScreen() {
           <Text style={styles.doneButtonText}>Done</Text>
         </TouchableOpacity>
       </ScrollView>
+            <Modal
+        visible={!!typePickerDoc}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setTypePickerDoc(null)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setTypePickerDoc(null)}
+        >
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+
+            <Text style={styles.modalTitle}>
+              Change Document Type
+            </Text>
+
+            {typePickerDoc &&
+              docTypeOptions.map((opt) => {
+                const selected =
+                  (typePickerDoc.doc_type ?? "other") === opt.key;
+
+                return (
+                  <Pressable
+                    key={opt.key}
+                    onPress={() =>
+                      changeDocType(typePickerDoc, opt.key)
+                    }
+                    style={[
+                      styles.modalOption,
+                      selected && styles.modalOptionSelected,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        selected &&
+                          styles.modalOptionTextSelected,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+
+                    {selected && (
+                      <Ionicons
+                        name="checkmark"
+                        size={18}
+                        color="#0F766E"
+                      />
+                    )}
+                  </Pressable>
+                );
+              })}
+          </View>
+        </Pressable>
+      </Modal>
     </>
   );
 }
@@ -467,6 +503,82 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: colors.text,
     marginBottom: 6,
+  },
+    typeBadge: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#E6F7F7",
+    borderWidth: 1,
+    borderColor: "#0F766E",
+  },
+
+  typeBadgeText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#0F766E",
+  },
+    modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.30)",
+  },
+
+  modalSheet: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 28,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+
+  modalHandle: {
+    alignSelf: "center",
+    width: 44,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: "#D0D5DD",
+    marginBottom: 18,
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#111",
+    marginBottom: 14,
+  },
+
+  modalOption: {
+    minHeight: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+    backgroundColor: "#fff",
+  },
+
+  modalOptionSelected: {
+    backgroundColor: "#E6F7F7",
+    borderColor: "#0F766E",
+  },
+
+  modalOptionText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#333",
+  },
+
+  modalOptionTextSelected: {
+    color: "#0F766E",
   },
   cardSub: {
     fontSize: 12,

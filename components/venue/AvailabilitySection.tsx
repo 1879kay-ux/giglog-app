@@ -394,29 +394,7 @@ export default function AvailabilitySection({
           </View>
         ) : null}
 
-        <View style={styles.badgeRow}>
-          <View style={styles.lineupBadge}>
-            <Text style={styles.lineupBadgeText}>
-              {hasCustomLineup ? "Custom Lineup" : "Core Band"}
-            </Text>
-          </View>
-
-          {canEdit ? (
-            <View style={styles.adminActions}>
-              <Pressable
-                onPress={() => router.push(`/events/${eventId}/lineup`)}
-                hitSlop={10}
-                style={styles.editLineupPill}
-              >
-                <Text style={styles.editLineupPillText}>Edit Lineup</Text>
-              </Pressable>
-
-              
-            </View>
-          ) : (
-            <View />
-          )}
-        </View>
+        
 
         <View style={styles.chipRow}>
           {chip("available", "✓ Available")}
@@ -427,44 +405,49 @@ export default function AvailabilitySection({
         {saving ? <Text style={styles.saving}>Saving…</Text> : null}
       </InfoCard>
 
-      <InfoCard title="Event Summary">
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryItem}>
-            Total to respond: {summary?.total_expected ?? 0}
-          </Text>
-          <Text style={styles.summaryItem}>
-            Responses due: {summary?.awaiting_count ?? 0}
-          </Text>
-        </View>
+   <InfoCard title="Event Summary">
+  <View style={styles.summaryRow}>
+    <Text style={styles.summaryItem}>
+      Total: {summary?.total_expected ?? 0} | Awaiting: {summary?.awaiting_count ?? 0}
+    </Text>
+  </View>
 
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryItem}>
-            Available: {summary?.available_count ?? 0}
-          </Text>
-          <Text style={styles.summaryItem}>
-            Provisional: {summary?.provisional_count ?? 0}
-          </Text>
-          <Text style={styles.summaryItem}>
-            Unavailable: {summary?.unavailable_count ?? 0}
-          </Text>
-        </View>
+  <View style={styles.summaryRow}>
+    <Text style={styles.summaryItem}>
+      Available: {summary?.available_count ?? 0} | Provisional: {summary?.provisional_count ?? 0} | Unavailable: {summary?.unavailable_count ?? 0}
+    </Text>
+  </View>
 
-        <Text style={styles.smallNote}>
-          Counts are for members expected to respond.
-        </Text>
-      </InfoCard>
+  <Text style={styles.smallNote}>
+    Counts for members expected to respond.
+  </Text>
+</InfoCard>
 
-                  {canEdit ? (
-        <Pressable
-          onPress={sendAvailabilityReminder}
-          hitSlop={10}
-          style={[styles.reminderPill, { alignSelf: "flex-start", marginBottom: 12 }]}
-        >
-          <Text style={styles.reminderPillText}>
-            Remind Awaiting
-            {summary?.awaiting_count ? ` (${summary.awaiting_count})` : ""}
-          </Text>
-        </Pressable>
+                {canEdit ? (
+        <>
+          <Pressable
+            onPress={sendAvailabilityReminder}
+            hitSlop={10}
+            style={styles.reminderButton}
+          >
+            <Text style={styles.reminderPillText}>
+              Remind Awaiting
+              {summary?.awaiting_count ? ` (${summary.awaiting_count})` : ""}
+            </Text>
+          </Pressable>
+
+          <View style={styles.lineupActionRow}>
+            <Text style={styles.lineupActionText}>Expected Lineup</Text>
+
+            <Pressable
+              onPress={() => router.push(`/events/${eventId}/lineup`)}
+              hitSlop={10}
+              style={styles.editLineupButton}
+            >
+              <Text style={styles.editLineupButtonText}>Edit Lineup</Text>
+            </Pressable>
+          </View>
+        </>
       ) : null}
 
       {/* MUSICIANS */}
@@ -660,58 +643,49 @@ const styles = StyleSheet.create({
     color: "#555",
   },
 
-  badgeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-
-  lineupBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-    backgroundColor: "rgba(13,148,136,0.10)",
-  },
-  lineupBadgeText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: colors.primary,
-  },
-
-  adminActions: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-  },
-
-  editLineupPill: {
-    height: 34,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(13,148,136,0.35)",
-    backgroundColor: "rgba(13,148,136,0.08)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  editLineupPillText: {
-    fontSize: 11,
-    fontWeight: "900",
-    color: colors.primary,
-    lineHeight: 14,
-  },
-
-  reminderPill: {
-    height: 34,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+   reminderButton: {
+    height: 44,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "rgba(239, 68, 68, 0.55)",
     backgroundColor: "rgba(239, 68, 68, 0.08)",
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 12,
+  },
+
+  lineupActionRow: {
+    minHeight: 50,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(13,148,136,0.20)",
+    backgroundColor: "rgba(13,148,136,0.06)",
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+
+  lineupActionText: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: colors.primary,
+  },
+
+  editLineupButton: {
+    height: 34,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  editLineupButtonText: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#fff",
   },
 
   reminderPillText: {
@@ -735,7 +709,12 @@ const styles = StyleSheet.create({
 
   saving: { marginTop: 6, fontSize: 12, color: "#666", fontStyle: "italic" },
 
-  summaryRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+   summaryRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 6,
+  },
   summaryItem: { fontSize: 13, fontWeight: "800", color: "#333" },
 
   table: { borderRadius: 10, overflow: "hidden", backgroundColor: "#fff" },

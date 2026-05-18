@@ -589,7 +589,7 @@ setEvents(nextEvents);
               >
                 <TouchableOpacity
                   onPress={() =>
-                    shareUpcomingNext6Months({
+                    shareUpcomingGigs({
                       bandName,
                       events: filteredEventsRef.current,
                     })
@@ -986,7 +986,7 @@ function buildUpcomingShareMessage(opts: {
   return lines.join("\n").trim();
 }
 
-async function shareUpcomingNext6Months(params: {
+async function shareUpcomingGigs(params: {
   bandName?: string | null;
   events: EventRow[];
 }) {

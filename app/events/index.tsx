@@ -42,6 +42,7 @@ type EventRow = {
   event_status: string | null;
   event_type: string | null;
   venue_id: string | null;
+  has_documents?: boolean;
   venues?: { event_venue_name: string | null; city: string | null } | null; // hydrated client-side
 };
 
@@ -226,12 +227,38 @@ export default function EventsListScreen() {
         }
       }
 
-      const nextEvents = baseEvents.map((e) => ({
-        ...e,
-        venues: e.venue_id ? (venuesById[e.venue_id] ?? null) : null,
-      }));
+      const baseNextEvents = baseEvents.map((e) => ({
+  ...e,
+  venues: e.venue_id ? (venuesById[e.venue_id] ?? null) : null,
+}));
 
-      setEvents(nextEvents);
+const eventIdsForDocs = baseNextEvents.map((e) => e.event_id);
+
+let documentEventIds = new Set<string>();
+
+if (eventIdsForDocs.length > 0) {
+  const { data: docData, error: docErr } = await supabase
+    .from("event_documents")
+    .select("event_id")
+    .in("event_id", eventIdsForDocs);
+
+  if (docErr) {
+    console.log("event documents indicator load error (ignored)", docErr);
+  } else {
+    documentEventIds = new Set(
+      ((docData ?? []) as { event_id: string | null }[])
+        .map((d) => d.event_id)
+        .filter(Boolean) as string[],
+    );
+  }
+}
+
+const nextEvents = baseNextEvents.map((e) => ({
+  ...e,
+  has_documents: documentEventIds.has(e.event_id),
+}));
+
+setEvents(nextEvents);
 
       // --- Readiness dots (expected lineup only) ---
       try {
@@ -766,8 +793,8 @@ export default function EventsListScreen() {
                     </Text>
 
                     <Text style={styles.eventVenue}>
-                      {venueName}, {city}
-                    </Text>
+  {venueName}, {city}
+</Text>
 
                     {eventsMode === "archived" ? (
                       <Text style={styles.archivedBadge}>ARCHIVED</Text>
@@ -803,7 +830,11 @@ export default function EventsListScreen() {
                     ) : null}
 
                     <View style={styles.rightIcons}>
-                      {readiness ? (
+  {item.has_documents ? (
+    <Ionicons name="document-text-outline" size={18} color="#0D9488" />
+  ) : null}
+
+  {readiness ? (
                         <View
                           style={[
                             styles.readinessDot,
@@ -1106,6 +1137,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: "uppercase",
   },
+eventVenueRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6,
+},
+
 
   eventVenue: {
     fontSize: 18,

@@ -209,9 +209,10 @@ export default function EditEventScheduleScreen() {
       <Stack.Screen options={{ title: "Edit Schedule" }} />
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+  style={{ flex: 1 }}
+  behavior={Platform.OS === "ios" ? "padding" : "height"}
+  keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+>
         <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
@@ -276,6 +277,11 @@ export default function EditEventScheduleScreen() {
             </View>
           </View>
 
+  
+
+                </ScrollView>
+
+        <View style={styles.footer}>
           <TouchableOpacity
             style={styles.saveButton}
             onPress={onSave}
@@ -285,7 +291,7 @@ export default function EditEventScheduleScreen() {
               {saving ? "Saving…" : "Save"}
             </Text>
           </TouchableOpacity>
-        </ScrollView>
+        </View>
 
         {/* ANDROID picker: close on selection */}
         {Platform.OS === "android" && pickerKey && (
@@ -353,7 +359,7 @@ export default function EditEventScheduleScreen() {
               </View>
             </View>
           </Modal>
-        )}
+               )}
       </KeyboardAvoidingView>
     </>
   );
@@ -367,9 +373,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.pageBg,
   },
 
-  container: {
+    container: {
     padding: 16,
-    paddingBottom: 28,
+    paddingBottom: 120,
     backgroundColor: colors.pageBg,
   },
 
@@ -472,7 +478,14 @@ const styles = StyleSheet.create({
     minHeight: 110,
     textAlignVertical: "top",
   },
-
+  footer: {
+    backgroundColor: colors.pageBg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === "ios" ? 24 : 12,
+  },
   saveButton: {
     backgroundColor: colors.button,
     borderRadius: 12,

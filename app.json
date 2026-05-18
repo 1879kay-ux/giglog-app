@@ -30,9 +30,7 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.giglogtracker.app",
       "versionCode": 3,
-      "blockedPermissions": [
-        "android.permission.CAMERA"
-      ]
+      "blockedPermissions": ["android.permission.CAMERA"]
     },
     "web": {
       "bundler": "metro",
@@ -54,9 +52,13 @@
           "icon": "./assets/icon.png",
           "color": "#0D9488"
         }
+
       ],
       "expo-localization"
       "expo-web-browser"
+
+      ]
+
     ],
     "experiments": {
       "typedRoutes": true

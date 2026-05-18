@@ -1,9 +1,9 @@
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import {
-    addMemberUnavailability,
-    deleteMemberUnavailability,
-    listMemberUnavailability,
-    MemberUnavailability,
+  addMemberUnavailability,
+  deleteMemberUnavailability,
+  listMemberUnavailability,
+  MemberUnavailability,
 } from "@/lib/memberUnavailability";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,14 +12,14 @@ import { Stack } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 function toDbDate(date: Date) {
@@ -28,7 +28,13 @@ function toDbDate(date: Date) {
 
 function toDisplayDate(date: Date | string) {
   const d = typeof date === "string" ? new Date(`${date}T12:00:00`) : date;
-  return new Intl.DateTimeFormat("en-GB").format(d);
+
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(d);
 }
 
 export default function UnavailabilityScreen() {
@@ -199,17 +205,18 @@ export default function UnavailabilityScreen() {
           }
           renderItem={({ item }) => (
             <View style={styles.card}>
-              <View>
-                <Text style={styles.dateText}>
-                  {toDisplayDate(item.start_date)} →{" "}
-                  {toDisplayDate(item.end_date)}
-                </Text>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <Text style={styles.dateText} numberOfLines={2}>
+  {toDisplayDate(item.start_date)} →{" "}
+  {toDisplayDate(item.end_date)}
+</Text>
                 <Text style={styles.cardSubText}>{t("unavailability.unavailable")}</Text>
               </View>
 
-              <Pressable onPress={() => handleDelete(item.id)}>
-                <Text style={styles.deleteText}>{t("unavailability.delete")}</Text>
-              </Pressable>
+              <Pressable style={styles.deletePill} onPress={() => handleDelete(item.id)}>
+  <Ionicons name="trash-outline" size={14} color="#DC2626" />
+  <Text style={styles.deleteText}>{t("unavailability.delete")}</Text>
+</Pressable>
             </View>
           )}
         />
@@ -337,10 +344,22 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  deleteText: {
-    color: "#DC2626",
-    fontWeight: "800",
-  },
+  deletePill: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 4,
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+  borderRadius: 999,
+  borderWidth: 1,
+  borderColor: "#DC2626",
+},
+
+deleteText: {
+  color: "#DC2626",
+  fontWeight: "800",
+  fontSize: 12,
+},
 
   emptyCard: {
     borderWidth: 1,

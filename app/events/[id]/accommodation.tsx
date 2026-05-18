@@ -448,8 +448,7 @@ export default function EventAccommodationEditScreen() {
       return;
     }
 
-    await load();
-    Alert.alert("Saved", "Accommodation updated.");
+    router.back();
   }
 
   async function deleteAccommodation() {
@@ -675,17 +674,17 @@ export default function EventAccommodationEditScreen() {
                     value={new Date(form.check_in_at)}
                     mode="datetime"
                     display="spinner"
-                    onChange={(event, selected) => {
-                      if (event.type === "dismissed" || !selected) {
-                        setShowCheckIn(false);
-                        return;
-                      }
-                      setShowCheckIn(false);
-                      setForm((p) => ({
-                        ...p,
-                        check_in_at: selected.toISOString(),
-                      }));
-                    }}
+                 onChange={(event, selected) => {
+  if (event.type === "dismissed" || !selected) {
+    setShowCheckIn(false);
+    return;
+  }
+
+  setForm((p) => ({
+    ...p,
+    check_in_at: selected.toISOString(),
+  }));
+}}
                   />
                 ) : null}
               </>
@@ -735,17 +734,17 @@ export default function EventAccommodationEditScreen() {
                     value={new Date(form.check_out_at)}
                     mode="datetime"
                     display="spinner"
-                    onChange={(event, selected) => {
-                      if (event.type === "dismissed" || !selected) {
-                        setShowCheckOut(false);
-                        return;
-                      }
-                      setShowCheckOut(false);
-                      setForm((p) => ({
-                        ...p,
-                        check_out_at: selected.toISOString(),
-                      }));
-                    }}
+                   onChange={(event, selected) => {
+  if (event.type === "dismissed" || !selected) {
+    setShowCheckOut(false);
+    return;
+  }
+
+  setForm((p) => ({
+    ...p,
+    check_out_at: selected.toISOString(),
+  }));
+}}
                   />
                 ) : null}
               </>

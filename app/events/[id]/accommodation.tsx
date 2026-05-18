@@ -507,9 +507,10 @@ export default function EventAccommodationEditScreen() {
       />
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+  style={{ flex: 1 }}
+  behavior={Platform.OS === "ios" ? "padding" : "height"}
+  keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+>
         <ScrollView
           style={styles.container}
           contentContainerStyle={styles.content}
@@ -806,37 +807,39 @@ export default function EventAccommodationEditScreen() {
               editable={canEdit && !saving}
             />
 
-            {canEdit ? (
-              <>
-                <Pressable
-                  style={[
-                    styles.saveBtn,
-                    !canSave || saving ? styles.saveBtnDisabled : null,
-                  ]}
-                  onPress={save}
-                  disabled={!canSave || saving}
-                >
-                  <Text style={styles.saveBtnText}>
-                    {saving ? "Saving..." : "Save"}
-                  </Text>
-                </Pressable>
+               {canEdit ? <View style={styles.footerSpacer} /> : null}
+                    </View>
+        </ScrollView>
 
-                {row ? (
-                  <Pressable
-                    style={[
-                      styles.deleteBtn,
-                      saving ? styles.saveBtnDisabled : null,
-                    ]}
-                    onPress={deleteAccommodation}
-                    disabled={saving}
-                  >
-                    <Text style={styles.deleteBtnText}>Delete</Text>
-                  </Pressable>
-                ) : null}
-              </>
+        {canEdit ? (
+          <View style={styles.stickyFooter}>
+            <Pressable
+              style={[
+                styles.saveBtn,
+                !canSave || saving ? styles.saveBtnDisabled : null,
+              ]}
+              onPress={save}
+              disabled={!canSave || saving}
+            >
+              <Text style={styles.saveBtnText}>
+                {saving ? "Saving..." : "Save"}
+              </Text>
+            </Pressable>
+
+            {row ? (
+              <Pressable
+                style={[
+                  styles.deleteBtn,
+                  saving ? styles.saveBtnDisabled : null,
+                ]}
+                onPress={deleteAccommodation}
+                disabled={saving}
+              >
+                <Text style={styles.deleteBtnText}>Delete</Text>
+              </Pressable>
             ) : null}
           </View>
-        </ScrollView>
+        ) : null}
       </KeyboardAvoidingView>
     </>
   );
@@ -934,6 +937,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   toggleLabel: { fontWeight: "800", color: colors.text },
+
+  stickyFooter: {
+    backgroundColor: colors.pageBg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === "ios" ? 24 : 12,
+  },
+
+  footerSpacer: {
+    height: 130,
+  },
 
   saveBtn: {
     marginTop: 14,

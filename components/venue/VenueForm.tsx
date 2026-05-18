@@ -89,12 +89,13 @@ export default function VenueForm({
     onSubmit(finalVenue);
   };
 
-  const content = (
-    <ScrollView
-      contentContainerStyle={[styles.container, { paddingBottom: 160 }]}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
+ const content = (
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        contentContainerStyle={[styles.container, { paddingBottom: 120 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       {/* VENUE NAME */}
       <Text style={styles.label}>
         Venue Name <Text style={styles.required}>*</Text>
@@ -210,11 +211,14 @@ export default function VenueForm({
         />
       </View>
 
-      {/* SAVE BUTTON */}
-      <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
-        <Text style={styles.saveButtonText}>Save Venue</Text>
-      </TouchableOpacity>
-    </ScrollView>
+            </ScrollView>
+
+      <View style={styles.stickyFooter}>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
+          <Text style={styles.saveButtonText}>Save Venue</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 
   return (
@@ -282,6 +286,13 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 2,
   },
+  stickyFooter: {
+  padding: 16,
+  paddingBottom: 24,
+  backgroundColor: "#f5f5f5",
+  borderTopWidth: 1,
+  borderTopColor: "#ddd",
+},
   saveButton: {
     backgroundColor: colors.primary,
     padding: 16,

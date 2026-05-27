@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "GigSynq Dev",
+    "name": "GigSynq",
     "slug": "Giglog",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "gigsynqdev",
+    "scheme": "giglog",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash-icon.png",
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "icon": "./assets/icon.png",
-      "bundleIdentifier": "com.giglogtracker.app.dev",
+      "bundleIdentifier": "com.giglogtracker.app",
       "buildNumber": "2",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false

@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -84,7 +84,8 @@ export default function AvailabilityGridModal({
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<GridAvailabilityRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
-
+  const headerScrollRef = useRef<ScrollView | null>(null);
+  const bodyScrollRef = useRef<ScrollView | null>(null);
   const eventIds = useMemo(
     () => (events || []).map((e) => e.event_id).filter(Boolean),
     [events],
@@ -244,18 +245,45 @@ export default function AvailabilityGridModal({
             </Text>
             <Text style={{ color: colors.textMuted, marginTop: 6 }}>{err}</Text>
           </View>
-        ) : (
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}
-            showsVerticalScrollIndicator
-            nestedScrollEnabled
-          >
-            <View style={styles.gridWrap}>
-              <View style={[styles.leftCol, { width: LEFT_W }]}>
-                <View style={[styles.corner, { height: HEADER_H }]}>
-                  <Text style={styles.cornerText}>Event</Text>
-                </View>
+       ) : (
+  <>
+    <View style={[styles.stickyHeader, { height: HEADER_H }]}>
+      <View style={[styles.corner, { width: LEFT_W, height: HEADER_H }]}>
+        <Text style={styles.cornerText}>Event</Text>
+      </View>
+
+      <ScrollView
+  ref={headerScrollRef}
+  horizontal
+  scrollEnabled={false}
+  showsHorizontalScrollIndicator={false}
+>
+        <View style={[styles.headerRow, { height: HEADER_H }]}>
+          {members.map((m) => (
+            <View
+              key={m.member_id}
+              style={[styles.headerCell, { width: COL_W, height: HEADER_H }]}
+            >
+              <View style={styles.rotWrapOnly}>
+                <Text style={styles.rotNameOnly} numberOfLines={1}>
+                  {String(m.display_name ?? "").trim() || "?"}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
+
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}
+      showsVerticalScrollIndicator
+      nestedScrollEnabled
+    >
+
+<View style={styles.gridWrap}>
+  <View style={[styles.leftCol, { width: LEFT_W }]}>
 
                 {events.map((e) => {
                   const venue = e.venues?.event_venue_name ?? "Event";
@@ -279,25 +307,20 @@ export default function AvailabilityGridModal({
               </View>
 
               <View style={{ flex: 1 }}>
-                <ScrollView horizontal showsHorizontalScrollIndicator>
+                <ScrollView
+  ref={bodyScrollRef}
+  horizontal
+  showsHorizontalScrollIndicator
+  scrollEventThrottle={16}
+  onScroll={(e) => {
+    headerScrollRef.current?.scrollTo({
+      x: e.nativeEvent.contentOffset.x,
+      animated: false,
+    });
+  }}
+>
                   <View>
-                    <View style={[styles.headerRow, { height: HEADER_H }]}>
-                      {members.map((m) => (
-                        <View
-                          key={m.member_id}
-                          style={[
-                            styles.headerCell,
-                            { width: COL_W, height: HEADER_H },
-                          ]}
-                        >
-                          <View style={styles.rotWrapOnly}>
-                            <Text style={styles.rotNameOnly} numberOfLines={1}>
-                              {String(m.display_name ?? "").trim() || "?"}
-                            </Text>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
+                    
 
                     {events.map((e) => {
                       const row = cellByEventMember[e.event_id] || {};
@@ -324,7 +347,8 @@ export default function AvailabilityGridModal({
                 </ScrollView>
               </View>
             </View>
-          </ScrollView>
+                  </ScrollView>
+        </>
         )}
       </View>
     </Modal>
@@ -333,6 +357,14 @@ export default function AvailabilityGridModal({
 
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
+
+  stickyHeader: {
+    flexDirection: "row",
+    backgroundColor: colors.cardBg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    zIndex: 2,
+  },
 
   gridWrap: { flexDirection: "row", minHeight: "100%" },
 

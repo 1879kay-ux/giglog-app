@@ -205,6 +205,35 @@ export default function TravelSection({
     openUrl(url);
   }
 
+   function openToDeparture(app: "apple" | "google" | "waze") {
+    if (!departureOrigin) {
+      Alert.alert(
+        "Departure location not set",
+        "Set a default departure location, or set one just for this event.",
+      );
+      return;
+    }
+    if (!venueDest) {
+      Alert.alert(
+        "Venue location missing",
+        "Add an address or postcode to the venue.",
+      );
+      return;
+    }
+
+    const o = enc(venueDest);
+    const d = enc(departureOrigin);
+
+    const url =
+      app === "apple"
+        ? `http://maps.apple.com/?saddr=${o}&daddr=${d}&dirflg=d`
+        : app === "google"
+          ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`
+          : `https://waze.com/ul?q=${d}&navigate=yes`;
+
+    openUrl(url);
+  }
+
   const showingGlobalDefault =
     !clean(departureAddress) &&
     !clean(departurePostcode) &&
@@ -274,7 +303,6 @@ export default function TravelSection({
           <Chip label="Waze" onPress={() => openToVenue("waze")} />
         </View>
       </View>
-
       {/* Venue */}
       <View style={styles.locationBox}>
         <Text style={styles.locationTitle}>Venue Location</Text>
@@ -283,7 +311,16 @@ export default function TravelSection({
           {venueCity ?? ""} {venuePostcode ?? ""}
         </Text>
       </View>
+      {/* Venue → Departure */}
+      <View style={styles.travelRow}>
+        <Text style={styles.travelLabel}>Venue → Departure Location</Text>
 
+        <View style={styles.travelButtonRow}>
+          <Chip label="Apple" onPress={() => openToDeparture("apple")} />
+          <Chip label="Google" onPress={() => openToDeparture("google")} />
+          <Chip label="Waze" onPress={() => openToDeparture("waze")} />
+        </View>
+      </View>
       {/* WEB PICKER MODAL (admin + admin mode) */}
       {Platform.OS === "web" && showWebPicker && canEdit ? (
         <View style={styles.webModalOverlay} pointerEvents="auto">

@@ -17,6 +17,7 @@ import AvailabilityGridModal from "./AvailabilityGridModal";
 
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Platform,
   Pressable,
@@ -416,6 +417,48 @@ setEvents(nextEvents);
     [eventsMode, todayLondon, currentMemberId],
   );
 
+  async function confirmAllShownAvailable() {
+    if (!currentMemberId) return;
+
+    const eventIds = filteredEventsRef.current
+      .filter((e) => needsResponseByEventId[e.event_id])
+      .map((e) => e.event_id);
+
+    if (eventIds.length === 0) {
+      Alert.alert("Nothing to confirm", "No displayed events need your availability.");
+      return;
+    }
+
+    Alert.alert(
+      "Confirm availability",
+      `Mark ${eventIds.length} displayed event${eventIds.length === 1 ? "" : "s"} as Available?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Confirm",
+          onPress: async () => {
+            const rows = eventIds.map((event_id) => ({
+              event_id,
+              member_id: currentMemberId,
+              status: "available",
+            }));
+
+            const { error } = await supabase
+              .from("event_availability")
+              .upsert(rows, { onConflict: "event_id,member_id" });
+
+            if (error) {
+              Alert.alert("Could not confirm availability", error.message);
+              return;
+            }
+
+            await loadEvents(false);
+          },
+        },
+      ],
+    );
+  }
+
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
@@ -736,7 +779,13 @@ setEvents(nextEvents);
             <View />
           )}
 
-          {canEdit ? (
+          {needsAvailabilityOnly ? (
+            <ActionButton
+              label="Confirm All"
+              icon="checkmark-circle-outline"
+              onPress={confirmAllShownAvailable}
+            />
+          ) : canEdit ? (
             <ActionButton
               label="Add Event"
               icon="add-circle-outline"

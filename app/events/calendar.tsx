@@ -136,16 +136,16 @@ export default function EventsCalendarScreen() {
     loadYearEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year]);
-  useEffect(() => {
+      useEffect(() => {
     if (viewMode !== "month") return;
     if (year !== new Date().getFullYear()) return;
 
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       calendarScrollRef.current?.scrollTo({
         y: currentMonthIndex * 500,
         animated: false,
       });
-    });
+    }, 100);
   }, [viewMode, year, currentMonthIndex]);
 
   async function loadYearEvents() {

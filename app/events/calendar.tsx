@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -125,6 +125,9 @@ export default function EventsCalendarScreen() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [dayModalOpen, setDayModalOpen] = useState(false);
 
+  const calendarScrollRef = useRef<ScrollView | null>(null);
+  const currentMonthIndex = new Date().getMonth();
+
   const monthsInYear = useMemo(() => {
     return Array.from({ length: 12 }, (_, i) => new Date(year, i, 1));
   }, [year]);
@@ -133,6 +136,17 @@ export default function EventsCalendarScreen() {
     loadYearEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year]);
+  useEffect(() => {
+    if (viewMode !== "month") return;
+    if (year !== new Date().getFullYear()) return;
+
+    requestAnimationFrame(() => {
+      calendarScrollRef.current?.scrollTo({
+        y: currentMonthIndex * 500,
+        animated: false,
+      });
+    });
+  }, [viewMode, year, currentMonthIndex]);
 
   async function loadYearEvents() {
     setLoading(true);
@@ -467,8 +481,9 @@ export default function EventsCalendarScreen() {
         </View>
       ) : (
         <ScrollView
-          style={styles.page}
-          contentContainerStyle={{ paddingBottom: 24 }}
+         ref={calendarScrollRef}
+         style={styles.page}
+         contentContainerStyle={{ paddingBottom: 24 }}
         >
           {/* MODE + YEAR NAV */}
           <View style={styles.topRow}>

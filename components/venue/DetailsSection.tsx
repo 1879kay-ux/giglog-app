@@ -4,6 +4,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 type VenueRow = {
@@ -44,6 +45,7 @@ export default function DetailsSection({
   venue,
   venueId,
 }: DetailsSectionProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const { isAdmin, adminModeEnabled } = useCurrentMember();
   const canEdit = isAdmin && adminModeEnabled;
@@ -66,7 +68,7 @@ export default function DetailsSection({
   const editPill = (onPress: () => void) => (
     <Pressable onPress={onPress} hitSlop={10} style={styles.editPill}>
       <Ionicons name="create-outline" size={16} color={colors.primary} />
-      <Text style={styles.editPillText}>Edit</Text>
+      <Text style={styles.editPillText}>{t("detailsSection.edit")}</Text>
     </Pressable>
   );
 
@@ -88,48 +90,48 @@ export default function DetailsSection({
     <ScrollView style={styles.container}>
       <View style={styles.content}>
         {/* Event Overview */}
-        <InfoCard title="Event Overview" right={editEventDetails}>
+        <InfoCard title={t("detailsSection.eventOverview")} right={editEventDetails}>
           <View style={styles.row}>
-            <Text style={styles.label}>Date</Text>
+            <Text style={styles.label}>{t("detailsSection.date")}</Text>
             <Text style={styles.value}>{formatDate(event.event_date)}</Text>
           </View>
 
           <View style={styles.row}>
-            <Text style={styles.label}>Event Name</Text>
+            <Text style={styles.label}>{t("detailsSection.eventName")}</Text>
             <Text style={styles.value}>{venue?.event_venue_name || "—"}</Text>
           </View>
 
           <View style={styles.row}>
-            <Text style={styles.label}>City</Text>
+            <Text style={styles.label}>{t("detailsSection.city")}</Text>
             <Text style={styles.value}>{venue?.city || "—"}</Text>
           </View>
 
           <View style={styles.row}>
-            <Text style={styles.label}>Status</Text>
+            <Text style={styles.label}>{t("detailsSection.status")}</Text>
             <Text style={styles.value}>{event.event_status || "—"}</Text>
           </View>
 
           <View style={styles.row}>
-            <Text style={styles.label}>Type</Text>
+            <Text style={styles.label}>{t("detailsSection.type")}</Text>
             <Text style={styles.value}>{event.event_type || "—"}</Text>
           </View>
 
           {/* ✅ Notes */}
           <View style={[styles.row, styles.rowLast]}>
-            <Text style={styles.label}>Event Notes</Text>
+            <Text style={styles.label}>{t("detailsSection.eventNotes")}</Text>
             <Text style={styles.value}>{event.event_notes || "—"}</Text>
           </View>
         </InfoCard>
 
         {/* Venue Details */}
-        <InfoCard title="Venue Details" right={editVenueDetails}>
+        <InfoCard title={t("detailsSection.venueDetails")} right={editVenueDetails}>
           <View style={styles.row}>
-            <Text style={styles.label}>Venue Name</Text>
+            <Text style={styles.label}>{t("detailsSection.venueName")}</Text>
             <Text style={styles.value}>{venue?.event_venue_name || "—"}</Text>
           </View>
 
           <View style={styles.row}>
-            <Text style={styles.label}>Address</Text>
+            <Text style={styles.label}>{t("detailsSection.address")}</Text>
             <Text style={styles.value}>
               {venue?.address || "—"}
               {venue?.postcode ? ` ${venue.postcode}` : ""}
@@ -137,60 +139,60 @@ export default function DetailsSection({
           </View>
 
           <View style={styles.row}>
-            <Text style={styles.label}>Contact Name</Text>
+            <Text style={styles.label}>{t("detailsSection.contactName")}</Text>
             <Text style={styles.value}>{venue?.venue_contact_name || "—"}</Text>
           </View>
 
           <View style={styles.row}>
-            <Text style={styles.label}>Contact Phone</Text>
+            <Text style={styles.label}>{t("detailsSection.contactPhone")}</Text>
             <Text style={styles.value}>
               {venue?.venue_contact_phone || "—"}
             </Text>
           </View>
 
           <View style={styles.row}>
-            <Text style={styles.label}>Contact Email</Text>
+            <Text style={styles.label}>{t("detailsSection.contactEmail")}</Text>
             <Text style={styles.value}>
               {venue?.venue_contact_email || "—"}
             </Text>
           </View>
 
           <View style={styles.row}>
-            <Text style={styles.label}>Capacity</Text>
+            <Text style={styles.label}>{t("detailsSection.capacity")}</Text>
             <Text style={styles.value}>{venue?.capacity ?? "—"}</Text>
           </View>
 
           {venue?.venue_notes ? (
             <View style={[styles.row, styles.rowLast]}>
-              <Text style={styles.label}>Venue Notes</Text>
+              <Text style={styles.label}>{t("detailsSection.venueNotes")}</Text>
               <Text style={styles.value}>{venue.venue_notes}</Text>
             </View>
           ) : (
             <View style={[styles.row, styles.rowLast]}>
-              <Text style={styles.label}>Venue Notes</Text>
+              <Text style={styles.label}>{t("detailsSection.venueNotes")}</Text>
               <Text style={styles.value}>—</Text>
             </View>
           )}
         </InfoCard>
 
         {/* Promoter Contact */}
-        <InfoCard title="Promoter Contact" right={editEventDetails}>
+        <InfoCard title={t("detailsSection.promoterContact")} right={editEventDetails}>
           <View style={styles.row}>
-            <Text style={styles.label}>Name</Text>
+            <Text style={styles.label}>{t("detailsSection.name")}</Text>
             <Text style={styles.value}>
               {event.promoter_contact_name || "—"}
             </Text>
           </View>
 
           <View style={styles.row}>
-            <Text style={styles.label}>Phone</Text>
+            <Text style={styles.label}>{t("detailsSection.phone")}</Text>
             <Text style={styles.value}>
               {event.promoter_contact_phone || "—"}
             </Text>
           </View>
 
           <View style={[styles.row, styles.rowLast]}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>{t("detailsSection.email")}</Text>
             <Text style={styles.value}>
               {event.promoter_contact_email || "—"}
             </Text>

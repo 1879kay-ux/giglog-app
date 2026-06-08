@@ -8,6 +8,7 @@ import {
     useRouter,
 } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
     ActivityIndicator,
     Alert,
@@ -82,7 +83,7 @@ function InfoRow({
   );
 }
 
-type ChipOption = { key: string; selectedColor: string };
+type ChipOption = { key: string; label?: string; selectedColor: string };
 
 function ChipGroup({
   label,
@@ -115,7 +116,7 @@ function ChipGroup({
               ]}
             >
               <Text style={[styles.chipText, selected && { color: "#fff" }]}>
-                {opt.key}
+                {opt.label ?? opt.key}
               </Text>
             </TouchableOpacity>
           );
@@ -128,6 +129,7 @@ function ChipGroup({
 export default function EditEventDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -152,23 +154,23 @@ export default function EditEventDetailsScreen() {
 
   const typeOptions: ChipOption[] = useMemo(
     () => [
-      { key: "Gig", selectedColor: "#2ECC71" },
-      { key: "Rehearsal", selectedColor: "#2ECC71" },
-      { key: "Recording", selectedColor: "#2ECC71" },
-      { key: "Promo", selectedColor: "#2ECC71" },
-      { key: "Meeting", selectedColor: "#2ECC71" },
-      { key: "Other", selectedColor: "#2ECC71" },
+      { key: "Gig", label: t("eventsEditDetails.typeGig"), selectedColor: "#2ECC71" },
+      { key: "Rehearsal", label: t("eventsEditDetails.typeRehearsal"), selectedColor: "#2ECC71" },
+      { key: "Recording", label: t("eventsEditDetails.typeRecording"), selectedColor: "#2ECC71" },
+      { key: "Promo", label: t("eventsEditDetails.typePromo"), selectedColor: "#2ECC71" },
+      { key: "Meeting", label: t("eventsEditDetails.typeMeeting"), selectedColor: "#2ECC71" },
+      { key: "Other", label: t("eventsEditDetails.typeOther"), selectedColor: "#2ECC71" },
     ],
-    [],
+    [t],
   );
 
   const statusOptions: ChipOption[] = useMemo(
     () => [
-      { key: "Confirmed", selectedColor: "#2ECC71" },
-      { key: "Provisional", selectedColor: "#F39C12" },
-      { key: "Cancelled", selectedColor: "#E74C3C" },
+      { key: "Confirmed", label: t("eventsEditDetails.statusConfirmed"), selectedColor: "#2ECC71" },
+      { key: "Provisional", label: t("eventsEditDetails.statusProvisional"), selectedColor: "#F39C12" },
+      { key: "Cancelled", label: t("eventsEditDetails.statusCancelled"), selectedColor: "#E74C3C" },
     ],
-    [],
+    [t],
   );
 
   useFocusEffect(
@@ -444,11 +446,11 @@ if (dateChanged || statusChanged) {
 
       {/* EVENT OVERVIEW */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Event Overview</Text>
+        <Text style={styles.cardTitle}>{t("eventsEditDetails.eventOverview")}</Text>
 
         {/* DATE ROW */}
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Date</Text>
+          <Text style={styles.rowLabel}>{t("eventsEditDetails.date")}</Text>
 
           <TouchableOpacity
             style={styles.dateValueWrap}
@@ -481,25 +483,24 @@ if (dateChanged || statusChanged) {
         )}
 
         <ChipGroup
-          label="Event Type"
+          label={t("eventsEditDetails.eventType")}
           value={eventType}
           options={typeOptions}
           onChange={setEventType}
         />
 
         <ChipGroup
-          label="Status"
+          label={t("eventsEditDetails.status")}
           value={eventStatus}
           options={statusOptions}
           onChange={setEventStatus}
         />
 
         <View style={{ marginTop: 16 }}>
-          <Text style={styles.sectionTitle}>Delete Event</Text>
+          <Text style={styles.sectionTitle}>{t("eventsEditDetails.deleteEvent")}</Text>
 
           <Text style={styles.helper}>
-            Selecting this will remove the event from all views. This action
-            cannot be undone.
+            {t("eventsEditDetails.deleteHelper")}
           </Text>
 
           <View style={{ marginTop: 10 }}>
@@ -521,7 +522,7 @@ if (dateChanged || statusChanged) {
                   { color: eventStatus === "Deleted" ? "#fff" : "#E74C3C" },
                 ]}
               >
-                Delete
+                {t("eventsEditDetails.deleteButton")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -530,30 +531,30 @@ if (dateChanged || statusChanged) {
 
       {/* VENUE DETAILS */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Venue Details</Text>
-        <InfoRow label="Venue Name" value={venue?.event_venue_name ?? null} />
-        <InfoRow label="Address" value={venue?.address ?? null} />
-        <InfoRow label="Postcode" value={venue?.postcode ?? null} />
+        <Text style={styles.cardTitle}>{t("eventsEditDetails.venueDetails")}</Text>
+        <InfoRow label={t("eventsEditDetails.venueName")} value={venue?.event_venue_name ?? null} />
+        <InfoRow label={t("eventsEditDetails.address")} value={venue?.address ?? null} />
+        <InfoRow label={t("eventsEditDetails.postcode")} value={venue?.postcode ?? null} />
         <InfoRow
-          label="Contact Name"
+          label={t("eventsEditDetails.contactName")}
           value={venue?.venue_contact_name ?? null}
         />
         <InfoRow
-          label="Contact Phone"
+          label={t("eventsEditDetails.contactPhone")}
           value={venue?.venue_contact_phone ?? null}
         />
         <InfoRow
-          label="Contact Email"
+          label={t("eventsEditDetails.contactEmail")}
           value={venue?.venue_contact_email ?? null}
         />
         <InfoRow
-          label="Capacity"
+          label={t("eventsEditDetails.capacity")}
           value={venue?.capacity != null ? String(venue.capacity) : null}
         />
-        <InfoRow label="Venue Notes" value={venue?.venue_notes ?? null} />
+        <InfoRow label={t("eventsEditDetails.venueNotes")} value={venue?.venue_notes ?? null} />
 
         <Text style={styles.helper}>
-          If you need to change venue details, edit the venue record.
+          {t("eventsEditDetails.venueHelper")}
         </Text>
 
         {!!event.venue_id && (
@@ -562,30 +563,30 @@ if (dateChanged || statusChanged) {
             onPress={() => router.push(`/venue/${event.venue_id}/edit`)}
           >
             <Ionicons name="create-outline" size={18} color="#fff" />
-            <Text style={styles.secondaryButtonText}>Edit Venue</Text>
+            <Text style={styles.secondaryButtonText}>{t("eventsEditDetails.editVenue")}</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {/* PROMOTER CONTACT */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Promoter Contact</Text>
+        <Text style={styles.cardTitle}>{t("eventsEditDetails.promoterContact")}</Text>
 
-        <Text style={styles.inputLabel}>Name</Text>
+        <Text style={styles.inputLabel}>{t("eventsEditDetails.name")}</Text>
         <TextInput
           style={styles.input}
           value={promoterName}
           onChangeText={setPromoterName}
         />
 
-        <Text style={styles.inputLabel}>Phone</Text>
+        <Text style={styles.inputLabel}>{t("eventsEditDetails.phone")}</Text>
         <TextInput
           style={styles.input}
           value={promoterPhone}
           onChangeText={setPromoterPhone}
         />
 
-        <Text style={styles.inputLabel}>Email</Text>
+        <Text style={styles.inputLabel}>{t("eventsEditDetails.email")}</Text>
         <TextInput
           style={styles.input}
           value={promoterEmail}
@@ -595,13 +596,13 @@ if (dateChanged || statusChanged) {
 
       {/* NOTES */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Notes</Text>
+        <Text style={styles.cardTitle}>{t("eventsEditDetails.notes")}</Text>
         <TextInput
           style={[styles.input, styles.multiline]}
           multiline
           value={notes}
           onChangeText={setNotes}
-          placeholder="Add any notes for this event..."
+          placeholder={t("eventsEditDetails.notesPlaceholder")}
           placeholderTextColor="#999"
         />
       </View>
@@ -658,7 +659,7 @@ if (dateChanged || statusChanged) {
             onPress={onSave}
             disabled={saving}
           >
-            <Text style={styles.saveButtonText}>{saving ? "Saving…" : "Save"}</Text>
+            <Text style={styles.saveButtonText}>{saving ? t("eventsEditDetails.saving") : t("eventsEditDetails.save")}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

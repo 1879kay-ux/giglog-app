@@ -3,6 +3,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Modal,
@@ -80,6 +81,7 @@ export default function AvailabilityGridModal({
   events: EventRow[];
 }) {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
 
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<GridAvailabilityRow[]>([]);
@@ -172,12 +174,23 @@ export default function AvailabilityGridModal({
 
   function formatShort(dateString: string) {
     const date = new Date(`${dateString}T12:00:00`);
-    const formatted = new Intl.DateTimeFormat("en-GB", {
+    const formatted = new Intl.DateTimeFormat(i18n.resolvedLanguage || i18n.language, {
       weekday: "short",
       day: "2-digit",
       month: "short",
     }).format(date);
     return formatted.replace(",", "");
+  }
+
+  function displayEventType(value: string | null | undefined) {
+    const v = String(value ?? "").toLowerCase();
+    if (v === "gig") return t("availabilityGrid.typeGig");
+    if (v === "rehearsal") return t("availabilityGrid.typeRehearsal");
+    if (v === "recording") return t("availabilityGrid.typeRecording");
+    if (v === "promo") return t("availabilityGrid.typePromo");
+    if (v === "meeting") return t("availabilityGrid.typeMeeting");
+    if (v === "other") return t("availabilityGrid.typeOther");
+    return t("availabilityGrid.eventFallback");
   }
 
   return (
@@ -197,7 +210,7 @@ export default function AvailabilityGridModal({
             <Ionicons name="arrow-back-outline" size={26} color="#fff" />
           </TouchableOpacity>
 
-          <Text style={styles.topBarTitle}>Availability Grid</Text>
+          <Text style={styles.topBarTitle}>{t("availabilityGrid.title")}</Text>
 
           <View style={styles.topBarRight}>
             <TouchableOpacity
@@ -217,19 +230,19 @@ export default function AvailabilityGridModal({
           <View style={styles.legendPill}>
             <View style={styles.legendItem}>
               <Dot kind="awaiting" />
-              <Text style={styles.legendText}>Await</Text>
+              <Text style={styles.legendText}>{t("availabilityGrid.await")}</Text>
             </View>
             <View style={styles.legendItem}>
               <Dot kind="green" />
-              <Text style={styles.legendText}>Avail</Text>
+              <Text style={styles.legendText}>{t("availabilityGrid.avail")}</Text>
             </View>
             <View style={styles.legendItem}>
               <Dot kind="amber" />
-              <Text style={styles.legendText}>Prov</Text>
+              <Text style={styles.legendText}>{t("availabilityGrid.prov")}</Text>
             </View>
             <View style={styles.legendItem}>
               <Dot kind="red" />
-              <Text style={styles.legendText}>No</Text>
+              <Text style={styles.legendText}>{t("availabilityGrid.no")}</Text>
             </View>
           </View>
         </View>
@@ -249,7 +262,7 @@ export default function AvailabilityGridModal({
   <>
     <View style={[styles.stickyHeader, { height: HEADER_H }]}>
       <View style={[styles.corner, { width: LEFT_W, height: HEADER_H }]}>
-        <Text style={styles.cornerText}>Event</Text>
+        <Text style={styles.cornerText}>{t("availabilityGrid.event")}</Text>
       </View>
 
       <ScrollView
@@ -286,8 +299,9 @@ export default function AvailabilityGridModal({
   <View style={[styles.leftCol, { width: LEFT_W }]}>
 
                 {events.map((e) => {
-                  const venue = e.venues?.event_venue_name ?? "Event";
+                  const venue = e.venues?.event_venue_name ?? t("availabilityGrid.eventFallback");
                   const city = e.venues?.city ?? "";
+                  const eventTypeDisplay = displayEventType(e.event_type);
                   return (
                     <View
                       key={e.event_id}
@@ -299,7 +313,7 @@ export default function AvailabilityGridModal({
                       <Text numberOfLines={1} style={styles.meta}>
                         {formatShort(e.event_date)}
                         {city ? ` · ${city}` : ""}
-                        {e.event_type ? ` · ${String(e.event_type)}` : ""}
+                        {eventTypeDisplay ? ` · ${eventTypeDisplay}` : ""}
                       </Text>
                     </View>
                   );

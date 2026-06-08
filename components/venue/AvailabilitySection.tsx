@@ -165,7 +165,7 @@ export default function AvailabilitySection({
 
     if (error) {
       console.log("availability load error", error);
-      Alert.alert("Error", error.message);
+      Alert.alert(t("availabilitySection.errorTitle"), error.message);
       setRows([]);
       setSummary(null);
       setLoading(false);
@@ -243,11 +243,14 @@ export default function AvailabilitySection({
         .map((r) => r.member_id);
 
       if (awaitingIds.length === 0) {
-        Alert.alert("No reminders needed", "Everyone has responded.");
+        Alert.alert(
+          t("availabilitySection.noRemindersNeeded"),
+          t("availabilitySection.everyoneHasResponded"),
+        );
         return;
       }
 
-      const title = "Availability reminder";
+      const title = t("availabilitySection.availabilityReminder");
 
       const body = `Please confirm availability for ${venueName ?? "this event"}${
         eventDate ? ` on ${eventDate}` : ""
@@ -272,13 +275,16 @@ export default function AvailabilitySection({
       if (error) throw error;
 
       Alert.alert(
-        "Reminder sent",
+        t("availabilitySection.reminderSent"),
         `Sent to ${awaitingIds.length} awaiting member${
           awaitingIds.length === 1 ? "" : "s"
         }.`,
       );
     } catch (e: any) {
-      Alert.alert("Reminder failed", e?.message ?? "Please try again.");
+      Alert.alert(
+        t("availabilitySection.reminderFailed"),
+        e?.message ?? t("availabilitySection.pleaseTryAgain"),
+      );
     }
   }
 
@@ -329,15 +335,27 @@ export default function AvailabilitySection({
       await load();
 
       if (label === "available") {
-        Alert.alert("Availability updated", "You are marked as Available.");
+        Alert.alert(
+          t("availabilitySection.availabilityUpdated"),
+          t("availabilitySection.markedAvailable"),
+        );
       } else if (label === "provisional") {
-        Alert.alert("Availability updated", "You are marked as Provisional.");
+        Alert.alert(
+          t("availabilitySection.availabilityUpdated"),
+          t("availabilitySection.markedProvisional"),
+        );
       } else if (label === "unavailable") {
-        Alert.alert("Availability updated", "You are marked as Unavailable.");
+        Alert.alert(
+          t("availabilitySection.availabilityUpdated"),
+          t("availabilitySection.markedUnavailable"),
+        );
       }
     } catch (e: any) {
       console.log("setAvailability error", e);
-      Alert.alert("Error", e?.message ?? "Failed to update availability");
+      Alert.alert(
+        t("availabilitySection.errorTitle"),
+        e?.message ?? t("availabilitySection.failedToUpdateAvailability"),
+      );
     } finally {
       setSaving(false);
     }
@@ -384,7 +402,7 @@ export default function AvailabilitySection({
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <InfoCard title="Your Availability">
+      <InfoCard title={t("availabilitySection.yourAvailability")}>
         {currentLabel === "awaiting" ? (
           <View style={styles.confirmPrompt}>
             <Text style={styles.confirmPromptTitle}>
@@ -404,7 +422,7 @@ export default function AvailabilitySection({
           {chip("unavailable", t("availabilitySection.chipUnavailable"))}
         </View>
 
-        {saving ? <Text style={styles.saving}>Saving…</Text> : null}
+        {saving ? <Text style={styles.saving}>{t("availabilitySection.saving")}</Text> : null}
       </InfoCard>
 
   <InfoCard title={t("availabilitySection.eventSummary")}>
@@ -592,7 +610,7 @@ function labelText(v: AvailabilityLabel, t: (key: string) => string) {
   if (v === "available") return t("availabilitySection.statusAvailable");
   if (v === "provisional") return t("availabilitySection.statusProvisional");
   if (v === "unavailable") return t("availabilitySection.statusUnavailable");
-  return "Dep";
+  return t("availabilitySection.dep");
 }
 
 function statusBg(v: AvailabilityLabel) {

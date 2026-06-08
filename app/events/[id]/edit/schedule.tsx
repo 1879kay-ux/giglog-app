@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -75,6 +76,7 @@ type TimeFieldKey =
 
 export default function EditEventScheduleScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -105,16 +107,16 @@ export default function EditEventScheduleScreen() {
   const fields = useMemo(
     () =>
       [
-        { key: "travel_venue", label: "Travel to Venue" },
-        { key: "loadin", label: "Load-in" },
-        { key: "soundcheck", label: "Soundcheck" },
-        { key: "doors", label: "Doors" },
-        { key: "onstage", label: "Onstage" },
-        { key: "offstage", label: "Offstage" },
-        { key: "venue_curfew", label: "Venue Curfew" },
-        { key: "depart_venue", label: "Depart Venue" },
+        { key: "travel_venue", label: t("eventsEditSchedule.travelToVenue") },
+        { key: "loadin", label: t("eventsEditSchedule.loadIn") },
+        { key: "soundcheck", label: t("eventsEditSchedule.soundcheck") },
+        { key: "doors", label: t("eventsEditSchedule.doors") },
+        { key: "onstage", label: t("eventsEditSchedule.onstage") },
+        { key: "offstage", label: t("eventsEditSchedule.offstage") },
+        { key: "venue_curfew", label: t("eventsEditSchedule.venueCurfew") },
+        { key: "depart_venue", label: t("eventsEditSchedule.departVenue") },
       ] as { key: TimeFieldKey; label: string }[],
-    [],
+    [t],
   );
 
   useEffect(() => {
@@ -218,7 +220,7 @@ export default function EditEventScheduleScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Schedule</Text>
+            <Text style={styles.cardTitle}>{t("eventsEditSchedule.schedule")}</Text>
 
             {fields.map((f) => (
               <View key={f.key} style={styles.row}>
@@ -265,13 +267,13 @@ export default function EditEventScheduleScreen() {
             ))}
 
             <View style={styles.notesWrap}>
-              <Text style={styles.notesLabel}>Schedule Notes</Text>
+              <Text style={styles.notesLabel}>{t("eventsEditSchedule.scheduleNotes")}</Text>
               <TextInput
                 style={styles.notesInput}
                 multiline
                 value={scheduleNotes}
                 onChangeText={setScheduleNotes}
-                placeholder="Add schedule notes..."
+                placeholder={t("eventsEditSchedule.addScheduleNotes")}
                 placeholderTextColor="#999"
               />
             </View>
@@ -288,7 +290,7 @@ export default function EditEventScheduleScreen() {
             disabled={saving}
           >
             <Text style={styles.saveButtonText}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? t("eventsEditSchedule.saving") : t("eventsEditSchedule.save")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -331,10 +333,10 @@ export default function EditEventScheduleScreen() {
                       setPickerKey(null);
                     }}
                   >
-                    <Text style={styles.iosPickerBtn}>Cancel</Text>
+                    <Text style={styles.iosPickerBtn}>{t("eventsEditSchedule.cancel")}</Text>
                   </TouchableOpacity>
 
-                  <Text style={styles.iosPickerTitle}>Select time</Text>
+                  <Text style={styles.iosPickerTitle}>{t("eventsEditSchedule.selectTime")}</Text>
 
                   <TouchableOpacity
                     onPress={() => {
@@ -343,7 +345,7 @@ export default function EditEventScheduleScreen() {
                       setPickerKey(null);
                     }}
                   >
-                    <Text style={styles.iosPickerBtn}>Done</Text>
+                    <Text style={styles.iosPickerBtn}>{t("eventsEditSchedule.done")}</Text>
                   </TouchableOpacity>
                 </View>
 

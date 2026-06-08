@@ -18,6 +18,7 @@ import {
   useRouter,
 } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -153,6 +154,7 @@ type SectionKey =
 --------------------------------------------------------- */
 export default function EventDetailsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const cm = useCurrentMember() as any;
   const isAdmin = !!cm?.isAdmin;
@@ -584,7 +586,7 @@ export default function EventDetailsScreen() {
           </View>
         ) : showMissingEvent ? (
           <View style={styles.loadingContainer}>
-            <Text style={styles.emptyText}>Event not found.</Text>
+            <Text style={styles.emptyText}>{t("eventDetails.notFound")}</Text>
           </View>
         ) : (
           <>
@@ -612,7 +614,7 @@ export default function EventDetailsScreen() {
             >
               <Section
                 sectionKey="details"
-                title="Details"
+                title={t("eventDetails.details")}
                 icon="information-circle-outline"
                 open={openSections.details}
                 onPress={() => toggleSection("details")}
@@ -628,7 +630,7 @@ export default function EventDetailsScreen() {
 
               <Section
                 sectionKey="availability"
-                title="Availability"
+                title={t("eventDetails.availability")}
                 icon="checkmark-circle-outline"
                 open={openSections.availability}
                 onPress={() => toggleSection("availability")}
@@ -663,7 +665,7 @@ export default function EventDetailsScreen() {
 
               <Section
                 sectionKey="schedule"
-                title="Schedule"
+                title={t("eventDetails.schedule")}
                 icon="time-outline"
                 open={openSections.schedule}
                 onPress={() => toggleSection("schedule")}
@@ -685,7 +687,7 @@ export default function EventDetailsScreen() {
 
               <Section
                 sectionKey="documents"
-                title="Documents"
+                title={t("eventDetails.documents")}
                 icon="document-text-outline"
                 open={openSections.documents}
                 onPress={() => toggleSection("documents")}
@@ -702,7 +704,7 @@ export default function EventDetailsScreen() {
 
               <Section
                 sectionKey="travel"
-                title="Travel"
+                title={t("eventDetails.travel")}
                 icon="navigate-outline"
                 open={openSections.travel}
                 onPress={() => toggleSection("travel")}
@@ -721,7 +723,7 @@ export default function EventDetailsScreen() {
               {accommodation || canEdit ? (
                 <Section
                   sectionKey="accommodation"
-                  title="Accommodation"
+                  title={t("eventDetails.accommodation")}
                   icon="bed-outline"
                   open={openSections.accommodation}
                   onPress={() => toggleSection("accommodation")}
@@ -741,7 +743,7 @@ export default function EventDetailsScreen() {
               {canSeeFinance ? (
                 <Section
                   sectionKey="finance"
-                  title="Finance"
+                  title={t("eventDetails.finance")}
                   icon="cash-outline"
                   open={openSections.finance}
                   onPress={() => toggleSection("finance")}

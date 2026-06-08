@@ -372,5 +372,13 @@
   "eventsIndex.confirmAvailability": "Confirm Availability",
   "eventsIndex.showingAwaitingAvailability": "Showing Awaiting Availability",
   "eventsIndex.unknown": "Unknown",
-  "eventsIndex.eventFallback": "Event"
+  "eventsIndex.eventFallback": "Event",
+  "eventDetails.notFound": "Event not found.",
+  "eventDetails.details": "Details",
+  "eventDetails.availability": "Availability",
+  "eventDetails.schedule": "Schedule",
+  "eventDetails.documents": "Documents",
+  "eventDetails.travel": "Travel",
+  "eventDetails.accommodation": "Accommodation",
+  "eventDetails.finance": "Finance"
 }

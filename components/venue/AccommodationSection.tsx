@@ -54,7 +54,10 @@ async function openUrl(url: string) {
     if (!can) throw new Error("cannot open");
     await Linking.openURL(url);
   } catch {
-    Alert.alert("Can't open maps", "Check the address/postcode and try again.");
+    Alert.alert(
+      t("accommodationSection.alertCantOpenMaps"),
+      t("accommodationSection.alertCheckAddressPostcode"),
+    );
   }
 }
 
@@ -157,8 +160,8 @@ export default function AccommodationSection({
   function openToHotel(app: "apple" | "google" | "waze") {
     if (!hotelDest) {
       Alert.alert(
-        "Hotel location missing",
-        "Add a postcode (or address) to the accommodation.",
+        t("accommodationSection.alertHotelLocationMissing"),
+        t("accommodationSection.alertAddPostcodeOrAddress"),
       );
       return;
     }

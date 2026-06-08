@@ -3,6 +3,7 @@
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Linking,
@@ -117,11 +118,12 @@ export default function AccommodationSection({
   canEdit: boolean;
   onPressEdit: () => void;
 }) {
+  const { t } = useTranslation();
   if (!accommodation) {
     // Admins only should ever see this empty state (Event screen hides section for non-admin if null)
     return (
       <View>
-        <Text style={styles.muted}>No accommodation added.</Text>
+        <Text style={styles.muted}>{t("accommodationSection.noAccommodationAdded")}</Text>
 
         {canEdit ? (
           <Pressable style={styles.editPill} onPress={onPressEdit}>
@@ -130,7 +132,7 @@ export default function AccommodationSection({
               size={16}
               color={colors.primary}
             />
-            <Text style={styles.editPillText}>Add accommodation</Text>
+            <Text style={styles.editPillText}>{t("accommodationSection.addAccommodation")}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -181,7 +183,7 @@ export default function AccommodationSection({
         {canEdit ? (
           <Pressable style={styles.editPill} onPress={onPressEdit}>
             <Ionicons name="create-outline" size={16} color={colors.primary} />
-            <Text style={styles.editPillText}>Edit</Text>
+            <Text style={styles.editPillText}>{t("accommodationSection.edit")}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -192,59 +194,59 @@ export default function AccommodationSection({
       {hotelDest ? (
         <View style={styles.directionsBlock}>
           <Text style={styles.directionsLabel}>
-            Current Location → Accommodation
+            {t("accommodationSection.currentToAccommodation")}
           </Text>
 
           <View style={styles.travelButtonRow}>
-            <Chip label="Apple" onPress={() => openToHotel("apple")} />
-            <Chip label="Google" onPress={() => openToHotel("google")} />
-            <Chip label="Waze" onPress={() => openToHotel("waze")} />
+            <Chip label={t("accommodationSection.apple")} onPress={() => openToHotel("apple")} />
+            <Chip label={t("accommodationSection.google")} onPress={() => openToHotel("google")} />
+            <Chip label={t("accommodationSection.waze")} onPress={() => openToHotel("waze")} />
           </View>
         </View>
       ) : null}
 
       <View style={styles.card}>
         <Row
-          label="Check-in"
+          label={t("accommodationSection.checkIn")}
           value={formatDateTime(accommodation.check_in_at)}
         />
         <Row
-          label="Check-out"
+          label={t("accommodationSection.checkOut")}
           value={formatDateTime(accommodation.check_out_at)}
         />
 
         {accommodation.rooms_count !== null ? (
-          <Row label="Rooms" value={String(accommodation.rooms_count)} />
+          <Row label={t("accommodationSection.rooms")} value={String(accommodation.rooms_count)} />
         ) : null}
 
         {accommodation.total_cost !== null ? (
           <Row
-            label="Total cost"
+            label={t("accommodationSection.totalCost")}
             value={formatMoneyGBP(accommodation.total_cost)}
           />
         ) : null}
 
         {accommodation.booked_under_name ? (
-          <Row label="Booked under" value={accommodation.booked_under_name} />
+          <Row label={t("accommodationSection.bookedUnder")} value={accommodation.booked_under_name} />
         ) : null}
 
         {accommodation.booking_reference ? (
-          <Row label="Booking ref" value={accommodation.booking_reference} />
+          <Row label={t("accommodationSection.bookingRef")} value={accommodation.booking_reference} />
         ) : null}
 
         <Row
-          label="Breakfast"
-          value={accommodation.breakfast_included ? "Yes" : "No"}
+          label={t("accommodationSection.breakfast")}
+          value={accommodation.breakfast_included ? t("accommodationSection.yes") : t("accommodationSection.no")}
         />
         <Row
-          label="Parking"
-          value={accommodation.parking_available ? "Yes" : "No"}
+          label={t("accommodationSection.parking")}
+          value={accommodation.parking_available ? t("accommodationSection.yes") : t("accommodationSection.no")}
         />
       </View>
 
       {accommodation.notes ? (
         <View style={styles.notesBox}>
-          <Text style={styles.notesTitle}>Notes</Text>
+          <Text style={styles.notesTitle}>{t("accommodationSection.notes")}</Text>
           <Text style={styles.notes}>{accommodation.notes}</Text>
         </View>
       ) : null}

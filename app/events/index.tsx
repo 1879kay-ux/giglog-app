@@ -111,7 +111,7 @@ let savedEventsReturnEventId: string | null = null;
 
 export default function EventsListScreen() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const cm: any = useCurrentMember();
   const isAdmin = !!cm?.isAdmin;
@@ -489,14 +489,34 @@ setEvents(nextEvents);
 
   function formatDisplayDate(dateString: string) {
     const date = new Date(`${dateString}T12:00:00`);
-    const formatted = new Intl.DateTimeFormat("en-GB", {
-      weekday: "short",
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    }).format(date);
+const formatted = new Intl.DateTimeFormat(i18n.resolvedLanguage || i18n.language, {
+  weekday: "short",
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+}).format(date);
 
     return formatted.replace(",", "").toUpperCase();
+  }
+
+  function displayEventStatus(statusRaw: string) {
+    const v = String(statusRaw || "").toLowerCase();
+    if (v === "confirmed") return t("eventsIndex.statusConfirmed");
+    if (v === "provisional") return t("eventsIndex.statusProvisional");
+    if (v === "cancelled") return t("eventsIndex.statusCancelled");
+    if (v === "deleted") return t("eventsIndex.statusDeleted");
+    return t("eventsIndex.unknown");
+  }
+
+  function displayEventType(typeRaw: string) {
+    const v = String(typeRaw || "").toLowerCase();
+    if (v === "gig") return t("eventsIndex.typeGig");
+    if (v === "rehearsal") return t("eventsIndex.typeRehearsal");
+    if (v === "recording") return t("eventsIndex.typeRecording");
+    if (v === "promo") return t("eventsIndex.typePromo");
+    if (v === "meeting") return t("eventsIndex.typeMeeting");
+    if (v === "other") return t("eventsIndex.typeOther");
+    return t("eventsIndex.eventFallback");
   }
 
   const filteredEvents = events.filter((item) => {
@@ -805,8 +825,10 @@ setEvents(nextEvents);
             const venueName = item.venues?.event_venue_name ?? "—";
             const city = item.venues?.city ?? "—";
             const statusRaw = item.event_status ?? "Unknown";
+            const statusDisplay = displayEventStatus(statusRaw);
             const statusNorm = String(item.event_status ?? "").toLowerCase();
-            const type = item.event_type ?? "Event";
+            const typeRaw = item.event_type ?? "Event";
+            const typeDisplay = displayEventType(typeRaw);
 
             const needsResponse =
               eventsMode === "upcoming" &&
@@ -852,7 +874,7 @@ setEvents(nextEvents);
                     ) : null}
 
                     <Text style={styles.eventMeta}>
-                      {type},{" "}
+                      {typeDisplay},{" "}
                       <Text
                         style={[
                           styles.eventMetaStatus,
@@ -863,7 +885,7 @@ setEvents(nextEvents);
                               : null,
                         ]}
                       >
-                        {statusRaw}
+                        {statusDisplay}
                       </Text>
                     </Text>
                   </View>

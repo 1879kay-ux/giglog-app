@@ -44,7 +44,7 @@ type BandBrandingQueryRow = {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const cm = useCurrentMember() as any;
 
   const canViewBandAndCrew = !!cm?.canViewBandAndCrew;
@@ -54,6 +54,26 @@ export default function HomeScreen() {
   const [bandName, setBandName] = useState<string>("GigSynq");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [nextEvent, setNextEvent] = useState<NextEvent | null>(null);
+
+  function displayEventType(value: string | null | undefined) {
+    const v = String(value ?? "").toLowerCase();
+    if (v === "gig") return t("home.typeGig");
+    if (v === "rehearsal") return t("home.typeRehearsal");
+    if (v === "recording") return t("home.typeRecording");
+    if (v === "promo") return t("home.typePromo");
+    if (v === "meeting") return t("home.typeMeeting");
+    if (v === "other") return t("home.typeOther");
+    return t("home.typeEvent");
+  }
+
+  function displayEventStatus(value: string | null | undefined) {
+    const v = String(value ?? "").toLowerCase();
+    if (v === "confirmed") return t("home.statusConfirmed");
+    if (v === "provisional") return t("home.statusProvisional");
+    if (v === "cancelled") return t("home.statusCancelled");
+    if (v === "deleted") return t("home.statusDeleted");
+    return t("home.statusUnknown");
+  }
 
   async function loadBandBranding() {
     const { data: userData } = await supabase.auth.getUser();
@@ -134,20 +154,28 @@ export default function HomeScreen() {
       const venueName = row.venues?.event_venue_name ?? "TBC";
       const city = row.venues?.city ?? "TBC";
 
-      const dateLabel = new Date(row.event_date)
-        .toLocaleDateString(undefined, {
+      const dateLabel = new Intl.DateTimeFormat(
+        i18n.resolvedLanguage || i18n.language,
+        {
           weekday: "short",
           day: "2-digit",
-          month: "long",
+          month: "short",
           year: "numeric",
-        })
+        },
+      )
+        .format(new Date(row.event_date))
         .toUpperCase();
+
+      const typeRaw = row.event_type ?? "Event";
+      const statusRaw = row.event_status ?? "Unknown";
+      const typeDisplay = displayEventType(typeRaw);
+      const statusDisplay = displayEventStatus(statusRaw);
 
       setNextEvent({
         event_id: row.event_id,
         event_date_label: dateLabel,
         venue_city_label: `${venueName}, ${city}`,
-        type_status_label: `${row.event_type}, ${row.event_status}`,
+        type_status_label: `${typeDisplay}, ${statusDisplay}`,
       });
     }
 
@@ -156,7 +184,7 @@ export default function HomeScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [i18n.language, i18n.resolvedLanguage, t]);
 
   return (
     <>

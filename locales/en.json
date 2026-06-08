@@ -360,5 +360,17 @@
   "availabilitySection.awaiting": "Awaiting",
   "availabilitySection.available": "Available",
   "availabilitySection.provisional": "Provisional",
-  "availabilitySection.unavailable": "Unavailable"
+  "availabilitySection.unavailable": "Unavailable",
+  "eventsIndex.title": "Events",
+  "eventsIndex.upcoming": "Upcoming",
+  "eventsIndex.archived": "Archived",
+  "eventsIndex.searchPlaceholder": "Search events...",
+  "eventsIndex.confirmAll": "Confirm All",
+  "eventsIndex.addEvent": "Add Event",
+  "eventsIndex.archivedBadge": "ARCHIVED",
+  "eventsIndex.availabilityConflict": "Availability Conflict",
+  "eventsIndex.confirmAvailability": "Confirm Availability",
+  "eventsIndex.showingAwaitingAvailability": "Showing Awaiting Availability",
+  "eventsIndex.unknown": "Unknown",
+  "eventsIndex.eventFallback": "Event"
 }

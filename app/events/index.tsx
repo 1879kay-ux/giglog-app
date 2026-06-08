@@ -13,6 +13,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import AvailabilityGridModal from "./AvailabilityGridModal";
 
 import {
@@ -110,6 +111,7 @@ let savedEventsReturnEventId: string | null = null;
 
 export default function EventsListScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const cm: any = useCurrentMember();
   const isAdmin = !!cm?.isAdmin;
@@ -592,7 +594,7 @@ setEvents(nextEvents);
     <>
       <Stack.Screen
         options={{
-          title: "Events",
+          title: t("eventsIndex.title"),
           headerTitleAlign: "center",
           headerStyle: { backgroundColor: PRIMARY_TEAL },
           headerTitleStyle: { color: "#fff", fontWeight: "700", fontSize: 18 },
@@ -684,7 +686,7 @@ setEvents(nextEvents);
                   eventsMode === "upcoming" ? styles.modeTextActive : null,
                 ]}
               >
-                Upcoming
+                {t("eventsIndex.upcoming")}
               </Text>
             </Pressable>
 
@@ -701,7 +703,7 @@ setEvents(nextEvents);
                   eventsMode === "archived" ? styles.modeTextActive : null,
                 ]}
               >
-                Archived
+                {t("eventsIndex.archived")}
               </Text>
             </Pressable>
           </View>
@@ -714,7 +716,7 @@ setEvents(nextEvents);
 
           <TextInput
             style={styles.searchInput}
-            placeholder="Search events..."
+            placeholder={t("eventsIndex.searchPlaceholder")}
             placeholderTextColor="#999"
             value={search}
             onChangeText={setSearch}
@@ -742,7 +744,7 @@ setEvents(nextEvents);
                 <Ionicons name="filter-outline" size={14} color="#B45309" />
 
                 <Text style={styles.conflictPillText}>
-                  {availabilityConflictCount} Availability Conflict
+                  {availabilityConflictCount} {t("eventsIndex.availabilityConflict")}
                 </Text>
               </View>
             </Pressable>
@@ -770,8 +772,8 @@ setEvents(nextEvents);
 
                 <Text style={styles.countPillText}>
                   {needsAvailabilityOnly
-                    ? "Showing Awaiting Availability"
-                    : `${responseRequiredCount} Confirm Availability`}
+                    ? t("eventsIndex.showingAwaitingAvailability")
+                    : `${responseRequiredCount} ${t("eventsIndex.confirmAvailability")}`}
                 </Text>
               </View>
             </Pressable>
@@ -781,13 +783,13 @@ setEvents(nextEvents);
 
           {needsAvailabilityOnly ? (
             <ActionButton
-              label="Confirm All"
+              label={t("eventsIndex.confirmAll")}
               icon="checkmark-circle-outline"
               onPress={confirmAllShownAvailable}
             />
           ) : canEdit ? (
             <ActionButton
-              label="Add Event"
+              label={t("eventsIndex.addEvent")}
               icon="add-circle-outline"
               onPress={() => router.push("/events/add")}
             />
@@ -846,7 +848,7 @@ setEvents(nextEvents);
 </Text>
 
                     {eventsMode === "archived" ? (
-                      <Text style={styles.archivedBadge}>ARCHIVED</Text>
+                      <Text style={styles.archivedBadge}>{t("eventsIndex.archivedBadge")}</Text>
                     ) : null}
 
                     <Text style={styles.eventMeta}>
@@ -869,12 +871,12 @@ setEvents(nextEvents);
                   <View style={styles.rightCol}>
                     {hasAvailabilityConflict ? (
                       <Text style={styles.conflictBadgeSmall}>
-                        Availability conflict
+                        {t("eventsIndex.availabilityConflict")}
                       </Text>
                     ) : null}
                     {needsResponse ? (
                       <Text style={styles.responseBadgeSmall}>
-                        Confirm availability
+                        {t("eventsIndex.confirmAvailability")}
                       </Text>
                     ) : null}
 

@@ -360,5 +360,17 @@
   "availabilitySection.awaiting": "Pendiente",
   "availabilitySection.available": "Disponible",
   "availabilitySection.provisional": "Provisional",
-  "availabilitySection.unavailable": "No disponible"
+  "availabilitySection.unavailable": "No disponible",
+  "eventsIndex.title": "Eventos",
+  "eventsIndex.upcoming": "Próximos",
+  "eventsIndex.archived": "Archivados",
+  "eventsIndex.searchPlaceholder": "Buscar eventos...",
+  "eventsIndex.confirmAll": "Confirmar todo",
+  "eventsIndex.addEvent": "Agregar evento",
+  "eventsIndex.archivedBadge": "ARCHIVADO",
+  "eventsIndex.availabilityConflict": "Conflicto de disponibilidad",
+  "eventsIndex.confirmAvailability": "Confirmar disponibilidad",
+  "eventsIndex.showingAwaitingAvailability": "Mostrando disponibilidad pendiente",
+  "eventsIndex.unknown": "Desconocido",
+  "eventsIndex.eventFallback": "Evento"
 }

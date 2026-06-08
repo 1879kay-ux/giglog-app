@@ -5,6 +5,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   FlatList,
@@ -25,6 +26,7 @@ interface Venue {
 
 export default function VenuesScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +107,7 @@ export default function VenuesScreen() {
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={fetchVenues}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t("venues.retry")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -115,7 +117,7 @@ export default function VenuesScreen() {
     <View style={{ flex: 1 }}>
       <Stack.Screen
         options={{
-          title: "Venues",
+          title: t("venues.title"),
           headerLeft: () => (
             <View
               style={Platform.select({
@@ -162,7 +164,7 @@ export default function VenuesScreen() {
 
           <TextInput
             style={styles.searchInput}
-            placeholder="Search venues..."
+            placeholder={t("venues.searchPlaceholder")}
             placeholderTextColor="#999"
             value={search}
             onChangeText={setSearch}
@@ -178,14 +180,16 @@ export default function VenuesScreen() {
         {/* ADD VENUE BUTTON (admin + admin mode) */}
         {canEdit ? (
           <ActionButton
-            label="Add Venue"
+            label={t("venues.addVenue")}
             icon="add-circle-outline"
             onPress={() => router.push("/venue/add")}
             style={styles.addVenueButton}
           />
         ) : null}
 
-        <Text style={styles.countText}>{filteredVenues.length} venues</Text>
+        <Text style={styles.countText}>
+          {t("venues.count", { count: filteredVenues.length })}
+        </Text>
 
         <FlatList
           data={filteredVenues}

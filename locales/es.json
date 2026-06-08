@@ -297,5 +297,21 @@
   "documentsSection.edit": "Editar",
   "documentsSection.documents": "Documentos",
   "documentsSection.noDocumentsYet": "Aún no hay documentos",
-  "documentsSection.uploadInAdminMode": "Sube documentos en modo administrador."
+  "documentsSection.uploadInAdminMode": "Sube documentos en modo administrador.",
+  "travelSection.departureToVenue": "Ubicación de salida → Recinto",
+  "travelSection.edit": "Editar",
+  "travelSection.apple": "Apple",
+  "travelSection.google": "Google",
+  "travelSection.waze": "Waze",
+  "travelSection.departureLocation": "Ubicación de salida",
+  "travelSection.default": "Predeterminado",
+  "travelSection.notSet": "Sin configurar",
+  "travelSection.currentToVenue": "Ubicación actual → Recinto",
+  "travelSection.venueLocation": "Ubicación del recinto",
+  "travelSection.venueToDeparture": "Recinto → Ubicación de salida",
+  "travelSection.departureLocationModalTitle": "Ubicación de salida",
+  "travelSection.whatToChange": "¿Qué quieres cambiar?",
+  "travelSection.defaultForAllEvents": "Predeterminado para todos los eventos",
+  "travelSection.thisEventOnly": "Solo este evento",
+  "travelSection.cancel": "Cancelar"
 }

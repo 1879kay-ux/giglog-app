@@ -4,6 +4,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Linking,
@@ -48,6 +49,7 @@ export default function TravelSection({
   departureAddress,
   departurePostcode,
 }: Props) {
+  const { t } = useTranslation();
   const router = useRouter();
   const { isAdmin, adminModeEnabled } = useCurrentMember();
   const canEdit = !!isAdmin && !!adminModeEnabled;
@@ -244,7 +246,7 @@ export default function TravelSection({
       {/* Departure */}
       <View style={styles.travelRow}>
         <View style={styles.blockHeader}>
-          <Text style={styles.travelLabel}>Departure Location → Venue</Text>
+          <Text style={styles.travelLabel}>{t("travelSection.departureToVenue")}</Text>
 
           {canEdit ? (
             <Pressable
@@ -257,20 +259,20 @@ export default function TravelSection({
                 size={16}
                 color={colors.primary}
               />
-              <Text style={styles.editPillText}>Edit</Text>
+              <Text style={styles.editPillText}>{t("travelSection.edit")}</Text>
             </Pressable>
           ) : null}
         </View>
 
         <View style={styles.travelButtonRow}>
-          <Chip label="Apple" onPress={() => openFromDeparture("apple")} />
-          <Chip label="Google" onPress={() => openFromDeparture("google")} />
+          <Chip label={t("travelSection.apple")} onPress={() => openFromDeparture("apple")} />
+          <Chip label={t("travelSection.google")} onPress={() => openFromDeparture("google")} />
           {/* Waze removed here: Waze deep links route from current location only */}
         </View>
 
         <View style={styles.locationBox}>
           <View style={styles.locationHeaderRow}>
-            <Text style={styles.locationTitle}>Departure Location</Text>
+            <Text style={styles.locationTitle}>{t("travelSection.departureLocation")}</Text>
 
             {showingGlobalDefault ? (
               <Pressable
@@ -279,13 +281,13 @@ export default function TravelSection({
                 hitSlop={8}
                 disabled={!canEdit}
               >
-                <Text style={styles.badgeText}>Default</Text>
+                <Text style={styles.badgeText}>{t("travelSection.default")}</Text>
               </Pressable>
             ) : null}
           </View>
 
           <Text style={styles.locationText}>
-            {effectiveDepartureAddress ?? "Not set"}
+            {effectiveDepartureAddress ?? t("travelSection.notSet")}
           </Text>
           <Text style={styles.locationText}>
             {effectiveDeparturePostcode ?? ""}
@@ -295,17 +297,17 @@ export default function TravelSection({
 
       {/* Current location */}
       <View style={styles.travelRow}>
-        <Text style={styles.travelLabel}>Current Location → Venue</Text>
+        <Text style={styles.travelLabel}>{t("travelSection.currentToVenue")}</Text>
 
         <View style={styles.travelButtonRow}>
-          <Chip label="Apple" onPress={() => openToVenue("apple")} />
-          <Chip label="Google" onPress={() => openToVenue("google")} />
-          <Chip label="Waze" onPress={() => openToVenue("waze")} />
+          <Chip label={t("travelSection.apple")} onPress={() => openToVenue("apple")} />
+          <Chip label={t("travelSection.google")} onPress={() => openToVenue("google")} />
+          <Chip label={t("travelSection.waze")} onPress={() => openToVenue("waze")} />
         </View>
       </View>
       {/* Venue */}
       <View style={styles.locationBox}>
-        <Text style={styles.locationTitle}>Venue Location</Text>
+        <Text style={styles.locationTitle}>{t("travelSection.venueLocation")}</Text>
         <Text style={styles.locationText}>{venueAddress ?? ""}</Text>
         <Text style={styles.locationText}>
           {venueCity ?? ""} {venuePostcode ?? ""}
@@ -313,20 +315,20 @@ export default function TravelSection({
       </View>
       {/* Venue → Departure */}
       <View style={styles.travelRow}>
-        <Text style={styles.travelLabel}>Venue → Departure Location</Text>
+        <Text style={styles.travelLabel}>{t("travelSection.venueToDeparture")}</Text>
 
         <View style={styles.travelButtonRow}>
-          <Chip label="Apple" onPress={() => openToDeparture("apple")} />
-          <Chip label="Google" onPress={() => openToDeparture("google")} />
-          <Chip label="Waze" onPress={() => openToDeparture("waze")} />
+          <Chip label={t("travelSection.apple")} onPress={() => openToDeparture("apple")} />
+          <Chip label={t("travelSection.google")} onPress={() => openToDeparture("google")} />
+          <Chip label={t("travelSection.waze")} onPress={() => openToDeparture("waze")} />
         </View>
       </View>
       {/* WEB PICKER MODAL (admin + admin mode) */}
       {Platform.OS === "web" && showWebPicker && canEdit ? (
         <View style={styles.webModalOverlay} pointerEvents="auto">
           <View style={styles.webModalCard} pointerEvents="auto">
-            <Text style={styles.webModalTitle}>Departure location</Text>
-            <Text style={styles.webModalText}>What do you want to change?</Text>
+            <Text style={styles.webModalTitle}>{t("travelSection.departureLocationModalTitle")}</Text>
+            <Text style={styles.webModalText}>{t("travelSection.whatToChange")}</Text>
 
             <Pressable
               style={styles.webModalBtn}
@@ -335,7 +337,7 @@ export default function TravelSection({
                 router.push("/settings/travel" as any);
               }}
             >
-              <Text style={styles.webModalBtnText}>Default for all events</Text>
+              <Text style={styles.webModalBtnText}>{t("travelSection.defaultForAllEvents")}</Text>
             </Pressable>
 
             <Pressable
@@ -345,14 +347,14 @@ export default function TravelSection({
                 goEditEvent();
               }}
             >
-              <Text style={styles.webModalBtnText}>This event only</Text>
+              <Text style={styles.webModalBtnText}>{t("travelSection.thisEventOnly")}</Text>
             </Pressable>
 
             <Pressable
               style={[styles.webModalBtn, styles.webModalBtnCancel]}
               onPress={() => setShowWebPicker(false)}
             >
-              <Text style={styles.webModalBtnText}>Cancel</Text>
+              <Text style={styles.webModalBtnText}>{t("travelSection.cancel")}</Text>
             </Pressable>
           </View>
         </View>

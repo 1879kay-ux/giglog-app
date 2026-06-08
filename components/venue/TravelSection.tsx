@@ -68,12 +68,12 @@ export default function TravelSection({
     }
 
     Alert.alert(
-      "Departure location",
-      "What do you want to change?",
+      t("travelSection.departureLocation"),
+      t("travelSection.whatChange"),
       [
-        { text: "Default for all events", onPress: goDefaults },
-        { text: "This event only", onPress: goEditEvent },
-        { text: "Cancel", style: "cancel" },
+        { text: t("travelSection.defaultForAllEvents"), onPress: goDefaults },
+        { text: t("travelSection.thisEventOnly"), onPress: goEditEvent },
+        { text: t("travelSection.cancel"), style: "cancel" },
       ],
       { cancelable: true },
     );

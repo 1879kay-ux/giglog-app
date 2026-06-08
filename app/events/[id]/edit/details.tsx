@@ -195,7 +195,7 @@ export default function EditEventDetailsScreen() {
 
     if (eventErr || !eventData) {
       setLoading(false);
-      Alert.alert("Error", "Could not load event.");
+      Alert.alert(t("eventsEditDetails.alertErrorTitle"), t("eventsEditDetails.alertCouldNotLoadEvent"));
       return;
     }
 
@@ -300,18 +300,29 @@ export default function EditEventDetailsScreen() {
   async function onSave() {
     if (!id) return;
 
-    if (!eventDate) return Alert.alert("Missing", "Please choose a Date.");
+    if (!eventDate)
+      return Alert.alert(
+        t("eventsEditDetails.alertMissingTitle"),
+        t("eventsEditDetails.alertPleaseChooseDate"),
+      );
     if (!eventType)
-      return Alert.alert("Missing", "Please choose an Event Type.");
-    if (!eventStatus) return Alert.alert("Missing", "Please choose a Status.");
+      return Alert.alert(
+        t("eventsEditDetails.alertMissingTitle"),
+        t("eventsEditDetails.alertPleaseChooseEventType"),
+      );
+    if (!eventStatus)
+      return Alert.alert(
+        t("eventsEditDetails.alertMissingTitle"),
+        t("eventsEditDetails.alertPleaseChooseStatus"),
+      );
     if (eventStatus === "Deleted") {
       Alert.alert(
-        "Delete Event",
-        "Do you wish to delete this event? This action cannot be undone.",
+        t("eventsEditDetails.alertDeleteEventTitle"),
+        t("eventsEditDetails.alertDeleteEventMessage"),
         [
-          { text: "Cancel", style: "cancel" },
+          { text: t("common.cancel"), style: "cancel" },
           {
-            text: "Delete Event",
+            text: t("eventsEditDetails.alertDeleteEventTitle"),
             style: "destructive",
             onPress: async () => {
               setSaving(true);
@@ -335,7 +346,7 @@ export default function EditEventDetailsScreen() {
               setSaving(false);
 
               if (error) {
-                Alert.alert("Save failed", error.message);
+                Alert.alert(t("eventsEditDetails.alertSaveFailedTitle"), error.message);
                 return;
               }
 
@@ -368,12 +379,12 @@ export default function EditEventDetailsScreen() {
     setSaving(false);
 
     if (error) {
-      Alert.alert("Save failed", error.message);
+      Alert.alert(t("eventsEditDetails.alertSaveFailedTitle"), error.message);
       return;
     }
 
     if (!data || (Array.isArray(data) && data.length === 0)) {
-      Alert.alert("Save failed", "No rows updated.");
+      Alert.alert(t("eventsEditDetails.alertSaveFailedTitle"), t("eventsEditDetails.alertNoRowsUpdated"));
       return;
     }
 
@@ -391,13 +402,13 @@ if (dateChanged || statusChanged) {
     await supabase.functions.invoke("send-push-notification", {
       body: {
         title: isCancelled
-          ? "GigSynq event cancelled"
-          : "GigSynq event updated",
+          ? t("eventsEditDetails.pushTitleCancelled")
+          : t("eventsEditDetails.pushTitleUpdated"),
         body: isCancelled
-          ? `${eventType} at ${venue?.event_venue_name ?? "Venue"}${venue?.city ? `, ${venue.city}` : ""} on ${formatEventDate(eventDate)} has been cancelled.`
+          ? `${eventType} at ${venue?.event_venue_name ?? t("eventsEditDetails.pushVenueFallback")}${venue?.city ? `, ${venue.city}` : ""} on ${formatEventDate(eventDate)} ${t("eventsEditDetails.pushHasBeenCancelled")}`
           : dateChanged
-            ? `${eventType} at ${venue?.event_venue_name ?? "Venue"}${venue?.city ? `, ${venue.city}` : ""} has changed date to ${formatEventDate(eventDate)}.`
-            : `${eventType} at ${venue?.event_venue_name ?? "Venue"}${venue?.city ? `, ${venue.city}` : ""} status changed to ${eventStatus}.`,
+            ? `${eventType} at ${venue?.event_venue_name ?? t("eventsEditDetails.pushVenueFallback")}${venue?.city ? `, ${venue.city}` : ""} ${t("eventsEditDetails.pushHasChangedDateTo")} ${formatEventDate(eventDate)}.`
+            : `${eventType} at ${venue?.event_venue_name ?? t("eventsEditDetails.pushVenueFallback")}${venue?.city ? `, ${venue.city}` : ""} ${t("eventsEditDetails.pushStatusChangedTo")} ${eventStatus}.`,
         data: {
   type: isCancelled ? "event_cancelled" : "event_updated",
   event_id: id,

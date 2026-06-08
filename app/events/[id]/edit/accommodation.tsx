@@ -9,6 +9,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -49,6 +50,7 @@ function isoNowRounded() {
 
 export default function EventAccommodationScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -222,57 +224,57 @@ export default function EventAccommodationScreen() {
             </Text>
           ) : (
             <View style={styles.form}>
-              <Text style={styles.h2}>Edit</Text>
+              <Text style={styles.h2}>{t("eventsEditAccommodation.edit")}</Text>
 
-              <Label>Accommodation name</Label>
+              <Label>{t("eventsEditAccommodation.accommodationName")}</Label>
               <TextInput
                 value={form.name}
                 onChangeText={(t) => setForm((p) => ({ ...p, name: t }))}
-                placeholder="Premier Inn, Travelodge, etc."
+                placeholder={t("eventsEditAccommodation.placeholderAccommodationName")}
                 style={styles.input}
               />
 
-              <Label>Booked under</Label>
+              <Label>{t("eventsEditAccommodation.bookedUnder")}</Label>
               <TextInput
                 value={form.booked_under_name}
                 onChangeText={(t) =>
                   setForm((p) => ({ ...p, booked_under_name: t }))
                 }
-                placeholder="Name on booking"
+                placeholder={t("eventsEditAccommodation.placeholderBookedUnder")}
                 style={styles.input}
               />
 
-              <Label>Booking reference</Label>
+              <Label>{t("eventsEditAccommodation.bookingReference")}</Label>
               <TextInput
                 value={form.booking_reference}
                 onChangeText={(t) =>
                   setForm((p) => ({ ...p, booking_reference: t }))
                 }
-                placeholder="Ref"
+                placeholder={t("eventsEditAccommodation.placeholderReference")}
                 style={styles.input}
                 autoCapitalize="characters"
               />
 
-              <Label>Address line</Label>
+              <Label>{t("eventsEditAccommodation.addressLine")}</Label>
               <TextInput
                 value={form.address_line}
                 onChangeText={(t) =>
                   setForm((p) => ({ ...p, address_line: t }))
                 }
-                placeholder="Optional"
+                placeholder={t("eventsEditAccommodation.optional")}
                 style={styles.input}
               />
 
-              <Label>Postcode</Label>
+              <Label>{t("eventsEditAccommodation.postcode")}</Label>
               <TextInput
                 value={form.postcode}
                 onChangeText={(t) => setForm((p) => ({ ...p, postcode: t }))}
-                placeholder="Optional"
+                placeholder={t("eventsEditAccommodation.optional")}
                 style={styles.input}
                 autoCapitalize="characters"
               />
 
-              <Label>Check-in (ISO datetime)</Label>
+              <Label>{t("eventsEditAccommodation.checkIn")}</Label>
               <TextInput
                 value={form.check_in_at}
                 onChangeText={(t) => setForm((p) => ({ ...p, check_in_at: t }))}
@@ -280,7 +282,7 @@ export default function EventAccommodationScreen() {
                 style={styles.input}
               />
 
-              <Label>Check-out (ISO datetime)</Label>
+              <Label>{t("eventsEditAccommodation.checkOut")}</Label>
               <TextInput
                 value={form.check_out_at}
                 onChangeText={(t) =>
@@ -292,7 +294,7 @@ export default function EventAccommodationScreen() {
 
               <View style={styles.twoCol}>
                 <View style={{ flex: 1 }}>
-                  <Label>Rooms</Label>
+                  <Label>{t("eventsEditAccommodation.rooms")}</Label>
                   <TextInput
                     value={form.rooms_count}
                     onChangeText={(t) =>
@@ -305,7 +307,7 @@ export default function EventAccommodationScreen() {
                 </View>
 
                 <View style={{ flex: 1 }}>
-                  <Label>Total cost</Label>
+                  <Label>{t("eventsEditAccommodation.totalCost")}</Label>
                   <TextInput
                     value={form.total_cost}
                     onChangeText={(t) =>
@@ -319,7 +321,9 @@ export default function EventAccommodationScreen() {
               </View>
 
               <ToggleRow
-                label="Breakfast included"
+                label={t("eventsEditAccommodation.breakfastIncluded")}
+                trueLabel={t("eventsEditAccommodation.yes")}
+                falseLabel={t("eventsEditAccommodation.no")}
                 value={form.breakfast_included}
                 onPress={() =>
                   setForm((p) => ({
@@ -330,7 +334,9 @@ export default function EventAccommodationScreen() {
               />
 
               <ToggleRow
-                label="Parking available"
+                label={t("eventsEditAccommodation.parkingAvailable")}
+                trueLabel={t("eventsEditAccommodation.yes")}
+                falseLabel={t("eventsEditAccommodation.no")}
                 value={form.parking_available}
                 onPress={() =>
                   setForm((p) => ({
@@ -340,11 +346,11 @@ export default function EventAccommodationScreen() {
                 }
               />
 
-              <Label>Notes</Label>
+              <Label>{t("eventsEditAccommodation.notes")}</Label>
               <TextInput
                 value={form.notes}
                 onChangeText={(t) => setForm((p) => ({ ...p, notes: t }))}
-                placeholder="Late check-in code, parking instructions, etc."
+                placeholder={t("eventsEditAccommodation.placeholderNotes")}
                 style={[
                   styles.input,
                   { height: 110, textAlignVertical: "top" },
@@ -361,7 +367,7 @@ export default function EventAccommodationScreen() {
                 disabled={!canSave || saving}
               >
                 <Text style={styles.saveBtnText}>
-                  {saving ? "Saving..." : "Save"}
+                  {saving ? t("eventsEditAccommodation.saving") : t("eventsEditAccommodation.save")}
                 </Text>
               </Pressable>
 
@@ -383,10 +389,14 @@ function Label({ children }: { children: React.ReactNode }) {
 
 function ToggleRow({
   label,
+  trueLabel,
+  falseLabel,
   value,
   onPress,
 }: {
   label: string;
+  trueLabel: string;
+  falseLabel: string;
   value: boolean;
   onPress: () => void;
 }) {
@@ -396,7 +406,7 @@ function ToggleRow({
       <View
         style={[styles.togglePill, value ? styles.toggleOn : styles.toggleOff]}
       >
-        <Text style={styles.togglePillText}>{value ? "Yes" : "No"}</Text>
+        <Text style={styles.togglePillText}>{value ? trueLabel : falseLabel}</Text>
       </View>
     </Pressable>
   );

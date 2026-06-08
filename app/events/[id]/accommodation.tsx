@@ -15,6 +15,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -228,6 +229,7 @@ function WebDateTimeSplit({
 
 export default function EventAccommodationEditScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const eventId = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -496,7 +498,7 @@ export default function EventAccommodationEditScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "Accommodation",
+          title: t("eventsAccommodation.title"),
           headerLeft: () => (
             <Pressable onPress={() => router.back()} style={styles.headerBtn}>
               <Ionicons name="arrow-back-outline" size={24} color="#fff" />
@@ -516,15 +518,15 @@ export default function EventAccommodationEditScreen() {
         >
           {!canEdit ? (
             <View style={styles.readOnlyCard}>
-              <Text style={styles.readOnlyTitle}>Read only</Text>
+              <Text style={styles.readOnlyTitle}>{t("eventsAccommodation.readOnly")}</Text>
               <Text style={styles.readOnlyText}>
-                Admins can add or edit accommodation.
+                {t("eventsAccommodation.readOnlyHelper")}
               </Text>
             </View>
           ) : null}
 
           <View style={styles.card}>
-            <Label>Accommodation name</Label>
+            <Label>{t("eventsAccommodation.accommodationName")}</Label>
             <TextInput
               value={form.name}
               onChangeText={(t) => {
@@ -544,7 +546,7 @@ export default function EventAccommodationEditScreen() {
                   160,
                 );
               }}
-              placeholder="Premier Inn"
+              placeholder={t("eventsAccommodation.placeholderName")}
               style={styles.input}
               editable={canEdit && !saving}
             />
@@ -581,56 +583,56 @@ export default function EventAccommodationEditScreen() {
                     <Text style={styles.suggestMeta}>
                       {[s.postcode, s.address_line]
                         .filter(Boolean)
-                        .join(" • ") || "No saved details"}
+                        .join(" • ") || t("eventsAccommodation.noSavedDetails")}
                     </Text>
                   </Pressable>
                 ))}
               </View>
             ) : null}
 
-            <Label>Booked under</Label>
+            <Label>{t("eventsAccommodation.bookedUnder")}</Label>
             <TextInput
               value={form.booked_under_name}
               onChangeText={(t) =>
                 setForm((p) => ({ ...p, booked_under_name: t }))
               }
-              placeholder="Name on booking"
+              placeholder={t("eventsAccommodation.placeholderBookedUnder")}
               style={styles.input}
               editable={canEdit && !saving}
             />
 
-            <Label>Booking reference</Label>
+            <Label>{t("eventsAccommodation.bookingReference")}</Label>
             <TextInput
               value={form.booking_reference}
               onChangeText={(t) =>
                 setForm((p) => ({ ...p, booking_reference: t }))
               }
-              placeholder="Ref"
+              placeholder={t("eventsAccommodation.placeholderReference")}
               style={styles.input}
               autoCapitalize="characters"
               editable={canEdit && !saving}
             />
 
-            <Label>Address line</Label>
+            <Label>{t("eventsAccommodation.addressLine")}</Label>
             <TextInput
               value={form.address_line}
               onChangeText={(t) => setForm((p) => ({ ...p, address_line: t }))}
-              placeholder="Optional"
+              placeholder={t("eventsAccommodation.optional")}
               style={styles.input}
               editable={canEdit && !saving}
             />
 
-            <Label>Postcode</Label>
+            <Label>{t("eventsAccommodation.postcode")}</Label>
             <TextInput
               value={form.postcode}
               onChangeText={(t) => setForm((p) => ({ ...p, postcode: t }))}
-              placeholder="Optional"
+              placeholder={t("eventsAccommodation.optional")}
               style={styles.input}
               autoCapitalize="characters"
               editable={canEdit && !saving}
             />
 
-            <Label>Check-in</Label>
+            <Label>{t("eventsAccommodation.checkIn")}</Label>
             {Platform.OS === "web" ? (
               <WebDateTimeSplit
                 valueIso={form.check_in_at}
@@ -690,7 +692,7 @@ export default function EventAccommodationEditScreen() {
               </>
             )}
 
-            <Label>Check-out</Label>
+            <Label>{t("eventsAccommodation.checkOut")}</Label>
             {Platform.OS === "web" ? (
               <WebDateTimeSplit
                 valueIso={form.check_out_at}
@@ -752,7 +754,7 @@ export default function EventAccommodationEditScreen() {
 
             <View style={styles.twoCol}>
               <View style={{ flex: 1 }}>
-                <Label>Rooms</Label>
+                <Label>{t("eventsAccommodation.rooms")}</Label>
                 <TextInput
                   value={form.rooms_count}
                   onChangeText={(t) =>
@@ -766,7 +768,7 @@ export default function EventAccommodationEditScreen() {
               </View>
 
               <View style={{ flex: 1 }}>
-                <Label>Total cost</Label>
+                <Label>{t("eventsAccommodation.totalCost")}</Label>
                 <TextInput
                   value={form.total_cost}
                   onChangeText={(t) =>
@@ -781,7 +783,7 @@ export default function EventAccommodationEditScreen() {
             </View>
 
             <ToggleRow
-              label="Breakfast included"
+              label={t("eventsAccommodation.breakfastIncluded")}
               value={form.breakfast_included}
               disabled={!canEdit || saving}
               onChange={(v) =>
@@ -790,17 +792,17 @@ export default function EventAccommodationEditScreen() {
             />
 
             <ToggleRow
-              label="Parking available"
+              label={t("eventsAccommodation.parkingAvailable")}
               value={form.parking_available}
               disabled={!canEdit || saving}
               onChange={(v) => setForm((p) => ({ ...p, parking_available: v }))}
             />
 
-            <Label>Notes</Label>
+            <Label>{t("eventsAccommodation.notes")}</Label>
             <TextInput
               value={form.notes}
               onChangeText={(t) => setForm((p) => ({ ...p, notes: t }))}
-              placeholder="Late check-in code, parking instructions, etc."
+              placeholder={t("eventsAccommodation.placeholderNotes")}
               style={[styles.input, { height: 110, textAlignVertical: "top" }]}
               multiline
               editable={canEdit && !saving}
@@ -821,7 +823,7 @@ export default function EventAccommodationEditScreen() {
               disabled={!canSave || saving}
             >
               <Text style={styles.saveBtnText}>
-                {saving ? "Saving..." : "Save"}
+                {saving ? t("eventsAccommodation.saving") : t("eventsAccommodation.save")}
               </Text>
             </Pressable>
 
@@ -834,7 +836,7 @@ export default function EventAccommodationEditScreen() {
                 onPress={deleteAccommodation}
                 disabled={saving}
               >
-                <Text style={styles.deleteBtnText}>Delete</Text>
+                <Text style={styles.deleteBtnText}>{t("eventsAccommodation.delete")}</Text>
               </Pressable>
             ) : null}
           </View>

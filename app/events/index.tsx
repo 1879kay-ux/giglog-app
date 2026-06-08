@@ -427,17 +427,29 @@ setEvents(nextEvents);
       .map((e) => e.event_id);
 
     if (eventIds.length === 0) {
-      Alert.alert("Nothing to confirm", "No displayed events need your availability.");
+      Alert.alert(
+        t("eventsIndex.nothingToConfirmTitle"),
+        t("eventsIndex.noDisplayedEventsNeedAvailability"),
+      );
       return;
     }
 
+    const confirmMessage =
+      eventIds.length === 1
+        ? t("eventsIndex.confirmDisplayedEventsSingular", {
+            count: eventIds.length,
+          })
+        : t("eventsIndex.confirmDisplayedEventsPlural", {
+            count: eventIds.length,
+          });
+
     Alert.alert(
-      "Confirm availability",
-      `Mark ${eventIds.length} displayed event${eventIds.length === 1 ? "" : "s"} as Available?`,
+      t("eventsIndex.confirmAvailabilityTitle"),
+      confirmMessage,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Confirm",
+          text: t("eventsIndex.confirmButton"),
           onPress: async () => {
             const rows = eventIds.map((event_id) => ({
               event_id,
@@ -450,7 +462,7 @@ setEvents(nextEvents);
               .upsert(rows, { onConflict: "event_id,member_id" });
 
             if (error) {
-              Alert.alert("Could not confirm availability", error.message);
+              Alert.alert(t("eventsIndex.couldNotConfirmAvailability"), error.message);
               return;
             }
 
@@ -657,6 +669,8 @@ const formatted = new Intl.DateTimeFormat(i18n.resolvedLanguage || i18n.language
                     shareUpcomingGigs({
                       bandName,
                       events: filteredEventsRef.current,
+                      t,
+                      locale: i18n.resolvedLanguage || i18n.language,
                     })
                   }
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -980,8 +994,8 @@ function parseEventDateLocal(dateVal: any): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function formatFullDateGB(dateLike: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
+function formatFullDate(dateLike: Date, locale: string) {
+  return new Intl.DateTimeFormat(locale || "en-GB", {
     weekday: "short",
     day: "2-digit",
     month: "long",
@@ -996,7 +1010,10 @@ function safeTrim(v: any) {
 function buildUpcomingShareMessage(opts: {
   bandName?: string | null;
   events: EventRow[];
+  t: (key: string, options?: any) => string;
+  locale: string;
 }) {
+  const { t, locale } = opts;
   const today = startOfTodayLocal();
 
   const until = addMonths(today, 6);
@@ -1023,23 +1040,28 @@ function buildUpcomingShareMessage(opts: {
 
   const lines: string[] = [];
 
-  const band = safeTrim(opts.bandName) || "Band";
-  lines.push(`${band} – Upcoming Gigs`);
-  lines.push(`Next 6 months (as of ${formatFullDateGB(today)})`);
+  const band = safeTrim(opts.bandName) || t("eventsIndex.bandFallback");
+  lines.push(t("eventsIndex.shareUpcomingGigsHeader", { band }));
+  lines.push(
+    t("eventsIndex.shareNextMonthsAsOf", {
+      date: formatFullDate(today, locale),
+    }),
+  );
   lines.push("");
 
   if (upcoming.length === 0) {
-    lines.push("No gigs in the next 6 months.");
+    lines.push(t("eventsIndex.shareNoGigsNextMonths"));
     return lines.join("\n").trim();
   }
 
   for (const e of upcoming) {
     const dt = parseEventDateLocal(e?.event_date);
-    const dateText = dt ? formatFullDateGB(dt) : "";
+    const dateText = dt ? formatFullDate(dt, locale) : "";
 
-    const venueName = safeTrim(e?.venues?.event_venue_name) || "Unknown venue";
-    const city = safeTrim(e?.venues?.city) || "Unknown city";
-    const status = safeTrim(e?.event_status) || "Unknown";
+    const venueName =
+      safeTrim(e?.venues?.event_venue_name) || t("eventsIndex.unknownVenue");
+    const city = safeTrim(e?.venues?.city) || t("eventsIndex.unknownCity");
+    const status = safeTrim(e?.event_status) || t("eventsIndex.unknown");
 
     const statusNorm = safeTrim(e?.event_status).toLowerCase();
     const mark =
@@ -1054,7 +1076,7 @@ function buildUpcomingShareMessage(opts: {
     );
   }
   lines.push("");
-  lines.push("Shared via GigSynq");
+  lines.push(t("eventsIndex.sharedViaGigSynq"));
 
   return lines.join("\n").trim();
 }
@@ -1062,6 +1084,8 @@ function buildUpcomingShareMessage(opts: {
 async function shareUpcomingGigs(params: {
   bandName?: string | null;
   events: EventRow[];
+  t: (key: string, options?: any) => string;
+  locale: string;
 }) {
   const message = buildUpcomingShareMessage(params);
   await Share.share({ message });

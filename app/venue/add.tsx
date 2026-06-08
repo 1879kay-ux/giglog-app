@@ -2,6 +2,7 @@ import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
 import React, { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
 
 import VenueForm from "../../components/venue/VenueForm";
@@ -11,16 +12,20 @@ export default function AddVenueScreen() {
   console.log("🟣 AddVenueScreen mounted");
 
   const router = useRouter();
+  const { t } = useTranslation();
   const { isAdmin, loading } = useCurrentMember();
 
   useEffect(() => {
     if (loading) return;
 
     if (!isAdmin) {
-      Alert.alert("No access", "Only admins can add venues.");
+      Alert.alert(
+        t("addVenue.alert.noAccessTitle"),
+        t("addVenue.alert.onlyAdminsCanAddVenues"),
+      );
       router.back();
     }
-  }, [isAdmin, loading, router]);
+  }, [isAdmin, loading, router, t]);
 
   if (loading) {
     return (
@@ -61,16 +66,22 @@ export default function AddVenueScreen() {
 
       if (error) {
         console.log("❌ SUPABASE ERROR:", error);
-        Alert.alert("Save Failed", error.message);
+        Alert.alert(t("addVenue.alert.saveFailedTitle"), error.message);
         return;
       }
 
       console.log("✅ SUPABASE INSERT RESULT:", data);
-      Alert.alert("Success", "Venue added successfully");
+      Alert.alert(
+        t("addVenue.alert.successTitle"),
+        t("addVenue.alert.venueAddedSuccessfully"),
+      );
       router.back();
     } catch (err: any) {
       console.log("❌ UNEXPECTED ERROR:", err);
-      Alert.alert("Save Failed", err?.message ?? "Unable to save venue");
+      Alert.alert(
+        t("addVenue.alert.saveFailedTitle"),
+        err?.message ?? t("addVenue.alert.unableToSaveVenue"),
+      );
     }
   };
 

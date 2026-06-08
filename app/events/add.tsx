@@ -39,8 +39,8 @@ function todayIsoDate() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function formatDisplayDate(isoDate: string) {
-  if (!isoDate) return "Select date";
+function formatDisplayDate(isoDate: string, fallbackText: string) {
+  if (!isoDate) return fallbackText;
   const d = new Date(`${isoDate}T00:00:00`);
   return d
     .toLocaleDateString("en-GB", {
@@ -73,8 +73,15 @@ export default function AddEventScreen() {
   const [saving, setSaving] = useState(false);
 
   const eventTypes = useMemo(
-    () => ["Gig", "Rehearsal", "Recording", "Promo", "Meeting", "Other"],
-    [],
+    () => [
+      { value: "Gig", label: t("eventsAdd.typeGig") },
+      { value: "Rehearsal", label: t("eventsAdd.typeRehearsal") },
+      { value: "Recording", label: t("eventsAdd.typeRecording") },
+      { value: "Promo", label: t("eventsAdd.typePromo") },
+      { value: "Meeting", label: t("eventsAdd.typeMeeting") },
+      { value: "Other", label: t("eventsAdd.typeOther") },
+    ],
+    [t],
   );
 
   const statusColors: Record<string, string> = {
@@ -322,11 +329,10 @@ body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `
               marginBottom: 10,
             }}
           >
-            Admin access required
+            {t("eventsAdd.adminAccessRequired")}
           </Text>
           <Text style={{ fontSize: 13, color: "#666", marginBottom: 14 }}>
-            You do not have permission to add events. Ask the band admin if you
-            need access.
+            {t("eventsAdd.adminAccessHelper")}
           </Text>
 
           <TouchableOpacity
@@ -339,7 +345,9 @@ body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `
             }}
             onPress={() => router.back()}
           >
-            <Text style={{ color: "#fff", fontWeight: "900" }}>Go back</Text>
+            <Text style={{ color: "#fff", fontWeight: "900" }}>
+              {t("eventsAdd.goBack")}
+            </Text>
           </TouchableOpacity>
         </View>
       </>
@@ -353,7 +361,7 @@ body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.label}>
-        Venue <Text style={styles.required}>*</Text>
+        {t("eventsAdd.venue")} <Text style={styles.required}>*</Text>
       </Text>
 
       <View style={styles.searchRow}>
@@ -365,7 +373,7 @@ body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `
         />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search venue..."
+          placeholder={t("eventsAdd.searchVenue")}
           value={venueSearch}
           onChangeText={handleVenueSearch}
           autoCorrect={false}
@@ -381,7 +389,7 @@ body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `
       {noMatch && (
         <View style={{ marginTop: 10 }}>
           <Text style={{ color: "#c62828", fontWeight: "600" }}>
-            No venues match "{venueSearch}"
+            {t("eventsAdd.noVenuesMatch", { venueSearch })}
           </Text>
 
           <TouchableOpacity
@@ -389,7 +397,9 @@ body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `
             onPress={() => router.push("/(modals)/add")}
           >
             <Ionicons name="add-circle-outline" size={18} color="#fff" />
-            <Text style={styles.addVenueButtonText}>Add New Venue</Text>
+            <Text style={styles.addVenueButtonText}>
+              {t("eventsAdd.addNewVenue")}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -424,12 +434,14 @@ body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `
       )}
 
       <Text style={styles.label}>
-        Event Date <Text style={styles.required}>*</Text>
+        {t("eventsAdd.eventDate")} <Text style={styles.required}>*</Text>
       </Text>
 
       <View style={styles.dateRow}>
         <View style={styles.dateBoxWide}>
-          <Text style={styles.dateText}>{formatDisplayDate(eventDate)}</Text>
+          <Text style={styles.dateText}>
+            {formatDisplayDate(eventDate, t("eventsAdd.selectDate"))}
+          </Text>
 
           <TouchableOpacity
             onPress={() => {
@@ -437,7 +449,7 @@ body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `
               setCalendarOpen(true);
             }}
             style={styles.calendarIconBtn}
-            accessibilityLabel="Pick date"
+            accessibilityLabel={t("eventsAdd.pickDate")}
           >
             <Ionicons
               name="calendar-outline"
@@ -475,48 +487,55 @@ body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `
       </Modal>
 
       <Text style={styles.label}>
-        Event Type <Text style={styles.required}>*</Text>
+        {t("eventsAdd.eventType")} <Text style={styles.required}>*</Text>
       </Text>
 
       <View style={styles.chipRow}>
         {eventTypes.map((type) => (
           <TouchableOpacity
-            key={type}
-            style={[styles.chip, eventType === type && styles.chipSelected]}
-            onPress={() => setEventType(type)}
+            key={type.value}
+            style={[
+              styles.chip,
+              eventType === type.value && styles.chipSelected,
+            ]}
+            onPress={() => setEventType(type.value)}
           >
             <Text
               style={[
                 styles.chipText,
-                eventType === type && styles.chipTextSelected,
+                eventType === type.value && styles.chipTextSelected,
               ]}
             >
-              {type}
+              {type.label}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
       <Text style={styles.label}>
-        Status <Text style={styles.required}>*</Text>
+        {t("eventsAdd.status")} <Text style={styles.required}>*</Text>
       </Text>
 
       <View style={styles.chipRow}>
-        {["Confirmed", "Provisional", "Cancelled"].map((status) => {
-          const selected = eventStatus === status;
+        {[
+          { value: "Confirmed", label: t("eventsAdd.statusConfirmed") },
+          { value: "Provisional", label: t("eventsAdd.statusProvisional") },
+          { value: "Cancelled", label: t("eventsAdd.statusCancelled") },
+        ].map((status) => {
+          const selected = eventStatus === status.value;
           return (
             <TouchableOpacity
-              key={status}
+              key={status.value}
               style={[
                 styles.chip,
-                selected && { backgroundColor: statusColors[status] },
+                selected && { backgroundColor: statusColors[status.value] },
               ]}
-              onPress={() => setEventStatus(status)}
+              onPress={() => setEventStatus(status.value)}
             >
               <Text
                 style={[styles.chipText, selected && styles.chipTextSelected]}
               >
-                {status}
+                {status.label}
               </Text>
             </TouchableOpacity>
           );
@@ -536,7 +555,7 @@ body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `
       >
         <Ionicons name="save-outline" size={20} color="#fff" />
         <Text style={styles.saveButtonText}>
-          {saving ? "Saving..." : "Save Event"}
+          {saving ? t("eventsAdd.saving") : t("eventsAdd.saveEvent")}
         </Text>
       </TouchableOpacity>
     </ScrollView>
@@ -546,7 +565,7 @@ body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `
     <>
       <Stack.Screen
         options={{
-          title: "Add Event",
+          title: t("eventsAdd.title"),
           headerTitleAlign: "center",
           headerStyle: { backgroundColor: colors.primary },
           headerTitleStyle: { color: "#fff", fontWeight: "700" },

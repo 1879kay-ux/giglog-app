@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -35,11 +36,12 @@ function getTokensFromUrl(url: string) {
 
 export default function AuthCallback() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [ready, setReady] = useState(false);
-  const [statusText, setStatusText] = useState("Opening invite link...");
+  const [statusText, setStatusText] = useState(t("authCallback.openingInviteLink"));
 
   useEffect(() => {
     let mounted = true;
@@ -47,14 +49,14 @@ export default function AuthCallback() {
     async function handleUrl(url: string | null) {
       try {
         if (!url) {
-          if (mounted) setStatusText("Invalid or expired link.");
+          if (mounted) setStatusText(t("authCallback.invalidOrExpiredLink"));
           return;
         }
 
         const { accessToken, refreshToken } = getTokensFromUrl(url);
 
         if (!accessToken || !refreshToken) {
-          if (mounted) setStatusText("Invalid or expired link.");
+          if (mounted) setStatusText(t("authCallback.invalidOrExpiredLink"));
           return;
         }
 
@@ -68,14 +70,14 @@ export default function AuthCallback() {
         if (!mounted) return;
 
         setReady(true);
-        setStatusText("Enter a new password for your account.");
+        setStatusText(t("authCallback.enterNewPassword"));
       } catch (error: any) {
         if (!mounted) return;
 
-        setStatusText("This link could not be completed.");
+        setStatusText(t("authCallback.linkCouldNotBeCompleted"));
         Alert.alert(
-          "Invite link failed",
-          error?.message ?? "Could not complete account activation.",
+          t("authCallback.inviteLinkFailed"),
+          error?.message ?? t("authCallback.couldNotCompleteActivation"),
         );
       }
     }
@@ -96,7 +98,7 @@ export default function AuthCallback() {
     if (!ready) return;
 
     if (newPassword.length < 8) {
-      Alert.alert("Password too short", "Use at least 8 characters.");
+      Alert.alert(t("authCallback.passwordTooShort"), t("authCallback.useAtLeast8Chars"));
       return;
     }
 
@@ -105,11 +107,11 @@ export default function AuthCallback() {
     });
 
     if (error) {
-      Alert.alert("Failed to set password", error.message);
+      Alert.alert(t("authCallback.failedToSetPassword"), error.message);
       return;
     }
 
-    Alert.alert("Password updated", "You can now sign in.");
+    Alert.alert(t("authCallback.passwordUpdated"), t("authCallback.youCanNowSignIn"));
     router.replace("/auth");
   }
 
@@ -143,14 +145,14 @@ export default function AuthCallback() {
               marginTop: 8,
             }}
           >
-            New password
+            {t("authCallback.newPassword")}
           </Text>
 
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <TextInput
               value={newPassword}
               onChangeText={setNewPassword}
-              placeholder="New password"
+              placeholder={t("authCallback.newPassword")}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               autoCorrect={false}
@@ -182,11 +184,13 @@ export default function AuthCallback() {
               }}
               accessibilityRole="button"
               accessibilityLabel={
-                showPassword ? "Hide password" : "Show password"
+                showPassword
+                  ? t("authCallback.hidePassword")
+                  : t("authCallback.showPassword")
               }
             >
               <Text style={{ fontWeight: "800", color: "#009999" }}>
-                {showPassword ? "Hide" : "Show"}
+                {showPassword ? t("authCallback.hide") : t("authCallback.show")}
               </Text>
             </TouchableOpacity>
           </View>

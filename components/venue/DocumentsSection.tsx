@@ -6,6 +6,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Linking,
@@ -39,6 +40,7 @@ type StorageDocItem = {
 };
 
 export default function DocumentsSection({ eventId }: DocumentsSectionProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const { isAdmin, adminModeEnabled } = useCurrentMember();
   const canEdit = isAdmin && adminModeEnabled;
@@ -126,14 +128,14 @@ export default function DocumentsSection({ eventId }: DocumentsSectionProps) {
   const HeaderRight = canEdit ? (
     <Pressable onPress={goEdit} hitSlop={10} style={styles.headerBtn}>
       <Ionicons name="create-outline" size={18} color={colors.primary} />
-      <Text style={styles.headerBtnText}>Edit</Text>
+      <Text style={styles.headerBtnText}>{t("documentsSection.edit")}</Text>
     </Pressable>
   ) : undefined;
 
   const isEmpty = !loading && docs.length === 0;
 
   return (
-    <InfoCard title="Documents" right={HeaderRight}>
+    <InfoCard title={t("documentsSection.documents")} right={HeaderRight}>
       {isEmpty ? (
         <View style={styles.emptyWrap}>
           <View style={styles.emptyIcon}>
@@ -145,8 +147,8 @@ export default function DocumentsSection({ eventId }: DocumentsSectionProps) {
           </View>
 
           <View style={{ flex: 1 }}>
-            <Text style={styles.emptyTitle}>No documents yet</Text>
-            <Text style={styles.emptySub}>Upload documents in admin mode.</Text>
+            <Text style={styles.emptyTitle}>{t("documentsSection.noDocumentsYet")}</Text>
+            <Text style={styles.emptySub}>{t("documentsSection.uploadInAdminMode")}</Text>
           </View>
         </View>
       ) : (

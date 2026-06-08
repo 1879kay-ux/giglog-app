@@ -293,5 +293,9 @@
   "scheduleSection.offstage": "Fin de escenario",
   "scheduleSection.venueCurfew": "Toque de queda del recinto",
   "scheduleSection.departVenue": "Salida del recinto",
-  "scheduleSection.scheduleNotes": "Notas del horario"
+  "scheduleSection.scheduleNotes": "Notas del horario",
+  "documentsSection.edit": "Editar",
+  "documentsSection.documents": "Documentos",
+  "documentsSection.noDocumentsYet": "Aún no hay documentos",
+  "documentsSection.uploadInAdminMode": "Sube documentos en modo administrador."
 }

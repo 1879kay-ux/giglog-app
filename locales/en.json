@@ -293,5 +293,9 @@
   "scheduleSection.offstage": "Offstage",
   "scheduleSection.venueCurfew": "Venue Curfew",
   "scheduleSection.departVenue": "Depart Venue",
-  "scheduleSection.scheduleNotes": "Schedule Notes"
+  "scheduleSection.scheduleNotes": "Schedule Notes",
+  "documentsSection.edit": "Edit",
+  "documentsSection.documents": "Documents",
+  "documentsSection.noDocumentsYet": "No documents yet",
+  "documentsSection.uploadInAdminMode": "Upload documents in admin mode."
 }

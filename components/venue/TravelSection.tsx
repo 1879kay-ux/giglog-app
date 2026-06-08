@@ -153,8 +153,8 @@ export default function TravelSection({
       await Linking.openURL(url);
     } catch {
       Alert.alert(
-        "Can't open maps",
-        "Check the address/postcode and try again.",
+        t("travelSection.alertCantOpenMaps"),
+        t("travelSection.alertCheckAddressPostcode"),
       );
     }
   }
@@ -162,8 +162,8 @@ export default function TravelSection({
   function openToVenue(app: "apple" | "google" | "waze") {
     if (!venueDest) {
       Alert.alert(
-        "Venue location missing",
-        "Add an address or postcode to the venue.",
+        t("travelSection.alertVenueLocationMissing"),
+        t("travelSection.alertAddVenueAddressOrPostcode"),
       );
       return;
     }
@@ -183,15 +183,15 @@ export default function TravelSection({
   function openFromDeparture(app: "apple" | "google") {
     if (!departureOrigin) {
       Alert.alert(
-        "Departure location not set",
-        "Set a default departure location, or set one just for this event.",
+        t("travelSection.alertDepartureLocationNotSet"),
+        t("travelSection.alertSetDefaultDeparture"),
       );
       return;
     }
     if (!venueDest) {
       Alert.alert(
-        "Venue location missing",
-        "Add an address or postcode to the venue.",
+        t("travelSection.alertVenueLocationMissing"),
+        t("travelSection.alertAddVenueAddressOrPostcode"),
       );
       return;
     }
@@ -210,15 +210,15 @@ export default function TravelSection({
    function openToDeparture(app: "apple" | "google" | "waze") {
     if (!departureOrigin) {
       Alert.alert(
-        "Departure location not set",
-        "Set a default departure location, or set one just for this event.",
+        t("travelSection.alertDepartureLocationNotSet"),
+        t("travelSection.alertSetDefaultDeparture"),
       );
       return;
     }
     if (!venueDest) {
       Alert.alert(
-        "Venue location missing",
-        "Add an address or postcode to the venue.",
+        t("travelSection.alertVenueLocationMissing"),
+        t("travelSection.alertAddVenueAddressOrPostcode"),
       );
       return;
     }

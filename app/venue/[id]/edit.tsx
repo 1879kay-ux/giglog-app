@@ -4,10 +4,12 @@ import { supabase } from "@/lib/supabase";
 import type { Venue } from "@/types/venue";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, View } from "react-native";
 
 export default function EditVenueScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { isAdmin, loading: memberLoading } = useCurrentMember();
 
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -98,7 +100,7 @@ export default function EditVenueScreen() {
   if (loading || !initialValues) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Stack.Screen options={{ title: "Edit Venue" }} />
+        <Stack.Screen options={{ title: t("addVenue.editTitle") }} />
         <ActivityIndicator size="large" color="#333" />
       </View>
     );
@@ -106,7 +108,7 @@ export default function EditVenueScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Edit Venue" }} />
+      <Stack.Screen options={{ title: t("addVenue.editTitle") }} />
       <VenueForm
         key={id}
         initialValues={initialValues}

@@ -416,7 +416,7 @@ if (dateChanged || statusChanged) {
   if (loading || !event) {
     return (
       <View style={styles.loading}>
-        <Stack.Screen options={{ title: "Edit Details" }} />
+        <Stack.Screen options={{ title: t("eventsEditDetails.title") }} />
         <ActivityIndicator size="large" color="#333" />
       </View>
     );
@@ -612,7 +612,7 @@ if (dateChanged || statusChanged) {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Edit Details" }} />
+      <Stack.Screen options={{ title: t("eventsEditDetails.title") }} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}

@@ -200,7 +200,7 @@ export default function EditEventScheduleScreen() {
   if (loading) {
     return (
       <View style={styles.loading}>
-        <Stack.Screen options={{ title: "Edit Schedule" }} />
+        <Stack.Screen options={{ title: t("eventsEditSchedule.title") }} />
         <ActivityIndicator size="large" color="#333" />
       </View>
     );
@@ -208,7 +208,7 @@ export default function EditEventScheduleScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Edit Schedule" }} />
+      <Stack.Screen options={{ title: t("eventsEditSchedule.title") }} />
 
       <KeyboardAvoidingView
   style={{ flex: 1 }}

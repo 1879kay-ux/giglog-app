@@ -304,7 +304,7 @@ export default function EventLineupScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "Edit Lineup",
+          title: t("eventsLineup.title"),
           headerLeft: () => (
             <Pressable
               onPress={() => router.back()}

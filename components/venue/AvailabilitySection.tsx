@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -80,7 +81,7 @@ type EventAvailabilityDbRow = {
 };
 
 // fixed width for the status column (keeps pills + header aligned)
-const STATUS_W = 96;
+const STATUS_W = 112;
 
 export default function AvailabilitySection({
   eventId,
@@ -90,6 +91,7 @@ export default function AvailabilitySection({
   eventDate,
   venueName,
 }: Props) {
+  const { t } = useTranslation();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -99,9 +101,9 @@ export default function AvailabilitySection({
 
   if (!memberId) {
     return (
-      <InfoCard title="Your Availability">
+      <InfoCard title={t("availabilitySection.yourAvailability")}>
         <Text style={{ fontSize: 13, color: "#C62828", fontWeight: "700" }}>
-          No memberId supplied. Availability cannot be set.
+          {t("availabilitySection.noMemberIdSupplied")}
         </Text>
       </InfoCard>
     );
@@ -386,10 +388,10 @@ export default function AvailabilitySection({
         {currentLabel === "awaiting" ? (
           <View style={styles.confirmPrompt}>
             <Text style={styles.confirmPromptTitle}>
-              Please confirm your availability
+              {t("availabilitySection.pleaseConfirmAvailability")}
             </Text>
             <Text style={styles.confirmPromptText}>
-              Choose Available, Provisional or Unavailable for this event.
+              {t("availabilitySection.chooseAvailabilityForEvent")}
             </Text>
           </View>
         ) : null}
@@ -397,29 +399,29 @@ export default function AvailabilitySection({
         
 
         <View style={styles.chipRow}>
-          {chip("available", "✓ Available")}
-          {chip("provisional", "• Provisional")}
-          {chip("unavailable", "✕ Unavailable")}
+          {chip("available", t("availabilitySection.chipAvailable"))}
+          {chip("provisional", t("availabilitySection.chipProvisional"))}
+          {chip("unavailable", t("availabilitySection.chipUnavailable"))}
         </View>
 
         {saving ? <Text style={styles.saving}>Saving…</Text> : null}
       </InfoCard>
 
-   <InfoCard title="Event Summary">
+  <InfoCard title={t("availabilitySection.eventSummary")}>
   <View style={styles.summaryRow}>
     <Text style={styles.summaryItem}>
-      Total: {summary?.total_expected ?? 0} | Awaiting: {summary?.awaiting_count ?? 0}
+      {t("availabilitySection.total")}: {summary?.total_expected ?? 0} | {t("availabilitySection.awaiting")}: {summary?.awaiting_count ?? 0}
     </Text>
   </View>
 
   <View style={styles.summaryRow}>
     <Text style={styles.summaryItem}>
-      Available: {summary?.available_count ?? 0} | Provisional: {summary?.provisional_count ?? 0} | Unavailable: {summary?.unavailable_count ?? 0}
+      {t("availabilitySection.available")}: {summary?.available_count ?? 0} | {t("availabilitySection.provisional")}: {summary?.provisional_count ?? 0} | {t("availabilitySection.unavailable")}: {summary?.unavailable_count ?? 0}
     </Text>
   </View>
 
   <Text style={styles.smallNote}>
-    Counts for members expected to respond.
+    {t("availabilitySection.countsExpectedToRespond")}
   </Text>
 </InfoCard>
 
@@ -431,45 +433,43 @@ export default function AvailabilitySection({
             style={styles.reminderButton}
           >
             <Text style={styles.reminderPillText}>
-              Remind Awaiting
+              {t("availabilitySection.remindAwaiting")}
               {summary?.awaiting_count ? ` (${summary.awaiting_count})` : ""}
             </Text>
           </Pressable>
 
           <View style={styles.lineupActionRow}>
-            <Text style={styles.lineupActionText}>Expected Lineup</Text>
+            <Text style={styles.lineupActionText}>{t("availabilitySection.expectedLineup")}</Text>
 
             <Pressable
               onPress={() => router.push(`/events/${eventId}/lineup`)}
               hitSlop={10}
               style={styles.editLineupButton}
             >
-              <Text style={styles.editLineupButtonText}>Edit Lineup</Text>
+              <Text style={styles.editLineupButtonText}>{t("availabilitySection.editLineup")}</Text>
             </Pressable>
           </View>
         </>
       ) : null}
 
       {/* MUSICIANS */}
-      <InfoCard title="Musicians">
+      <InfoCard title={t("availabilitySection.musicians")}>
         <View style={styles.table}>
           <View style={styles.tableHeader}>
             <Text
               style={[styles.cell, styles.cellHeader, { flex: 1.1 }]}
-              numberOfLines={1}
             >
-              Member
+              {t("availabilitySection.member")}
             </Text>
             <Text
               style={[styles.cell, styles.cellHeader, { flex: 2.1 }]}
-              numberOfLines={1}
             >
-              Instruments
+              {t("availabilitySection.instruments")}
             </Text>
 
             <View style={[styles.statusHeaderCell, { width: STATUS_W }]}>
-              <Text style={styles.cellHeader} numberOfLines={1}>
-                Availability
+              <Text style={styles.cellHeader}>
+                {t("availabilitySection.availability")}
               </Text>
             </View>
           </View>
@@ -505,7 +505,7 @@ export default function AvailabilitySection({
                     numberOfLines={1}
                     ellipsizeMode="clip"
                   >
-                    {labelText(r.availability_label)}
+                    {labelText(r.availability_label, t)}
                   </Text>
                 </View>
               </View>
@@ -513,31 +513,29 @@ export default function AvailabilitySection({
           ))}
 
           {musicians.length === 0 ? (
-            <Text style={styles.empty}>No musicians found.</Text>
+            <Text style={styles.empty}>{t("availabilitySection.noMusiciansFound")}</Text>
           ) : null}
         </View>
       </InfoCard>
 
       {/* CREW */}
-      <InfoCard title="Crew">
+      <InfoCard title={t("availabilitySection.crew")}>
         <View style={styles.table}>
           <View style={styles.tableHeader}>
             <Text
               style={[styles.cell, styles.cellHeader, { flex: 1.1 }]}
-              numberOfLines={1}
             >
-              Member
+              {t("availabilitySection.member")}
             </Text>
             <Text
               style={[styles.cell, styles.cellHeader, { flex: 2.1 }]}
-              numberOfLines={1}
             >
-              Role
+              {t("availabilitySection.role")}
             </Text>
 
             <View style={[styles.statusHeaderCell, { width: STATUS_W }]}>
-              <Text style={styles.cellHeader} numberOfLines={1}>
-                Availability
+              <Text style={styles.cellHeader}>
+                {t("availabilitySection.availability")}
               </Text>
             </View>
           </View>
@@ -573,7 +571,7 @@ export default function AvailabilitySection({
                     numberOfLines={1}
                     ellipsizeMode="clip"
                   >
-                    {labelText(r.availability_label)}
+                    {labelText(r.availability_label, t)}
                   </Text>
                 </View>
               </View>
@@ -581,7 +579,7 @@ export default function AvailabilitySection({
           ))}
 
           {crew.length === 0 ? (
-            <Text style={styles.empty}>No crew found.</Text>
+            <Text style={styles.empty}>{t("availabilitySection.noCrewFound")}</Text>
           ) : null}
         </View>
       </InfoCard>
@@ -589,11 +587,11 @@ export default function AvailabilitySection({
   );
 }
 
-function labelText(v: AvailabilityLabel) {
-  if (v === "awaiting") return "Awaiting";
-  if (v === "available") return "Available";
-  if (v === "provisional") return "Provisional";
-  if (v === "unavailable") return "Unavailable";
+function labelText(v: AvailabilityLabel, t: (key: string) => string) {
+  if (v === "awaiting") return t("availabilitySection.statusAwaiting");
+  if (v === "available") return t("availabilitySection.statusAvailable");
+  if (v === "provisional") return t("availabilitySection.statusProvisional");
+  if (v === "unavailable") return t("availabilitySection.statusUnavailable");
   return "Dep";
 }
 
@@ -695,17 +693,32 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
 
-  chipRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
-  chip: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderWidth: 2,
-    borderColor: "#009999",
-    borderRadius: 999,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  chipText: { fontSize: 12, fontWeight: "800", color: "#009999" },
+ chipRow: {
+  flexDirection: "row",
+  gap: 10,
+  marginBottom: 8,
+},
+chip: {
+  flex: 1,
+  minWidth: 0,
+  minHeight: 46,
+  backgroundColor: "#fff",
+  borderWidth: 2,
+  borderColor: "#009999",
+  borderRadius: 999,
+  paddingVertical: 8,
+  paddingHorizontal: 6,
+  alignItems: "center",
+  justifyContent: "center",
+},
+chipText: {
+  fontSize: 10,
+  lineHeight: 13,
+  fontWeight: "800",
+  color: "#009999",
+  textAlign: "center",
+  flexShrink: 1,
+},
 
   saving: { marginTop: 6, fontSize: 12, color: "#666", fontStyle: "italic" },
 
@@ -742,7 +755,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#333",
   },
-  cellHeader: { fontWeight: "800", color: "#666" },
+  cellHeader: {
+  fontSize: 11,
+  lineHeight: 13,
+  fontWeight: "800",
+  color: "#666",
+},
 
   statusHeaderCell: {
     alignItems: "center",

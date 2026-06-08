@@ -1107,13 +1107,14 @@ const styles = StyleSheet.create({
   },
 
   actionsRow: {
-    marginHorizontal: 12,
-    marginTop: 10,
-    marginBottom: 2,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
+  marginHorizontal: 12,
+  marginTop: 10,
+  marginBottom: 2,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: 10,
+  flexWrap: "wrap",
   },
 
   countPill: {

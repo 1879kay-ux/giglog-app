@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -46,23 +47,36 @@ function formatBytes(n?: number | null) {
   return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
-async function confirmDelete(message: string) {
+async function confirmDelete(
+  title: string,
+  t: (key: string, options?: { title?: string }) => string,
+) {
+  const message = t("eventsEditDocuments.confirmDeleteMessage", { title });
+
   if (Platform.OS === "web") {
     return window.confirm(message);
   }
 
   return new Promise<boolean>((resolve) => {
-    Alert.alert("Confirm delete", message, [
-      { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-      { text: "Delete", style: "destructive", onPress: () => resolve(true) },
+    Alert.alert(t("eventsEditDocuments.confirmDeleteTitle"), message, [
+      {
+        text: t("eventsEditDocuments.cancel"),
+        style: "cancel",
+        onPress: () => resolve(false),
+      },
+      {
+        text: t("eventsEditDocuments.delete"),
+        style: "destructive",
+        onPress: () => resolve(true),
+      },
     ]);
   });
 }
 
-async function pickDocType(): Promise<EventDocType | null> {
+async function pickDocType(t: (key: string) => string): Promise<EventDocType | null> {
   if (Platform.OS === "web") {
     const selected = window.prompt(
-      "Document type: tech, rider, setlist, contracts, other",
+      t("eventsEditDocuments.webPromptDocumentType"),
       "other",
     );
 
@@ -76,19 +90,24 @@ async function pickDocType(): Promise<EventDocType | null> {
   }
 
   return new Promise((resolve) => {
-    Alert.alert("Document type", "Choose document type", [
-      { text: "Tech", onPress: () => resolve("tech") },
-      { text: "Rider", onPress: () => resolve("rider") },
-      { text: "Set list", onPress: () => resolve("setlist") },
-      { text: "Contracts", onPress: () => resolve("contracts") },
-      { text: "Other", onPress: () => resolve("other") },
-      { text: "Cancel", style: "cancel", onPress: () => resolve(null) },
-    ]);
-  });
+  Alert.alert(
+    t("eventsEditDocuments.documentType"),
+    t("eventsEditDocuments.chooseDocumentType"),
+    [
+      { text: t("eventsEditDocuments.typeTech"), onPress: () => resolve("tech") },
+      { text: t("eventsEditDocuments.typeRider"), onPress: () => resolve("rider") },
+      { text: t("eventsEditDocuments.typeSetlist"), onPress: () => resolve("setlist") },
+      { text: t("eventsEditDocuments.typeContracts"), onPress: () => resolve("contracts") },
+      { text: t("eventsEditDocuments.typeOther"), onPress: () => resolve("other") },
+      { text: t("eventsEditDocuments.cancel"), style: "cancel", onPress: () => resolve(null) },
+    ]
+  );
+});
 }
 
 export default function EditEventDocumentsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -101,11 +120,11 @@ export default function EditEventDocumentsScreen() {
   const [typePickerDoc, setTypePickerDoc] = useState<EventDocRow | null>(null);
 
   const docTypeOptions: { key: EventDocType; label: string }[] = [
-    { key: "tech", label: "Tech" },
-    { key: "rider", label: "Rider" },
-    { key: "setlist", label: "Set list" },
-    { key: "contracts", label: "Contracts" },
-    { key: "other", label: "Other" },
+    { key: "tech", label: t("eventsEditDocuments.typeTech") },
+    { key: "rider", label: t("eventsEditDocuments.typeRider") },
+    { key: "setlist", label: t("eventsEditDocuments.typeSetlist") },
+    { key: "contracts", label: t("eventsEditDocuments.typeContracts") },
+    { key: "other", label: t("eventsEditDocuments.typeOther") },
   ];
 
   function updateLocal(docId: string, patch: Partial<EventDocRow>) {
@@ -163,7 +182,7 @@ export default function EditEventDocumentsScreen() {
 
       const filename = sanitizeFilename(file.name ?? "document");
 
-      const selectedDocType = await pickDocType();
+      const selectedDocType = await pickDocType(t);
 
       if (!selectedDocType) {
         setUploading(false);
@@ -268,9 +287,7 @@ export default function EditEventDocumentsScreen() {
   async function onDelete(doc: EventDocRow) {
     if (!id) return;
 
-    const ok = await confirmDelete(
-      `Delete "${doc.title}"? This cannot be undone.`,
-    );
+    const ok = await confirmDelete(doc.title, t);
     if (!ok) return;
 
     try {
@@ -311,10 +328,9 @@ export default function EditEventDocumentsScreen() {
 
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Upload Event Document</Text>
+          <Text style={styles.cardTitle}>{t("eventsEditDocuments.uploadEventDocument")}</Text>
           <Text style={styles.cardSub}>
-            Uploads to Supabase Storage (event-docs) and creates an
-            event_documents row.
+            {t("eventsEditDocuments.uploadHelper")}
           </Text>
 
           <TouchableOpacity
@@ -324,23 +340,23 @@ export default function EditEventDocumentsScreen() {
           >
             <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
             <Text style={styles.primaryButtonText}>
-              {uploading ? "Uploading…" : "Pick & Upload"}
+              {uploading ? t("eventsEditDocuments.uploading") : t("eventsEditDocuments.pickAndUpload")}
             </Text>
           </TouchableOpacity>
 
           <Text style={styles.note}>
-            Path format enforced: events/{`{event_id}`}/…
+            {t("eventsEditDocuments.uploadPathNote")}
           </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Uploaded Documents</Text>
+          <Text style={styles.cardTitle}>{t("eventsEditDocuments.uploadedDocuments")}</Text>
           <Text style={styles.cardSub}>
-            These are the storage-backed docs for this event.
+            {t("eventsEditDocuments.uploadedDocumentsHelper")}
           </Text>
 
           {docs.length === 0 ? (
-            <Text style={styles.emptyText}>No uploaded documents yet.</Text>
+            <Text style={styles.emptyText}>{t("eventsEditDocuments.noUploadedDocuments")}</Text>
           ) : (
             <View style={styles.list}>
               {docs.map((d, idx) => {
@@ -415,7 +431,7 @@ export default function EditEventDocumentsScreen() {
           style={styles.doneButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.doneButtonText}>Done</Text>
+          <Text style={styles.doneButtonText}>{t("eventsEditDocuments.done")}</Text>
         </TouchableOpacity>
       </ScrollView>
             <Modal
@@ -432,7 +448,7 @@ export default function EditEventDocumentsScreen() {
             <View style={styles.modalHandle} />
 
             <Text style={styles.modalTitle}>
-              Change Document Type
+              {t("eventsEditDocuments.changeDocumentType")}
             </Text>
 
             {typePickerDoc &&

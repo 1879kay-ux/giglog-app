@@ -1,6 +1,9 @@
 import { Stack } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 export default function ModalsLayout() {
+  const { t } = useTranslation();
+
   return (
     <Stack
       screenOptions={{
@@ -13,7 +16,7 @@ export default function ModalsLayout() {
       <Stack.Screen
         name="add"
         options={{
-          title: "Add Venue",
+          title: t("addVenue.title"),
         }}
       />
     </Stack>

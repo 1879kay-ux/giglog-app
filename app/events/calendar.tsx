@@ -5,6 +5,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Dimensions,
@@ -57,12 +58,20 @@ function addYears(d: Date, years: number) {
   return new Date(d.getFullYear() + years, d.getMonth(), 1);
 }
 
-function monthTitle(d: Date) {
-  return new Intl.DateTimeFormat("en-GB", { month: "long" }).format(d);
+function monthTitle(d: Date, locale: string) {
+  return new Intl.DateTimeFormat(locale, { month: "long" }).format(d);
 }
 
-function weekdayHeaders() {
-  return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+function weekdayHeaders(t: (key: string) => string) {
+  return [
+    t("calendar.dayMon"),
+    t("calendar.dayTue"),
+    t("calendar.dayWed"),
+    t("calendar.dayThu"),
+    t("calendar.dayFri"),
+    t("calendar.daySat"),
+    t("calendar.daySun"),
+  ];
 }
 
 function mondayFirstIndex(jsDay: number) {
@@ -97,17 +106,18 @@ function colorForEvent(e: EventLite) {
   return "#16a34a";
 }
 
-function pillLabel(e: EventLite) {
+function pillLabel(e: EventLite, fallback: string) {
   const city = (e.venues?.city ?? "").trim();
   const venue = (e.venues?.event_venue_name ?? "").trim();
   const type = (e.event_type ?? "").trim();
 
-  const base = city || venue || type || "Event";
+  const base = city || venue || type || fallback;
   return base.length > 10 ? `${base.slice(0, 10)}…` : base;
 }
 
 export default function EventsCalendarScreen() {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
 
   const todayKey = useMemo(() => ymd(new Date()), []);
   const [viewMode, setViewMode] = useState<ViewMode>("year");
@@ -294,7 +304,7 @@ export default function EventsCalendarScreen() {
       grouped[name].push(`${start} → ${end}`);
     }
 
-    let message = `GigSynq Unavailability Summary – ${year}\n\n`;
+    let message = `${t("calendar.unavailabilitySummary", { year })}\n\n`;
 
     Object.entries(grouped)
       .sort(([a], [b]) => a.localeCompare(b))
@@ -335,25 +345,25 @@ export default function EventsCalendarScreen() {
       <View style={compact ? styles.monthCardCompact : styles.monthCard}>
         <View style={styles.monthHeaderRow}>
           <Text style={compact ? styles.monthTitleCompact : styles.monthTitle}>
-            {monthTitle(monthStart).toUpperCase()}
+            {monthTitle(monthStart, i18n.resolvedLanguage || i18n.language).toUpperCase()}
           </Text>
 
           {compact ? null : (
             <Pressable
               onPress={() => {
-                setViewMode("month");
-              }}
+  setViewMode("year");
+}}
               hitSlop={10}
               style={styles.smallLinkPill}
             >
-              <Text style={styles.smallLinkText}>Year scroll</Text>
+              <Text style={styles.smallLinkText}>{t("calendar.yearScroll")}</Text>
             </Pressable>
           )}
         </View>
 
         {compact ? null : (
           <View style={styles.weekHeaderRow}>
-            {weekdayHeaders().map((w) => (
+            {weekdayHeaders(t).map((w) => (
               <Text key={w} style={styles.weekHeaderText}>
                 {w}
               </Text>
@@ -403,7 +413,7 @@ export default function EventsCalendarScreen() {
                         ]}
                       >
                         <Text style={styles.miniPillText} numberOfLines={1}>
-                          {pillLabel(dayEvents![0])}
+                          {pillLabel(dayEvents![0], t("calendar.eventFallback"))}
                         </Text>
                       </View>
 
@@ -427,7 +437,7 @@ export default function EventsCalendarScreen() {
                         ]}
                       >
                         <Text style={styles.pillText} numberOfLines={1}>
-                          {pillLabel(e)}
+                          {pillLabel(e, t("calendar.eventFallback"))}
                         </Text>
                       </View>
                     ))}
@@ -458,7 +468,7 @@ export default function EventsCalendarScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "Calendar",
+          title: t("calendar.title"),
           headerTitleAlign: "center",
           headerStyle: { backgroundColor: colors.primary },
           headerTitleStyle: { color: "#fff", fontWeight: "700", fontSize: 18 },
@@ -501,7 +511,7 @@ export default function EventsCalendarScreen() {
                     viewMode === "year" ? styles.viewModeTextActive : null,
                   ]}
                 >
-                  Year
+                  {t("calendar.year")}
                 </Text>
               </Pressable>
 
@@ -518,7 +528,7 @@ export default function EventsCalendarScreen() {
                     viewMode === "month" ? styles.viewModeTextActive : null,
                   ]}
                 >
-                  Months
+                  {t("calendar.months")}
                 </Text>
               </Pressable>
             </View>
@@ -559,9 +569,9 @@ export default function EventsCalendarScreen() {
           <View style={styles.legendRow}>
             <Text style={styles.legendText}>
               <Text style={{ color: "rgba(220, 38, 38, 0.55)" }}>■</Text>{" "}
-              Band/Crew Unavailable ·{" "}
-              <Text style={{ color: "#16a34a" }}>■</Text> Event ·{" "}
-              <Text style={{ color: "#dc2626" }}>■</Text> Cancelled
+              {t("calendar.bandCrewUnavailable")} ·{" "}
+              <Text style={{ color: "#16a34a" }}>■</Text> {t("calendar.event")} ·{" "}
+              <Text style={{ color: "#dc2626" }}>■</Text> {t("calendar.cancelled")}
             </Text>
           </View>
 
@@ -606,7 +616,9 @@ export default function EventsCalendarScreen() {
 
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
-              {selectedDate ? `Events: ${selectedDate}` : "Events"}
+              {selectedDate
+                ? t("calendar.eventsWithDate", { date: selectedDate })
+                : t("calendar.events")}
             </Text>
             {selectedUnavailableMembers.length > 0 ? (
               <View style={styles.unavailableMembersBox}>
@@ -618,9 +630,9 @@ export default function EventsCalendarScreen() {
               </View>
             ) : null}
             {selectedEvents.map((e) => {
-              const venueName = e.venues?.event_venue_name ?? "Unknown venue";
+              const venueName = e.venues?.event_venue_name ?? t("calendar.unknownVenue");
               const city = e.venues?.city ?? "";
-              const meta = `${e.event_type ?? "Event"}${e.event_status ? `, ${e.event_status}` : ""}`;
+              const meta = `${e.event_type ?? t("calendar.eventFallback")}${e.event_status ? `, ${e.event_status}` : ""}`;
 
               return (
                 <Pressable

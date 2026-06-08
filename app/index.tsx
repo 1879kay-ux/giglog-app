@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { Link, Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Image,
   Pressable,
@@ -43,6 +44,7 @@ type BandBrandingQueryRow = {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const cm = useCurrentMember() as any;
 
   const canViewBandAndCrew = !!cm?.canViewBandAndCrew;
@@ -202,7 +204,7 @@ export default function HomeScreen() {
 
         {/* Next event */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Next Event</Text>
+          <Text style={styles.sectionTitle}>{t("home.nextEvent")}</Text>
         </View>
 
         <Pressable
@@ -235,18 +237,18 @@ export default function HomeScreen() {
               </View>
             </>
           ) : (
-            <Text style={styles.noNextEvent}>No upcoming events.</Text>
+            <Text style={styles.noNextEvent}>{t("home.noUpcomingEvents")}</Text>
           )}
         </Pressable>
 
         {/* Quick links */}
         <View style={[styles.sectionHeaderRow, { marginTop: 18 }]}>
-          <Text style={styles.sectionTitle}>Quick Links</Text>
+          <Text style={styles.sectionTitle}>{t("home.quickLinks")}</Text>
         </View>
 
         <View style={styles.grid}>
           <NavTile
-            label="Events"
+            label={t("home.events")}
             icon="calendar"
             onPress={() => router.push("/events")}
           />
@@ -254,12 +256,12 @@ export default function HomeScreen() {
           {canViewBandAndCrew ? (
             <>
               <NavTile
-                label="Venues"
+                label={t("home.venues")}
                 icon="map-marker"
                 onPress={() => router.push("/venue")}
               />
               <NavTile
-                label="Band & Crew"
+                label={t("home.bandAndCrew")}
                 icon="users"
                 onPress={() => router.push("/band")}
               />
@@ -268,14 +270,14 @@ export default function HomeScreen() {
 
           {canViewBandDocs ? (
             <NavTile
-              label="Band Docs"
+              label={t("home.bandDocs")}
               icon="file-text-o"
               onPress={() => router.push("/band-documents")}
             />
           ) : null}
 
           <NavTile
-            label="Profile"
+            label={t("home.profile")}
             icon="user"
             onPress={() => router.push("/profile")}
           />

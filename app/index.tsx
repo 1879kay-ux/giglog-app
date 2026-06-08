@@ -130,6 +130,10 @@ export default function HomeScreen() {
           event_date,
           event_type,
           event_status,
+          act_id,
+          acts (
+            act_name
+          ),
           venues:venue_id (
             event_venue_name,
             city
@@ -173,6 +177,7 @@ export default function HomeScreen() {
 
       setNextEvent({
         event_id: row.event_id,
+        act_name: row.acts?.act_name ?? null,
         event_date_label: dateLabel,
         venue_city_label: `${venueName}, ${city}`,
         type_status_label: `${typeDisplay}, ${statusDisplay}`,
@@ -253,6 +258,11 @@ export default function HomeScreen() {
                 <Text style={styles.nextEventDate}>
                   {nextEvent.event_date_label}
                 </Text>
+                {nextEvent.act_name ? (
+                  <Text style={styles.nextEventAct} numberOfLines={1}>
+                    {nextEvent.act_name}
+                  </Text>
+                ) : null}
                 <Text style={styles.nextEventVenue} numberOfLines={1}>
                   {nextEvent.venue_city_label}
                 </Text>

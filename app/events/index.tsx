@@ -44,8 +44,10 @@ type EventRow = {
   event_status: string | null;
   event_type: string | null;
   venue_id: string | null;
+  act_id: string | null;
+  acts?: { act_name: string | null } | null;
   has_documents?: boolean;
-  venues?: { event_venue_name: string | null; city: string | null } | null; // hydrated client-side
+  venues?: { event_venue_name: string | null; city: string | null } | null;
 };
 
 type AvailabilityStatus = string | null;
@@ -166,17 +168,21 @@ export default function EventsListScreen() {
 
       // NOTE: do NOT embed venues here; if venues RLS blocks SELECT, PostgREST will error and return 0 events.
       let q = supabase
-        .from("events")
-        .select(
-          `
-        event_id,
-        event_date,
-        event_status,
-        event_type,
-        venue_id
-      `,
-        )
-        .neq("event_status", "Deleted");
+  .from("events")
+  .select(
+    `
+      event_id,
+      event_date,
+      event_status,
+      event_type,
+      venue_id,
+      act_id,
+      acts (
+        act_name
+      )
+    `,
+  )
+  .neq("event_status", "Deleted");
 
       if (eventsMode === "upcoming") {
         q = q
@@ -879,7 +885,11 @@ const formatted = new Intl.DateTimeFormat(i18n.resolvedLanguage || i18n.language
                       {formatDisplayDate(item.event_date)}
                     </Text>
 
-                    <Text style={styles.eventVenue}>
+           {item.acts?.act_name ? (
+  <Text style={styles.eventAct}>{item.acts.act_name}</Text>
+) : null}
+
+<Text style={styles.eventVenue}>
   {venueName}, {city}
 </Text>
 
@@ -1248,6 +1258,13 @@ eventVenueRow: {
     color: colors.text,
     marginBottom: 2,
     lineHeight: 22,
+  },
+  eventAct: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#0D9488",
+    marginTop: 4,
+    marginBottom: 2,
   },
 
   eventMeta: {

@@ -282,5 +282,16 @@
   "detailsSection.promoterContact": "Contacto del promotor",
   "detailsSection.name": "Nombre",
   "detailsSection.phone": "Teléfono",
-  "detailsSection.email": "Correo"
+  "detailsSection.email": "Correo",
+  "scheduleSection.edit": "Editar",
+  "scheduleSection.schedule": "Horario",
+  "scheduleSection.travelToVenue": "Viaje al recinto",
+  "scheduleSection.loadIn": "Carga",
+  "scheduleSection.soundcheck": "Prueba de sonido",
+  "scheduleSection.doors": "Apertura de puertas",
+  "scheduleSection.onstage": "Salida al escenario",
+  "scheduleSection.offstage": "Fin de escenario",
+  "scheduleSection.venueCurfew": "Toque de queda del recinto",
+  "scheduleSection.departVenue": "Salida del recinto",
+  "scheduleSection.scheduleNotes": "Notas del horario"
 }

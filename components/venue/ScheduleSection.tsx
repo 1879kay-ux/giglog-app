@@ -4,6 +4,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 type ScheduleSectionProps = {
@@ -48,6 +49,7 @@ export default function ScheduleSection({
   departVenue,
   scheduleNotes,
 }: ScheduleSectionProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const { isAdmin, adminModeEnabled } = useCurrentMember();
   const canEdit = !!isAdmin && !!adminModeEnabled;
@@ -59,25 +61,25 @@ export default function ScheduleSection({
       style={styles.editPill}
     >
       <Ionicons name="create-outline" size={16} color={colors.primary} />
-      <Text style={styles.editPillText}>Edit</Text>
+      <Text style={styles.editPillText}>{t("scheduleSection.edit")}</Text>
     </Pressable>
   ) : undefined;
 
   const timeFields = [
-    { label: "Travel to Venue", value: travelVenue ?? callTime },
-    { label: "Load-in", value: loadin },
-    { label: "Soundcheck", value: soundcheck },
-    { label: "Doors", value: doors },
-    { label: "Onstage", value: onstage },
-    { label: "Offstage", value: offstage },
-    { label: "Venue Curfew", value: venueCurfew },
-    { label: "Depart Venue", value: departVenue },
+    { label: t("scheduleSection.travelToVenue"), value: travelVenue ?? callTime },
+    { label: t("scheduleSection.loadIn"), value: loadin },
+    { label: t("scheduleSection.soundcheck"), value: soundcheck },
+    { label: t("scheduleSection.doors"), value: doors },
+    { label: t("scheduleSection.onstage"), value: onstage },
+    { label: t("scheduleSection.offstage"), value: offstage },
+    { label: t("scheduleSection.venueCurfew"), value: venueCurfew },
+    { label: t("scheduleSection.departVenue"), value: departVenue },
   ];
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
-        <InfoCard title="Schedule" right={editSchedule}>
+        <InfoCard title={t("scheduleSection.schedule")} right={editSchedule}>
           {timeFields.map((field, index) => {
             const display = formatTime(field.value) ?? "—";
             const isLast = index === timeFields.length - 1;
@@ -94,7 +96,7 @@ export default function ScheduleSection({
           })}
 
           <View style={styles.notesWrap}>
-            <Text style={styles.notesLabel}>Schedule Notes</Text>
+            <Text style={styles.notesLabel}>{t("scheduleSection.scheduleNotes")}</Text>
             <Text style={styles.notesText}>
               {scheduleNotes && scheduleNotes.trim()
                 ? scheduleNotes.trim()

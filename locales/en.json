@@ -282,5 +282,16 @@
   "detailsSection.promoterContact": "Promoter Contact",
   "detailsSection.name": "Name",
   "detailsSection.phone": "Phone",
-  "detailsSection.email": "Email"
+  "detailsSection.email": "Email",
+  "scheduleSection.edit": "Edit",
+  "scheduleSection.schedule": "Schedule",
+  "scheduleSection.travelToVenue": "Travel to Venue",
+  "scheduleSection.loadIn": "Load-in",
+  "scheduleSection.soundcheck": "Soundcheck",
+  "scheduleSection.doors": "Doors",
+  "scheduleSection.onstage": "Onstage",
+  "scheduleSection.offstage": "Offstage",
+  "scheduleSection.venueCurfew": "Venue Curfew",
+  "scheduleSection.departVenue": "Depart Venue",
+  "scheduleSection.scheduleNotes": "Schedule Notes"
 }

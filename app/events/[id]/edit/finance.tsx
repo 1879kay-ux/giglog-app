@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
     ActivityIndicator,
     Alert,
@@ -37,16 +38,6 @@ type EventFinanceRow = {
   fee_notes: string | null;
   cost_notes: string | null;
 };
-
-const FEE_TYPE_OPTIONS = [
-  "Guaranteed Fee (flat)",
-  "Door Deal",
-  "Guarantee plus percentage (vs door)",
-  "Expenses Only",
-  "Charity",
-] as const;
-
-const PAID_STATUS_OPTIONS = ["No", "Part", "Yes"] as const;
 
 function numToStr(v: number | null | undefined) {
   if (v === null || v === undefined) return "";
@@ -85,6 +76,7 @@ function cleanText(v: string) {
 export default function EditEventFinanceScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -110,6 +102,52 @@ export default function EditEventFinanceScreen() {
   const [feeNotes, setFeeNotes] = useState("");
   const [costNotes, setCostNotes] = useState("");
   const stickyFooterHeight = 92 + insets.bottom;
+
+  const numericFieldLabels = useMemo(
+    () => ({
+      income_guarantee: t("eventsEditFinance.guarantee"),
+      income_door: t("eventsEditFinance.door"),
+      income_fee: t("eventsEditFinance.feeLegacy"),
+      manual_playing_share_override: t("eventsEditFinance.shares"),
+      van_hire: t("eventsEditFinance.vanHire"),
+      fuel: t("eventsEditFinance.fuel"),
+      accommodation_cost: t("eventsEditFinance.accommodation"),
+      dep_cost: t("eventsEditFinance.depFees"),
+      driver_cost: t("eventsEditFinance.driverCost"),
+      foh_eng_cost: t("eventsEditFinance.fohEngineer"),
+      other_costs: t("eventsEditFinance.otherCosts"),
+    }),
+    [t],
+  );
+
+  const feeTypeOptions = useMemo(
+    () => [
+      {
+        value: "Guaranteed Fee (flat)",
+        label: t("eventsEditFinance.feeTypeGuaranteedFlat"),
+      },
+      { value: "Door Deal", label: t("eventsEditFinance.feeTypeDoorDeal") },
+      {
+        value: "Guarantee plus percentage (vs door)",
+        label: t("eventsEditFinance.feeTypeGuaranteePlusPercentage"),
+      },
+      {
+        value: "Expenses Only",
+        label: t("eventsEditFinance.feeTypeExpensesOnly"),
+      },
+      { value: "Charity", label: t("eventsEditFinance.feeTypeCharity") },
+    ],
+    [t],
+  );
+
+  const paidStatusOptions = useMemo(
+    () => [
+      { value: "No", label: t("eventsEditFinance.paidStatusNo") },
+      { value: "Part", label: t("eventsEditFinance.paidStatusPart") },
+      { value: "Yes", label: t("eventsEditFinance.paidStatusYes") },
+    ],
+    [t],
+  );
 
   const numericFields = useMemo(
     () => [
@@ -350,7 +388,7 @@ export default function EditEventFinanceScreen() {
   if (loading) {
     return (
       <View style={styles.loading}>
-        <Stack.Screen options={{ title: "Edit Finance" }} />
+        <Stack.Screen options={{ title: t("eventsEditFinance.title") }} />
         <ActivityIndicator size="large" color="#333" />
       </View>
     );
@@ -358,7 +396,7 @@ export default function EditEventFinanceScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Edit Finance" }} />
+      <Stack.Screen options={{ title: t("eventsEditFinance.title") }} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -374,79 +412,81 @@ export default function EditEventFinanceScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Finance</Text>
+            <Text style={styles.cardTitle}>{t("eventsEditFinance.finance")}</Text>
 
-            <Text style={styles.sectionLabel}>Income</Text>
+            <Text style={styles.sectionLabel}>{t("eventsEditFinance.income")}</Text>
 
             <RowNumber
-              label="Guarantee"
+              label={numericFieldLabels.income_guarantee}
               value={incomeGuarantee}
               onChange={setIncomeGuarantee}
             />
             <RowNumber
-              label="Door"
+              label={numericFieldLabels.income_door}
               value={incomeDoor}
               onChange={setIncomeDoor}
             />
 
             <RowChips
-              label="Fee Type"
+              label={t("eventsEditFinance.feeType")}
               value={feeType}
-              options={[...FEE_TYPE_OPTIONS]}
+              options={feeTypeOptions}
               onChange={setFeeType}
             />
 
             <RowChips
-              label="Paid Status"
+              label={t("eventsEditFinance.paidStatus")}
               value={paidStatus}
-              options={[...PAID_STATUS_OPTIONS]}
+              options={paidStatusOptions}
               onChange={setPaidStatus}
             />
 
             <RowNotes
-              label="Fee Notes"
+              label={t("eventsEditFinance.feeNotes")}
               value={feeNotes}
+              placeholder={t("eventsEditFinance.addNotes")}
               onChange={setFeeNotes}
             />
 
             <View style={styles.divider} />
 
-            <Text style={styles.sectionLabel}>Costs</Text>
+            <Text style={styles.sectionLabel}>{t("eventsEditFinance.costs")}</Text>
 
-            <RowNumber label="Van Hire" value={vanHire} onChange={setVanHire} />
-            <RowNumber label="Fuel" value={fuel} onChange={setFuel} />
+            <RowNumber label={numericFieldLabels.van_hire} value={vanHire} onChange={setVanHire} />
+            <RowNumber label={numericFieldLabels.fuel} value={fuel} onChange={setFuel} />
             <RowNumber
-              label="Accommodation"
+              label={numericFieldLabels.accommodation_cost}
               value={accommodation}
               onChange={setAccommodation}
             />
-            <RowNumber label="Dep Fees" value={depCost} onChange={setDepCost} />
+            <RowNumber label={numericFieldLabels.dep_cost} value={depCost} onChange={setDepCost} />
             <RowNumber
-              label="Driver Cost"
+              label={numericFieldLabels.driver_cost}
               value={driverCost}
               onChange={setDriverCost}
             />
             <RowNumber
-              label="FOH/Engineer"
+              label={numericFieldLabels.foh_eng_cost}
               value={fohEngCost}
               onChange={setFohEngCost}
             />
             <RowNumber
-              label="Other Costs"
+              label={numericFieldLabels.other_costs}
               value={otherCosts}
               onChange={setOtherCosts}
             />
 
             <RowNotes
-              label="Cost Notes"
+              label={t("eventsEditFinance.costNotes")}
               value={costNotes}
+              placeholder={t("eventsEditFinance.addNotes")}
               onChange={setCostNotes}
             />
 
             <View style={styles.divider} />
 
-            <Text style={styles.sectionLabel}>Net Income Split</Text>
-            <RowNumber label="Shares" value={shares} onChange={setShares} />
+            <Text style={styles.sectionLabel}>{t("eventsEditFinance.netIncomeSplit")}</Text>
+            <RowNumber label={numericFieldLabels.manual_playing_share_override} value={shares} onChange={setShares} />
           </View>
 
         </ScrollView>
@@ -463,7 +503,7 @@ export default function EditEventFinanceScreen() {
             disabled={saving}
           >
             <Text style={styles.saveButtonText}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? t("eventsEditFinance.saving") : t("eventsEditFinance.save")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -516,6 +556,7 @@ function RowNumber(props: {
 function RowNotes(props: {
   label: string;
   value: string;
+  placeholder: string;
   onChange: (t: string) => void;
 }) {
   return (
@@ -525,7 +566,7 @@ function RowNotes(props: {
         style={styles.notesInput}
         value={props.value}
         onChangeText={props.onChange}
-        placeholder="Add notes…"
+        placeholder={props.placeholder}
         placeholderTextColor="#999"
         multiline
       />
@@ -536,7 +577,7 @@ function RowNotes(props: {
 function RowChips(props: {
   label: string;
   value: string;
-  options: string[];
+  options: { value: string; label: string }[];
   onChange: (t: string) => void;
 }) {
   return (
@@ -553,11 +594,11 @@ function RowChips(props: {
 
       <View style={styles.chipWrap}>
         {props.options.map((opt) => {
-          const selected = props.value === opt;
+          const selected = props.value === opt.value;
           return (
             <TouchableOpacity
-              key={opt}
-              onPress={() => props.onChange(selected ? "" : opt)}
+              key={opt.value}
+              onPress={() => props.onChange(selected ? "" : opt.value)}
               activeOpacity={0.8}
               style={[
                 styles.chip,
@@ -572,7 +613,7 @@ function RowChips(props: {
                     : styles.chipTextUnselected,
                 ]}
               >
-                {opt}
+                  {opt.label}
               </Text>
             </TouchableOpacity>
           );

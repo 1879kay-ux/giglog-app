@@ -3,6 +3,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 type FinanceSectionProps = {
@@ -76,6 +77,7 @@ export default function FinanceSection({
   costNotes,
 }: FinanceSectionProps) {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const grossIncome = (incomeGuarantee || 0) + (incomeDoor || 0);
 
@@ -100,7 +102,7 @@ export default function FinanceSection({
     <ScrollView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Finance</Text>
+          <Text style={styles.sectionTitle}>{t("financeSection.finance")}</Text>
 
           {isAdmin ? (
             <Pressable
@@ -113,64 +115,64 @@ export default function FinanceSection({
                 size={16}
                 color={colors.primary}
               />
-              <Text style={styles.editPillText}>Edit</Text>
+              <Text style={styles.editPillText}>{t("financeSection.edit")}</Text>
             </Pressable>
           ) : null}
         </View>
 
-        <InfoCard title="Income">
-          <Row label="Guarantee" value={formatCurrency(incomeGuarantee)} />
-          <Row label="Door" value={formatCurrency(incomeDoor)} />
-          <Row label="Fee Type" value={feeType || "—"} />
-          <Row label="Paid Status" value={paidStatus || "—"} last />
+        <InfoCard title={t("financeSection.income")}>
+          <Row label={t("financeSection.guarantee")} value={formatCurrency(incomeGuarantee)} />
+          <Row label={t("financeSection.door")} value={formatCurrency(incomeDoor)} />
+          <Row label={t("financeSection.feeType")} value={feeType || "—"} />
+          <Row label={t("financeSection.paidStatus")} value={paidStatus || "—"} last />
 
           {feeNotes?.trim() ? (
             <View style={styles.noteBlock}>
-              <Text style={styles.noteLabel}>Fee Notes</Text>
+              <Text style={styles.noteLabel}>{t("financeSection.feeNotes")}</Text>
               <Text style={styles.noteText}>{feeNotes}</Text>
             </View>
           ) : null}
         </InfoCard>
 
-        <InfoCard title="Costs">
-          <Row label="Van Hire" value={formatCurrency(vanHire)} />
-          <Row label="Fuel" value={formatCurrency(fuel)} />
+        <InfoCard title={t("financeSection.costs")}>
+          <Row label={t("financeSection.vanHire")} value={formatCurrency(vanHire)} />
+          <Row label={t("financeSection.fuel")} value={formatCurrency(fuel)} />
 
           <Row
-            label="Accommodation"
+            label={t("financeSection.accommodation")}
             value={formatCurrency(accommodationCost)}
           />
           {showAccommodationSourceHint ? (
-            <Text style={styles.sourceHint}>From accommodation details</Text>
+            <Text style={styles.sourceHint}>{t("financeSection.fromAccommodationDetails")}</Text>
           ) : null}
 
-          <Row label="Dep Fees" value={formatCurrency(depCost)} />
-          <Row label="Driver Cost" value={formatCurrency(driverCost)} />
-          <Row label="FOH/Engineer" value={formatCurrency(fohEngCost)} />
-          <Row label="Other Costs" value={formatCurrency(otherCosts)} last />
+          <Row label={t("financeSection.depFees")} value={formatCurrency(depCost)} />
+          <Row label={t("financeSection.driverCost")} value={formatCurrency(driverCost)} />
+          <Row label={t("financeSection.fohEngineer")} value={formatCurrency(fohEngCost)} />
+          <Row label={t("financeSection.otherCosts")} value={formatCurrency(otherCosts)} last />
 
           {costNotes?.trim() ? (
             <View style={styles.noteBlock}>
-              <Text style={styles.noteLabel}>Cost Notes</Text>
+              <Text style={styles.noteLabel}>{t("financeSection.costNotes")}</Text>
               <Text style={styles.noteText}>{costNotes}</Text>
             </View>
           ) : null}
         </InfoCard>
 
-        <InfoCard title="Summary">
-          <Row label="Gross Income" value={formatCurrency(grossIncome)} bold />
-          <Row label="Total Costs" value={formatCurrency(totalCosts)} bold />
+        <InfoCard title={t("financeSection.summary")}>
+          <Row label={t("financeSection.grossIncome")} value={formatCurrency(grossIncome)} bold />
+          <Row label={t("financeSection.totalCosts")} value={formatCurrency(totalCosts)} bold />
 
           <View style={styles.netDivider} />
-          <Row label="Net Income" value={formatCurrency(netIncome)} bold />
+          <Row label={t("financeSection.netIncome")} value={formatCurrency(netIncome)} bold />
 
           <View style={styles.smallDivider} />
           <Row
-            label="Shares"
+            label={t("financeSection.shares")}
             value={shareCount && shareCount > 0 ? String(shareCount) : "—"}
             bold
           />
-          <Row label="Per Share" value={formatCurrency(perShare)} bold last />
+          <Row label={t("financeSection.perShare")} value={formatCurrency(perShare)} bold last />
         </InfoCard>
       </View>
     </ScrollView>

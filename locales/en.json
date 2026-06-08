@@ -405,6 +405,8 @@
   "eventsLineup.noCrew": "No crew found.",
   "eventsLineup.unnamed": "Unnamed",
   "eventsLineup.inviteHelp": "Invite adds them to this event and sets availability to Awaiting. Remove reverses this.",
+  "eventsLineup.removing": "Removing...",
+  "eventsLineup.remove": "Remove",
   "eventsEditDetails.eventOverview": "Event Overview",
   "eventsEditDetails.date": "Date",
   "eventsEditDetails.eventType": "Event Type",

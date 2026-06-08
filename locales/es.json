@@ -405,6 +405,8 @@
   "eventsLineup.noCrew": "No se encontró equipo.",
   "eventsLineup.unnamed": "Sin nombre",
   "eventsLineup.inviteHelp": "Invitar los añade a este evento y establece su disponibilidad como Pendiente. Eliminar revierte esta acción.",
+  "eventsLineup.removing": "Eliminando...",
+  "eventsLineup.remove": "Eliminar",
   "eventsEditDetails.eventOverview": "Resumen del evento",
   "eventsEditDetails.date": "Fecha",
   "eventsEditDetails.eventType": "Tipo de evento",

@@ -281,7 +281,7 @@ export default function EventLineupScreen() {
           ]}
         >
           <Text style={[styles.buttonText, styles.removeButtonText]}>
-            {saving ? "Removing..." : "Remove"}
+            {saving ? t("eventsLineup.removing") : t("eventsLineup.remove")}
           </Text>
         </Pressable>
       );

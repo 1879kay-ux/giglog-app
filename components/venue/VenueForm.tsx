@@ -1,5 +1,6 @@
 import { colors } from "@/theme/colors";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -22,6 +23,7 @@ export default function VenueForm({
   initialValues?: Partial<Venue>;
   onSubmit: (venue: Venue) => void;
 }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState<Partial<Venue>>({
     venue_id: initialValues?.venue_id ?? "",
     event_venue_name: initialValues?.event_venue_name ?? "",
@@ -98,7 +100,7 @@ export default function VenueForm({
       >
       {/* VENUE NAME */}
       <Text style={styles.label}>
-        Venue Name <Text style={styles.required}>*</Text>
+        {t("venueForm.venueName")} <Text style={styles.required}>*</Text>
       </Text>
       <TextInput
         style={[styles.input, errors.event_venue_name && styles.inputError]}
@@ -111,7 +113,7 @@ export default function VenueForm({
       )}
 
       {/* ADDRESS */}
-      <Text style={styles.label}>Address</Text>
+      <Text style={styles.label}>{t("venueForm.address")}</Text>
       <TextInput
         style={styles.input}
         value={form.address ?? ""}
@@ -121,7 +123,7 @@ export default function VenueForm({
 
       {/* CITY */}
       <Text style={styles.label}>
-        City <Text style={styles.required}>*</Text>
+        {t("venueForm.city")} <Text style={styles.required}>*</Text>
       </Text>
       <TextInput
         style={[styles.input, errors.city && styles.inputError]}
@@ -132,7 +134,7 @@ export default function VenueForm({
       {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
 
       {/* POSTCODE */}
-      <Text style={styles.label}>Postcode</Text>
+      <Text style={styles.label}>{t("venueForm.postcode")}</Text>
       <TextInput
         style={styles.input}
         value={form.postcode ?? ""}
@@ -141,7 +143,7 @@ export default function VenueForm({
       />
 
       {/* CONTACT NAME */}
-      <Text style={styles.label}>Contact Name</Text>
+      <Text style={styles.label}>{t("venueForm.contactName")}</Text>
       <TextInput
         style={styles.input}
         value={form.venue_contact_name ?? ""}
@@ -150,7 +152,7 @@ export default function VenueForm({
       />
 
       {/* CONTACT PHONE */}
-      <Text style={styles.label}>Contact Phone</Text>
+      <Text style={styles.label}>{t("venueForm.contactPhone")}</Text>
       <TextInput
         style={styles.input}
         value={form.venue_contact_phone ?? ""}
@@ -159,7 +161,7 @@ export default function VenueForm({
       />
 
       {/* CONTACT EMAIL */}
-      <Text style={styles.label}>Contact Email</Text>
+      <Text style={styles.label}>{t("venueForm.contactEmail")}</Text>
       <TextInput
         style={styles.input}
         value={form.venue_contact_email ?? ""}
@@ -170,7 +172,7 @@ export default function VenueForm({
       />
 
       {/* CAPACITY */}
-      <Text style={styles.label}>Capacity</Text>
+      <Text style={styles.label}>{t("venueForm.capacity")}</Text>
       <TextInput
         style={styles.input}
         keyboardType="numeric"
@@ -180,7 +182,7 @@ export default function VenueForm({
       />
 
       {/* CAPACITY NOTES */}
-      <Text style={styles.label}>Capacity Notes</Text>
+      <Text style={styles.label}>{t("venueForm.capacityNotes")}</Text>
       <TextInput
         style={[styles.input, styles.multiline]}
         multiline
@@ -189,7 +191,7 @@ export default function VenueForm({
       />
 
       {/* VENUE NOTES */}
-      <Text style={styles.label}>Venue Notes</Text>
+      <Text style={styles.label}>{t("venueForm.venueNotes")}</Text>
       <TextInput
         style={[styles.input, styles.multiline]}
         multiline
@@ -200,9 +202,9 @@ export default function VenueForm({
       {/* ACTIVE TOGGLE */}
       <View style={styles.toggleRow}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.label}>Active</Text>
+          <Text style={styles.label}>{t("venueForm.active")}</Text>
           <Text style={styles.helperText}>
-            Toggle off if venue is closed or inactive
+            {t("venueForm.activeHelper")}
           </Text>
         </View>
         <Switch
@@ -215,7 +217,7 @@ export default function VenueForm({
 
       <View style={styles.stickyFooter}>
         <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
-          <Text style={styles.saveButtonText}>Save Venue</Text>
+          <Text style={styles.saveButtonText}>{t("venueForm.saveVenue")}</Text>
         </TouchableOpacity>
       </View>
     </View>

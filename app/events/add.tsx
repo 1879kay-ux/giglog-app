@@ -227,11 +227,11 @@ export default function AddEventScreen() {
     setSaveError("");
     Keyboard.dismiss();
 
-    if (!selectedVenue) return setSaveError("Choose a venue.");
-    if (!eventDate) return setSaveError("Choose a date.");
-    if (!eventType) return setSaveError("Select an event type.");
-    if (!eventStatus) return setSaveError("Select a status.");
-    if (!bandId) return setSaveError("Band ID not loaded. Try again.");
+    if (!selectedVenue) return setSaveError(t("eventsAdd.validationChooseVenue"));
+    if (!eventDate) return setSaveError(t("eventsAdd.validationChooseDate"));
+    if (!eventType) return setSaveError(t("eventsAdd.validationSelectEventType"));
+    if (!eventStatus) return setSaveError(t("eventsAdd.validationSelectStatus"));
+    if (!bandId) return setSaveError(t("eventsAdd.validationBandIdNotLoaded"));
 
     setSaving(true);
 
@@ -279,7 +279,7 @@ export default function AddEventScreen() {
         await supabase.functions.invoke("send-push-notification", {
           body: {
             title: t("eventsAdd.notificationTitle"),
-body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `, ${selectedVenue.city}` : ""} added for ${formatDisplayDate(eventDate)}. Please confirm availability.`,
+body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `, ${selectedVenue.city}` : ""} ${t("eventsAdd.notificationAddedFor")} ${formatDisplayDate(eventDate)}. ${t("eventsAdd.notificationPleaseConfirmAvailability")}`,
             data: {
   type: "event_created",
   event_id: data.event_id,

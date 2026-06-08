@@ -278,7 +278,7 @@ export default function AddEventScreen() {
       try {
         await supabase.functions.invoke("send-push-notification", {
           body: {
-            title: "New GigSynq event",
+            title: t("eventsAdd.notificationTitle"),
 body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `, ${selectedVenue.city}` : ""} added for ${formatDisplayDate(eventDate)}. Please confirm availability.`,
             data: {
   type: "event_created",

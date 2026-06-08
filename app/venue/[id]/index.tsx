@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   ScrollView,
@@ -44,6 +45,7 @@ function Field({ label, value }: { label: string; value: string | null }) {
 
 export default function VenueDetailScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const {
     isAdmin,
     adminModeEnabled,
@@ -96,7 +98,7 @@ export default function VenueDetailScreen() {
   if (!venue) {
     return (
       <View style={styles.loading}>
-        <Text style={{ color: "#333" }}>Venue not found.</Text>
+        <Text style={{ color: "#333" }}>{t("venueDetails.notFound")}</Text>
       </View>
     );
   }
@@ -105,7 +107,7 @@ export default function VenueDetailScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "Venue Details",
+          title: t("venueDetails.title"),
           headerLeft: () => (
             <View style={styles.headerIconWrapper}>
               <TouchableOpacity onPress={() => router.back()}>
@@ -126,7 +128,9 @@ export default function VenueDetailScreen() {
       <View style={styles.container}>
         {/* VENUE INFO BLOCK */}
         <View style={styles.summary}>
-          <Text style={styles.title}>{venue.event_venue_name ?? "Venue"}</Text>
+          <Text style={styles.title}>
+            {venue.event_venue_name ?? t("venueDetails.venueFallback")}
+          </Text>
           <Text style={styles.subtitle}>
             {venue.city ?? "—"}
             {venue.postcode ? `, ${venue.postcode}` : ""}
@@ -137,7 +141,7 @@ export default function VenueDetailScreen() {
         {canEdit ? (
           <View style={styles.editButtonWrap}>
             <ActionButton
-              label="Edit Venue"
+              label={t("venueDetails.editVenue")}
               icon="create-outline"
               onPress={() => router.push(`/venue/${venue.venue_id}/edit`)}
               style={styles.editButton}
@@ -146,21 +150,25 @@ export default function VenueDetailScreen() {
         ) : null}
 
         <ScrollView contentContainerStyle={styles.content}>
-          <Field label="Address" value={venue.address} />
-          <Field label="Postcode" value={venue.postcode} />
-          <Field label="Contact" value={venue.venue_contact_name} />
-          <Field label="Phone" value={venue.venue_contact_phone} />
-          <Field label="Email" value={venue.venue_contact_email} />
+          <Field label={t("venueDetails.address")} value={venue.address} />
+          <Field label={t("venueDetails.postcode")} value={venue.postcode} />
+          <Field label={t("venueDetails.contact")} value={venue.venue_contact_name} />
+          <Field label={t("venueDetails.phone")} value={venue.venue_contact_phone} />
+          <Field label={t("venueDetails.email")} value={venue.venue_contact_email} />
           <Field
-            label="Capacity"
+            label={t("venueDetails.capacity")}
             value={venue.capacity != null ? String(venue.capacity) : null}
           />
-          <Field label="Capacity notes" value={venue.capacity_notes} />
-          <Field label="Notes" value={venue.venue_notes} />
+          <Field label={t("venueDetails.capacityNotes")} value={venue.capacity_notes} />
+          <Field label={t("venueDetails.notes")} value={venue.venue_notes} />
           <Field
-            label="Active"
+            label={t("venueDetails.active")}
             value={
-              venue.is_active == null ? null : venue.is_active ? "Yes" : "No"
+              venue.is_active == null
+                ? null
+                : venue.is_active
+                  ? t("venueDetails.yes")
+                  : t("venueDetails.no")
             }
           />
         </ScrollView>

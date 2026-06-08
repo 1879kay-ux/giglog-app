@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -27,6 +28,7 @@ function clean(v?: string | null) {
 
 export default function EditEventTravelScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -159,18 +161,18 @@ export default function EditEventTravelScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Departure Location</Text>
+            <Text style={styles.cardTitle}>{t("eventsEditTravel.departureLocation")}</Text>
             <Text style={styles.help}>
               This is the starting point for “Departure Location → Venue”
               directions.
             </Text>
 
-            <Text style={styles.label}>Departure Address</Text>
+            <Text style={styles.label}>{t("eventsEditTravel.departureAddress")}</Text>
             <TextInput
               style={styles.input}
               value={departureAddress}
               onChangeText={setDepartureAddress}
-              placeholder="e.g. Band lockup, street, town"
+              placeholder={t("eventsEditTravel.placeholderAddress")}
               placeholderTextColor="#999"
             />
 
@@ -181,7 +183,7 @@ export default function EditEventTravelScreen() {
               style={styles.input}
               value={departurePostcode}
               onChangeText={setDeparturePostcode}
-              placeholder="e.g. SW1A 1AA"
+              placeholder={t("eventsEditTravel.placeholderPostcode")}
               placeholderTextColor="#999"
               autoCapitalize="characters"
             />
@@ -191,7 +193,7 @@ export default function EditEventTravelScreen() {
               onPress={onClear}
               disabled={saving}
             >
-              <Text style={styles.clearText}>Clear for this event</Text>
+              <Text style={styles.clearText}>{t("eventsEditTravel.clearForThisEvent")}</Text>
             </TouchableOpacity>
           </View>
 
@@ -201,7 +203,7 @@ export default function EditEventTravelScreen() {
             disabled={saving}
           >
             <Text style={styles.saveButtonText}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? t("eventsEditTravel.saving") : t("eventsEditTravel.save")}
             </Text>
           </TouchableOpacity>
         </ScrollView>

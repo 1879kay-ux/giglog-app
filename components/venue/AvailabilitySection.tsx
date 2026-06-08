@@ -252,9 +252,9 @@ export default function AvailabilitySection({
 
       const title = t("availabilitySection.availabilityReminder");
 
-      const body = `Please confirm availability for ${venueName ?? "this event"}${
-        eventDate ? ` on ${eventDate}` : ""
-      }.`;
+      const body = `${t("availabilitySection.notificationPleaseConfirmAvailabilityFor")} ${
+        venueName ?? t("availabilitySection.notificationThisEvent")
+      }${eventDate ? ` ${t("availabilitySection.notificationOn")} ${eventDate}` : ""}.`;
 
       const { error } = await supabase.functions.invoke(
         "send-push-notification",
@@ -276,9 +276,13 @@ export default function AvailabilitySection({
 
       Alert.alert(
         t("availabilitySection.reminderSent"),
-        `Sent to ${awaitingIds.length} awaiting member${
-          awaitingIds.length === 1 ? "" : "s"
-        }.`,
+        awaitingIds.length === 1
+          ? t("availabilitySection.reminderSentToAwaitingMember", {
+              count: awaitingIds.length,
+            })
+          : t("availabilitySection.reminderSentToAwaitingMembers", {
+              count: awaitingIds.length,
+            }),
       );
     } catch (e: any) {
       Alert.alert(

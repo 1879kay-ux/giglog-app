@@ -6,6 +6,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -39,6 +40,7 @@ type EventRow = {
 
 export default function EventLineupScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const eventId = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -241,7 +243,7 @@ export default function EventLineupScreen() {
   if (!eventId) {
     return (
       <View style={styles.center}>
-        <Text style={styles.error}>Missing event id.</Text>
+        <Text style={styles.error}>{t("eventsLineup.missingEventId")}</Text>
       </View>
     );
   }
@@ -262,7 +264,7 @@ export default function EventLineupScreen() {
     if (core && already) {
       return (
         <View style={[styles.button, styles.buttonDisabled]}>
-          <Text style={styles.buttonText}>Core</Text>
+          <Text style={styles.buttonText}>{t("eventsLineup.core")}</Text>
         </View>
       );
     }
@@ -291,7 +293,9 @@ export default function EventLineupScreen() {
         disabled={saving}
         style={[styles.button, saving ? styles.buttonDisabled : null]}
       >
-        <Text style={styles.buttonText}>{saving ? "Adding..." : "Invite"}</Text>
+        <Text style={styles.buttonText}>
+          {saving ? t("eventsLineup.adding") : t("eventsLineup.invite")}
+        </Text>
       </Pressable>
     );
   };
@@ -318,20 +322,21 @@ export default function EventLineupScreen() {
         contentContainerStyle={styles.content}
       >
         <View style={styles.cardWrap}>
-          <InfoCard title="Invite Members">
-            <Text style={styles.note}>
-              Invite adds them to this event and seeds availability as Awaiting.
-              Remove reverses that.
-            </Text>
+          <InfoCard title={t("eventsLineup.inviteMembers")}>
+            <Text style={styles.helperText}>
+             {t("eventsLineup.inviteHelp")}
+           </Text>
           </InfoCard>
         </View>
 
         <View style={styles.cardWrap}>
-          <InfoCard title="Musicians">
+          <InfoCard title={t("eventsLineup.musicians")}>
             {musicians.map((m) => (
               <View key={m.member_id} style={styles.row}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.name}>{m.display_name ?? "Unnamed"}</Text>
+                  <Text style={styles.name}>
+                    {m.display_name ?? t("eventsLineup.unnamed")}
+                  </Text>
                   <Text style={styles.sub}>
                     {instrumentsDisplay(m) || "No instruments set"}
                   </Text>
@@ -340,17 +345,19 @@ export default function EventLineupScreen() {
               </View>
             ))}
             {musicians.length === 0 ? (
-              <Text style={styles.empty}>No musicians found.</Text>
+              <Text style={styles.empty}>{t("eventsLineup.noMusicians")}</Text>
             ) : null}
           </InfoCard>
         </View>
 
         <View style={styles.cardWrap}>
-          <InfoCard title="Crew">
+          <InfoCard title={t("eventsLineup.crew")}>
             {crew.map((m) => (
               <View key={m.member_id} style={styles.row}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.name}>{m.display_name ?? "Unnamed"}</Text>
+                  <Text style={styles.name}>
+                    {m.display_name ?? t("eventsLineup.unnamed")}
+                  </Text>
                   <Text style={styles.sub}>
                     {roleDisplay(m) || "No role set"}
                   </Text>
@@ -359,7 +366,7 @@ export default function EventLineupScreen() {
               </View>
             ))}
             {crew.length === 0 ? (
-              <Text style={styles.empty}>No crew found.</Text>
+              <Text style={styles.empty}>{t("eventsLineup.noCrew")}</Text>
             ) : null}
           </InfoCard>
         </View>

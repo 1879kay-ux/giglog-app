@@ -299,6 +299,11 @@ export default function HomeScreen() {
                 onPress={() => router.push("/venue")}
               />
               <NavTile
+                label={t("acts.title")}
+                icon="music"
+                onPress={() => router.push("/acts")}
+              />
+              <NavTile
                 label={t("home.bandAndCrew")}
                 icon="users"
                 onPress={() => router.push("/band")}

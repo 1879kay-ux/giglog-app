@@ -5,12 +5,12 @@ import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 
 type ActRow = {
@@ -71,7 +71,10 @@ export default function ActsScreen() {
   );
 
   const renderAct = ({ item }: { item: ActRow }) => (
-    <View style={styles.card}>
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed ? { opacity: 0.85 } : null]}
+      onPress={() => router.push(`/acts/${item.act_id}/lineup` as any)}
+    >
       <View style={styles.titleRow}>
         <Text style={styles.title}>{item.act_name ?? "Untitled"}</Text>
         {item.is_default ? (
@@ -84,7 +87,7 @@ export default function ActsScreen() {
       {item.contact_name ? <Text style={styles.detail}>{item.contact_name}</Text> : null}
       {item.phone ? <Text style={styles.detail}>{item.phone}</Text> : null}
       {item.email ? <Text style={styles.detail}>{item.email}</Text> : null}
-    </View>
+    </Pressable>
   );
 
   return (

@@ -4,12 +4,12 @@ import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    ActivityIndicator,
-    FlatList,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 type BandMemberRow = {
@@ -61,11 +61,11 @@ export default function BandMembersScreen() {
   const [showInactive, setShowInactive] = useState(false);
 
   const title = useMemo(
-    () =>
-      showInactive
-        ? t("bandMembers.titleAll")
-        : t("bandMembers.titleActive"),
-    [showInactive, t],
+  () =>
+    showInactive
+      ? t("people.titleAll")
+      : t("people.titleActive"),
+  [showInactive, t],
   );
 
   const loadMembers = useCallback(async () => {

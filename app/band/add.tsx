@@ -4,16 +4,16 @@ import { Stack, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 const MEMBER_TYPES = ["musician", "crew"] as const;
@@ -335,7 +335,7 @@ export default function AddBandMemberScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: i18n.t("bandAdd.title") }} />
+      <Stack.Screen options={{ title: i18n.t("people.addTitle") }} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -363,108 +363,7 @@ export default function AddBandMemberScreen() {
             style={styles.input}
           />
 
-          <Text style={styles.label}>{i18n.t("bandAdd.memberType")}</Text>
-          <View style={styles.chipWrap}>
-            {MEMBER_TYPES.map((t) => {
-              const selected = memberType === t;
-              return (
-                <Pressable
-                  key={t}
-                  onPress={() => {
-                    setMemberType(t);
-                    setRoleOther("");
-
-                    if (t === "musician") {
-                      setMusicianRole("Band");
-                      setCrewRole("Crew");
-                    } else {
-                      setCrewRole("Crew");
-                      setMusicianRole("Band");
-                      setInstruments([]);
-                      setCustomInstruments([]);
-                      setCustomInstrumentInput("");
-                    }
-                  }}
-                  style={[styles.chip, selected && styles.chipSelected]}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      selected && styles.chipTextSelected,
-                    ]}
-                  >
-                    {t === "musician"
-                      ? i18n.t("bandAdd.typeMusician")
-                      : i18n.t("bandAdd.typeCrew")}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Text style={styles.label}>{i18n.t("bandAdd.role")}</Text>
-          <View style={styles.chipWrap}>
-            {rolesToRender.map((r) => {
-              const selected = selectedRole === r;
-              return (
-                <Pressable
-                  key={r}
-                  onPress={() => {
-                    if (memberType === "musician")
-                      setMusicianRole(r as MusicianRole);
-                    else setCrewRole(r as CrewRole);
-
-                    if (r !== "Other") setRoleOther("");
-                  }}
-                  style={[styles.chip, selected && styles.chipSelected]}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      selected && styles.chipTextSelected,
-                    ]}
-                  >
-                    {r === "Band"
-                      ? i18n.t("bandAdd.roleBand")
-                      : r === "Dep Musician"
-                        ? i18n.t("bandAdd.roleDepMusician")
-                        : r === "Crew"
-                          ? i18n.t("bandAdd.roleCrew")
-                          : r === "Tour Manager"
-                            ? i18n.t("bandAdd.roleTourManager")
-                            : r === "Merch"
-                              ? i18n.t("bandAdd.roleMerch")
-                              : r === "FoH Engineer"
-                                ? i18n.t("bandAdd.roleFohEngineer")
-                                : r === "Monitor Engineer"
-                                  ? i18n.t("bandAdd.roleMonitorEngineer")
-                                  : r === "Lighting"
-                                    ? i18n.t("bandAdd.roleLighting")
-                                    : r === "Tech"
-                                      ? i18n.t("bandAdd.roleTech")
-                                      : r === "Other"
-                                        ? i18n.t("bandAdd.roleOtherOption")
-                                        : r}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          {selectedRole === "Other" ? (
-            <>
-              <Text style={styles.label}>{i18n.t("bandAdd.roleOther")}</Text>
-              <TextInput
-                value={roleOther}
-                onChangeText={setRoleOther}
-                placeholder={i18n.t("bandAdd.placeholderRoleOther")}
-                style={styles.input}
-              />
-            </>
-          ) : null}
-
-          {memberType === "musician" ? (
-            <>
+          <>
               <Text style={styles.label}>{i18n.t("bandAdd.instruments")}</Text>
               <View style={styles.chipWrap}>
                 {INSTRUMENTS.map((p) => {
@@ -544,8 +443,7 @@ export default function AddBandMemberScreen() {
                   ))}
                 </View>
               ) : null}
-            </>
-          ) : null}
+          </>
 
           <View style={styles.toggleRow}>
             <Pressable

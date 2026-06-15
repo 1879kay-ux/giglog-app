@@ -464,28 +464,14 @@ export default function EditBandMemberScreen() {
             style={styles.input}
           />
 
-          <Text style={styles.label}>{t("bandEdit.memberType")}</Text>
+          <Text style={styles.label}>{t("bandEdit.instruments")}</Text>
           <View style={styles.chipWrap}>
-            {MEMBER_TYPES.map((mt) => {
-              const selected = memberType === mt;
+            {INSTRUMENTS.map((p) => {
+              const selected = instruments.includes(p);
               return (
                 <Pressable
-                  key={mt}
-                  onPress={() => {
-                    setMemberType(mt);
-                    setRoleOther("");
-
-                    if (mt === "musician") {
-                      setMusicianRole("Band");
-                      setCrewRole("Crew");
-                    } else {
-                      setCrewRole("Crew");
-                      setMusicianRole("Band");
-                      setInstruments([]);
-                      setCustomInstruments([]);
-                      setCustomInstrumentInput("");
-                    }
-                  }}
+                  key={p}
+                  onPress={() => toggleInstrument(p)}
                   style={[styles.chip, selected && styles.chipSelected]}
                 >
                   <Text
@@ -494,116 +480,46 @@ export default function EditBandMemberScreen() {
                       selected && styles.chipTextSelected,
                     ]}
                   >
-                    {mt === "musician"
-                      ? t("bandEdit.typeMusician")
-                      : t("bandEdit.typeCrew")}
+                    {instrumentLabel(p)}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
 
-          <Text style={styles.label}>{t("bandEdit.role")}</Text>
-          <View style={styles.chipWrap}>
-            {rolesToRender.map((r) => {
-              const selected = role === r;
-              return (
-                <Pressable
-                  key={r}
-                  onPress={() => {
-                    if (memberType === "musician")
-                      setMusicianRole(r as MusicianRole);
-                    else setCrewRole(r as CrewRole);
-
-                    if (r !== "Other") setRoleOther("");
-                  }}
-                  style={[styles.chip, selected && styles.chipSelected]}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      selected && styles.chipTextSelected,
-                    ]}
-                  >
-                    {roleLabel(r)}
-                  </Text>
-                </Pressable>
-              );
-            })}
+          <Text style={styles.label}>{t("bandEdit.customInstruments")}</Text>
+          <View style={styles.customRow}>
+            <TextInput
+              value={customInstrumentInput}
+              onChangeText={setCustomInstrumentInput}
+              placeholder={t("bandEdit.placeholderCustomInstrument")}
+              style={[
+                styles.input,
+                { flex: 1, marginTop: 0, marginBottom: 0 },
+              ]}
+            />
+            <Pressable
+              style={styles.addButton}
+              onPress={addCustomInstrument}
+            >
+              <Text style={styles.addButtonText}>{t("bandEdit.add")}</Text>
+            </Pressable>
           </View>
 
-          {role === "Other" ? (
-            <>
-              <Text style={styles.label}>{t("bandEdit.roleOther")}</Text>
-              <TextInput
-                value={roleOther}
-                onChangeText={setRoleOther}
-                placeholder={t("bandEdit.placeholderRoleOther")}
-                style={styles.input}
-              />
-            </>
-          ) : null}
-
-          {memberType === "musician" ? (
-            <>
-              <Text style={styles.label}>{t("bandEdit.instruments")}</Text>
-              <View style={styles.chipWrap}>
-                {INSTRUMENTS.map((p) => {
-                  const selected = instruments.includes(p);
-                  return (
-                    <Pressable
-                      key={p}
-                      onPress={() => toggleInstrument(p)}
-                      style={[styles.chip, selected && styles.chipSelected]}
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          selected && styles.chipTextSelected,
-                        ]}
-                      >
-                        {instrumentLabel(p)}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              <Text style={styles.label}>{t("bandEdit.customInstruments")}</Text>
-              <View style={styles.customRow}>
-                <TextInput
-                  value={customInstrumentInput}
-                  onChangeText={setCustomInstrumentInput}
-                  placeholder={t("bandEdit.placeholderCustomInstrument")}
-                  style={[
-                    styles.input,
-                    { flex: 1, marginTop: 0, marginBottom: 0 },
-                  ]}
-                />
+          {customInstruments.length > 0 ? (
+            <View style={styles.customChipWrap}>
+              {customInstruments.map((p) => (
                 <Pressable
-                  style={styles.addButton}
-                  onPress={addCustomInstrument}
+                  key={p}
+                  style={[styles.chip, { borderColor: "#009999" }]}
+                  onPress={() => removeCustomInstrument(p)}
                 >
-                  <Text style={styles.addButtonText}>{t("bandEdit.add")}</Text>
+                  <Text style={[styles.chipText, { color: "#009999" }]}>
+                    {p} ✕
+                  </Text>
                 </Pressable>
-              </View>
-
-              {customInstruments.length > 0 ? (
-                <View style={styles.customChipWrap}>
-                  {customInstruments.map((p) => (
-                    <Pressable
-                      key={p}
-                      style={[styles.chip, { borderColor: "#009999" }]}
-                      onPress={() => removeCustomInstrument(p)}
-                    >
-                      <Text style={[styles.chipText, { color: "#009999" }]}>
-                        {p} ✕
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : null}
-            </>
+              ))}
+            </View>
           ) : null}
 
           <View style={styles.toggleRow}>

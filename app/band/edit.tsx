@@ -136,6 +136,7 @@ export default function EditBandMemberScreen() {
   const [customInstrumentInput, setCustomInstrumentInput] = useState("");
   const [loadedCapabilities, setLoadedCapabilities] = useState<CapabilityChip[]>([]);
   const [selectedCapabilityIds, setSelectedCapabilityIds] = useState<string[]>([]);
+  const [expandedCategories, setExpandedCategories] = useState<Set<CapabilityCategory>>(new Set());
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isActive, setIsActive] = useState(true);
@@ -225,6 +226,7 @@ export default function EditBandMemberScreen() {
       if (!row.band_id) {
         setLoadedCapabilities([]);
         setSelectedCapabilityIds([]);
+        setExpandedCategories(new Set());
       } else {
         const { data: capabilitiesRows, error: capabilitiesError } = await supabase
           .from("capabilities")
@@ -233,11 +235,12 @@ export default function EditBandMemberScreen() {
           .eq("is_active", true)
           .order("name", { ascending: true });
 
+        let nextCapabilities: CapabilityChip[] = [];
         if (capabilitiesError) {
           console.log("load capabilities catalogue error", capabilitiesError);
           setLoadedCapabilities([]);
         } else {
-          const nextCapabilities = ((capabilitiesRows ?? []) as any[])
+          nextCapabilities = ((capabilitiesRows ?? []) as any[])
             .filter(
               (item) =>
                 item?.capability_id &&
@@ -259,11 +262,12 @@ export default function EditBandMemberScreen() {
           .select("capability_id")
           .eq("member_id", row.member_id);
 
+        let nextSelectedIds: string[] = [];
         if (assignedError) {
           console.log("load assigned capabilities error", assignedError);
           setSelectedCapabilityIds([]);
         } else {
-          const nextSelectedIds = Array.from(
+          nextSelectedIds = Array.from(
             new Set(
               ((assignedRows ?? []) as any[])
                 .map((item) => item.capability_id)
@@ -272,6 +276,18 @@ export default function EditBandMemberScreen() {
           );
           setSelectedCapabilityIds(nextSelectedIds);
         }
+
+        setExpandedCategories(
+          new Set<CapabilityCategory>(
+            CAPABILITY_CATEGORY_ORDER.filter((category) =>
+              nextCapabilities.some(
+                (cap) =>
+                  cap.category === category &&
+                  nextSelectedIds.includes(cap.capability_id),
+              ),
+            ),
+          ),
+        );
       }
 
       setIsAdmin(!!row.is_admin);
@@ -312,6 +328,18 @@ export default function EditBandMemberScreen() {
         ? prev.filter((id) => id !== capabilityId)
         : [...prev, capabilityId],
     );
+  };
+
+  const toggleCategoryExpanded = (category: CapabilityCategory) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
   };
 
   const onSave = async () => {
@@ -655,35 +683,53 @@ export default function EditBandMemberScreen() {
           {groupedCapabilities.length === 0 ? (
             <Text style={styles.hint}>{t("people.noCapabilities")}</Text>
           ) : (
-            <View style={{ marginTop: 2, gap: 10 }}>
-              {groupedCapabilities.map((group) => (
-                <View key={group.category}>
-                  <Text style={[styles.hint, { marginBottom: 6 }]}>
-                    {capabilityCategoryLabel(group.category)}
-                  </Text>
-                  <View style={styles.chipWrap}>
-                    {group.items.map((capability) => {
-                      const selected = selectedCapabilityIds.includes(capability.capability_id);
-                      return (
-                        <Pressable
-                          key={capability.capability_id}
-                          onPress={() => toggleCapability(capability.capability_id)}
-                          style={[styles.chip, selected && styles.chipSelected]}
-                        >
-                          <Text
-                            style={[
-                              styles.chipText,
-                              selected && styles.chipTextSelected,
-                            ]}
-                          >
-                            {capability.name}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
+            <View style={{ marginTop: 2, gap: 4 }}>
+              {groupedCapabilities.map((group) => {
+                const isExpanded = expandedCategories.has(group.category);
+                const selectedCount = group.items.filter((cap) =>
+                  selectedCapabilityIds.includes(cap.capability_id),
+                ).length;
+                return (
+                  <View key={group.category}>
+                    <Pressable
+                      onPress={() => toggleCategoryExpanded(group.category)}
+                      style={styles.capabilityAccordionHeader}
+                    >
+                      <Text style={[styles.hint, { flex: 1 }]}>
+                        {`${capabilityCategoryLabel(group.category)} (${selectedCount})`}
+                      </Text>
+                      <Ionicons
+                        name={isExpanded ? "chevron-up" : "chevron-down"}
+                        size={16}
+                        color="#666"
+                      />
+                    </Pressable>
+                    {isExpanded ? (
+                      <View style={[styles.chipWrap, { marginTop: 8 }]}>
+                        {group.items.map((capability) => {
+                          const selected = selectedCapabilityIds.includes(capability.capability_id);
+                          return (
+                            <Pressable
+                              key={capability.capability_id}
+                              onPress={() => toggleCapability(capability.capability_id)}
+                              style={[styles.chip, selected && styles.chipSelected]}
+                            >
+                              <Text
+                                style={[
+                                  styles.chipText,
+                                  selected && styles.chipTextSelected,
+                                ]}
+                              >
+                                {capability.name}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    ) : null}
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
           )}
 
@@ -847,6 +893,14 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
     marginTop: 10,
+  },
+
+  capabilityAccordionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
   },
 
   toggleRow: { flexDirection: "row", gap: 10, marginTop: 16 },

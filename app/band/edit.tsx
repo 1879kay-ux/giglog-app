@@ -137,6 +137,10 @@ export default function EditBandMemberScreen() {
   const [loadedCapabilities, setLoadedCapabilities] = useState<CapabilityChip[]>([]);
   const [selectedCapabilityIds, setSelectedCapabilityIds] = useState<string[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<CapabilityCategory>>(new Set());
+  const [bandId, setBandId] = useState<string | null>(null);
+  const [editingCapabilityCategory, setEditingCapabilityCategory] = useState<CapabilityCategory | null>(null);
+  const [newCapabilityName, setNewCapabilityName] = useState("");
+  const [addingCapability, setAddingCapability] = useState(false);
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isActive, setIsActive] = useState(true);
@@ -162,6 +166,7 @@ export default function EditBandMemberScreen() {
       if (!gateChecked) return;
 
       if (!id) {
+        setBandId(null);
         setLoading(false);
         return;
       }
@@ -199,6 +204,7 @@ export default function EditBandMemberScreen() {
       }
 
       const row = data as BandMemberRow;
+      setBandId(row.band_id ?? null);
 
       setDisplayName(row.display_name ?? "");
       setEmail(row.email ?? "");
@@ -227,6 +233,8 @@ export default function EditBandMemberScreen() {
         setLoadedCapabilities([]);
         setSelectedCapabilityIds([]);
         setExpandedCategories(new Set());
+        setEditingCapabilityCategory(null);
+        setNewCapabilityName("");
       } else {
         const { data: capabilitiesRows, error: capabilitiesError } = await supabase
           .from("capabilities")
@@ -340,6 +348,104 @@ export default function EditBandMemberScreen() {
       }
       return next;
     });
+  };
+
+  const beginAddCapability = (category: CapabilityCategory) => {
+    setEditingCapabilityCategory(category);
+    setNewCapabilityName("");
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      next.add(category);
+      return next;
+    });
+  };
+
+  const cancelAddCapability = () => {
+    setEditingCapabilityCategory(null);
+    setNewCapabilityName("");
+  };
+
+  const addCapabilityInCategory = async (category: CapabilityCategory) => {
+    const name = newCapabilityName.trim();
+    if (!name) return;
+    if (!bandId || addingCapability) return;
+
+    setAddingCapability(true);
+
+    let capabilityToSelect: CapabilityChip | null = null;
+
+    const { data: insertedCapability, error: insertError } = await supabase
+      .from("capabilities")
+      .insert({
+        band_id: bandId,
+        name,
+        category,
+        sort_order: 999,
+        is_active: true,
+      })
+      .select("capability_id,name,category")
+      .single();
+
+    if (insertError) {
+      const isConflict = (insertError as any)?.code === "23505";
+
+      if (!isConflict) {
+        setAddingCapability(false);
+        Alert.alert("Error", insertError.message);
+        return;
+      }
+
+      const { data: existingCapability, error: existingError } = await supabase
+        .from("capabilities")
+        .select("capability_id,name,category")
+        .eq("band_id", bandId)
+        .eq("name", name)
+        .eq("category", category)
+        .maybeSingle();
+
+      if (existingError) {
+        setAddingCapability(false);
+        Alert.alert("Error", existingError.message);
+        return;
+      }
+
+      if (
+        existingCapability?.capability_id &&
+        existingCapability?.name &&
+        CAPABILITY_CATEGORY_ORDER.includes(
+          existingCapability.category as CapabilityCategory,
+        )
+      ) {
+        capabilityToSelect = {
+          capability_id: existingCapability.capability_id as string,
+          name: existingCapability.name as string,
+          category: existingCapability.category as CapabilityCategory,
+        };
+      }
+    } else if (insertedCapability?.capability_id && insertedCapability?.name) {
+      capabilityToSelect = {
+        capability_id: insertedCapability.capability_id as string,
+        name: insertedCapability.name as string,
+        category: insertedCapability.category as CapabilityCategory,
+      };
+    }
+
+    if (capabilityToSelect) {
+      setLoadedCapabilities((prev) =>
+        prev.some((cap) => cap.capability_id === capabilityToSelect!.capability_id)
+          ? prev
+          : [...prev, capabilityToSelect!].sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      setSelectedCapabilityIds((prev) =>
+        prev.includes(capabilityToSelect!.capability_id)
+          ? prev
+          : [...prev, capabilityToSelect!.capability_id],
+      );
+    }
+
+    setExpandedCategories((prev) => new Set(prev).add(category));
+    setNewCapabilityName("");
+    setAddingCapability(false);
   };
 
   const onSave = async () => {
@@ -631,6 +737,7 @@ export default function EditBandMemberScreen() {
                 const selectedCount = group.items.filter((cap) =>
                   selectedCapabilityIds.includes(cap.capability_id),
                 ).length;
+                const isEditingHere = editingCapabilityCategory === group.category;
                 return (
                   <View key={group.category} style={styles.capabilityAccordionCard}>
                     <Pressable
@@ -682,6 +789,40 @@ export default function EditBandMemberScreen() {
                             );
                           })}
                         </View>
+                        {isEditingHere ? (
+                          <View style={styles.capabilityAddEditor}>
+                            <TextInput
+                              value={newCapabilityName}
+                              onChangeText={setNewCapabilityName}
+                              placeholder={t("people.newCapabilityPlaceholder")}
+                              style={[styles.input, styles.capabilityAddInput]}
+                              editable={!addingCapability}
+                            />
+                            <View style={styles.capabilityAddActions}>
+                              <Pressable
+                                onPress={cancelAddCapability}
+                                disabled={addingCapability}
+                                style={styles.capabilityCancelButton}
+                              >
+                                <Text style={styles.capabilityCancelButtonText}>{t("people.cancel")}</Text>
+                              </Pressable>
+                              <Pressable
+                                onPress={() => addCapabilityInCategory(group.category)}
+                                disabled={addingCapability}
+                                style={[styles.capabilityAddButton, addingCapability && { opacity: 0.7 }]}
+                              >
+                                <Text style={styles.capabilityAddButtonText}>{t("people.add")}</Text>
+                              </Pressable>
+                            </View>
+                          </View>
+                        ) : (
+                          <Pressable
+                            onPress={() => beginAddCapability(group.category)}
+                            style={styles.capabilityAddTrigger}
+                          >
+                            <Text style={styles.capabilityAddTriggerText}>{t("people.addCapability")}</Text>
+                          </Pressable>
+                        )}
                       </View>
                     ) : null}
                   </View>
@@ -918,6 +1059,54 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 12,
   },
+  capabilityAddTrigger: {
+    marginTop: 12,
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "#BFE8E8",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "#F4FBFB",
+  },
+  capabilityAddTriggerText: {
+    color: "#007A7A",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  capabilityAddEditor: {
+    marginTop: 10,
+    gap: 8,
+  },
+  capabilityAddInput: {
+    marginTop: 0,
+    marginBottom: 0,
+  },
+  capabilityAddActions: {
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "flex-end",
+  },
+  capabilityCancelButton: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  capabilityCancelButtonText: {
+    color: "#374151",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  capabilityAddButton: {
+    backgroundColor: "#009999",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  capabilityAddButtonText: { color: "#fff", fontSize: 12, fontWeight: "800" },
 
   toggleRow: { flexDirection: "row", gap: 10, marginTop: 16 },
   toggle: {

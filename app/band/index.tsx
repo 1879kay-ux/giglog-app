@@ -100,12 +100,6 @@ export default function BandMembersScreen() {
     }, [loadMembers]),
   );
 
-  const musicians = useMemo(
-    () => members.filter((m) => !isCrewMember(m)),
-    [members],
-  );
-  const crew = useMemo(() => members.filter((m) => isCrewMember(m)), [members]);
-
   const renderMemberRow = ({ item }: { item: BandMemberRow }) => {
     const presetPositions = item.band_positions ?? [];
     const customPositions = item.band_positions_other ?? [];
@@ -236,31 +230,13 @@ export default function BandMembersScreen() {
           </View>
         ) : (
           <View style={{ flex: 1 }}>
-            <Text style={styles.sectionTitle}>{t("bandMembers.sectionMusicians")}</Text>
-            {musicians.length === 0 ? (
-              <Text style={styles.empty}>{t("bandMembers.emptyMusicians")}</Text>
-            ) : (
-              <FlatList
-                data={musicians}
-                keyExtractor={(item) => item.member_id}
-                ItemSeparatorComponent={() => <View style={styles.separator} />}
-                renderItem={renderMemberRow}
-              />
-            )}
-
-            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>
-              {t("bandMembers.sectionCrew")}
-            </Text>
-            {crew.length === 0 ? (
-              <Text style={styles.empty}>{t("bandMembers.emptyCrew")}</Text>
-            ) : (
-              <FlatList
-                data={crew}
-                keyExtractor={(item) => item.member_id}
-                ItemSeparatorComponent={() => <View style={styles.separator} />}
-                renderItem={renderMemberRow}
-              />
-            )}
+            <Text style={styles.sectionTitle}>{t("people.titleActive")}</Text>
+            <FlatList
+              data={members}
+              keyExtractor={(item) => item.member_id}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+              renderItem={renderMemberRow}
+            />
           </View>
         )}
       </View>

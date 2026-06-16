@@ -29,27 +29,30 @@ type BandMemberRow = {
   is_dep: boolean | null;
 };
 
+type CapabilityCategory =
+  | "performance"
+  | "crew"
+  | "logistics"
+  | "business"
+  | "creative_specialist"
+  | "other";
+
+const CAPABILITY_CATEGORY_ORDER: CapabilityCategory[] = [
+  "performance",
+  "crew",
+  "logistics",
+  "business",
+  "creative_specialist",
+  "other",
+];
+
 type CapabilityRow = {
   member_id: string;
-  capabilities: { name: string | null } | { name: string | null }[] | null;
+  capabilities:
+    | { name: string | null; category: CapabilityCategory | null }
+    | { name: string | null; category: CapabilityCategory | null }[]
+    | null;
 };
-
-const CREW_ROLE_SET = new Set<string>([
-  "Crew",
-  "Tour Manager",
-  "Merch",
-  "FoH Engineer",
-  "Monitor Engineer",
-  "Lighting",
-  "Tech",
-]);
-
-function isCrewMember(m: BandMemberRow) {
-  if (m.member_type === "crew") return true;
-  const r = (m.band_role ?? "").trim();
-  if (CREW_ROLE_SET.has(r)) return true;
-  return false;
-}
 
 export default function BandMembersScreen() {
   const router = useRouter();
@@ -65,6 +68,7 @@ export default function BandMembersScreen() {
   const [members, setMembers] = useState<BandMemberRow[]>([]);
   const [showInactive, setShowInactive] = useState(false);
   const [capabilitySummaryByMemberId, setCapabilitySummaryByMemberId] = useState<Record<string, string[]>>({});
+  const [capabilityCategoriesByMemberId, setCapabilityCategoriesByMemberId] = useState<Record<string, CapabilityCategory[]>>({});
 
   const title = useMemo(
   () =>
@@ -113,12 +117,13 @@ export default function BandMembersScreen() {
       const memberIds = members.map((m) => m.member_id);
       if (memberIds.length === 0) {
         if (alive) setCapabilitySummaryByMemberId({});
+        if (alive) setCapabilityCategoriesByMemberId({});
         return;
       }
 
       const { data, error } = await supabase
         .from("person_capabilities")
-        .select("member_id, capabilities(name)")
+        .select("member_id, capabilities(name,category)")
         .in("member_id", memberIds);
 
       if (!alive) return;
@@ -126,26 +131,61 @@ export default function BandMembersScreen() {
       if (error) {
         console.log("loadCapabilitySummaries error", error);
         setCapabilitySummaryByMemberId({});
+        setCapabilityCategoriesByMemberId({});
         return;
       }
 
-      const next: Record<string, string[]> = {};
+      const nextSummaryByMemberId: Record<string, string[]> = {};
+      const nextCategoriesByMemberId: Record<string, CapabilityCategory[]> = {};
 
       ((data ?? []) as CapabilityRow[]).forEach((row) => {
-        const name =
+        const capability =
           Array.isArray(row.capabilities)
-            ? row.capabilities[0]?.name
-            : row.capabilities?.name;
+            ? row.capabilities[0]
+            : row.capabilities;
+
+        const name = capability?.name?.trim();
+        const category = capability?.category ?? null;
+
         if (!name) return;
-        if (!next[row.member_id]) next[row.member_id] = [];
-        next[row.member_id].push(name);
+
+        if (!nextSummaryByMemberId[row.member_id]) {
+          nextSummaryByMemberId[row.member_id] = [];
+        }
+        nextSummaryByMemberId[row.member_id].push(name);
+
+        if (
+          category &&
+          CAPABILITY_CATEGORY_ORDER.includes(category) &&
+          !(
+            nextCategoriesByMemberId[row.member_id] ?? []
+          ).includes(category)
+        ) {
+          if (!nextCategoriesByMemberId[row.member_id]) {
+            nextCategoriesByMemberId[row.member_id] = [];
+          }
+          nextCategoriesByMemberId[row.member_id].push(category);
+        }
       });
 
-      Object.keys(next).forEach((id) => {
-        next[id] = next[id].sort((a, b) => a.localeCompare(b));
+      Object.keys(nextSummaryByMemberId).forEach((id) => {
+        nextSummaryByMemberId[id] = nextSummaryByMemberId[id].sort((a, b) =>
+          a.localeCompare(b),
+        );
       });
 
-      if (alive) setCapabilitySummaryByMemberId(next);
+      Object.keys(nextCategoriesByMemberId).forEach((id) => {
+        nextCategoriesByMemberId[id] = nextCategoriesByMemberId[id].sort(
+          (a, b) =>
+            CAPABILITY_CATEGORY_ORDER.indexOf(a) -
+            CAPABILITY_CATEGORY_ORDER.indexOf(b),
+        );
+      });
+
+      if (alive) {
+        setCapabilitySummaryByMemberId(nextSummaryByMemberId);
+        setCapabilityCategoriesByMemberId(nextCategoriesByMemberId);
+      }
     };
 
     loadCapabilitySummaries();
@@ -154,25 +194,19 @@ export default function BandMembersScreen() {
     };
   }, [members]);
 
+  const capabilityCategoryLabel = (category: CapabilityCategory) => {
+    if (category === "performance") return t("people.category.performance");
+    if (category === "crew") return t("people.category.crew");
+    if (category === "logistics") return t("people.category.logistics");
+    if (category === "business") return t("people.category.business");
+    if (category === "creative_specialist") return t("people.category.creativeSpecialist");
+    return t("people.category.other");
+  };
+
   const renderMemberRow = ({ item }: { item: BandMemberRow }) => {
-    const presetPositions = item.band_positions ?? [];
-    const customPositions = item.band_positions_other ?? [];
-    const allPositions = [...presetPositions, ...customPositions].filter(
-      Boolean,
-    );
-    const positions = allPositions.length > 0 ? allPositions.join(", ") : "";
-
-    const roleDisplay =
-      item.band_role === "Other"
-        ? item.band_role_other?.trim() || t("bandMembers.other")
-        : (item.band_role ?? "").trim();
-
     const statusLabel = item.is_active ? "" : t("bandMembers.inactive");
 
-    const crewLike = isCrewMember(item);
-    const typeLabel = crewLike
-      ? t("bandMembers.typeCrew")
-      : t("bandMembers.typeMusician");
+    const categoryBadges = capabilityCategoriesByMemberId[item.member_id] ?? [];
     const caps = capabilitySummaryByMemberId[item.member_id] ?? [];
     const capSubtitle =
       caps.length > 0
@@ -202,29 +236,16 @@ export default function BandMembersScreen() {
           {item.email ? <Text style={styles.meta2}>{item.email}</Text> : null}
 
           <View style={styles.tagRow}>
-            <View
-              style={[
-                styles.typeTag,
-                crewLike ? styles.typeTagCrew : styles.typeTagMusician,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.typeTagText,
-                  crewLike
-                    ? styles.typeTagCrewText
-                    : styles.typeTagMusicianText,
-                ]}
+            {categoryBadges.map((category) => (
+              <View
+                key={`${item.member_id}-${category}`}
+                style={styles.categoryTag}
               >
-                {typeLabel}
-              </Text>
-            </View>
-
-            {!!item.is_dep ? (
-              <View style={styles.depTag}>
-                <Text style={styles.depTagText}>{t("bandMembers.dep")}</Text>
+                <Text style={styles.categoryTagText}>
+                  {capabilityCategoryLabel(category)}
+                </Text>
               </View>
-            ) : null}
+            ))}
 
             {!!item.is_admin ? (
               <View style={styles.adminTag}>
@@ -376,6 +397,19 @@ const styles = StyleSheet.create({
   empty: { marginTop: 6, color: "#666" },
 
   tagRow: { flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" },
+
+  categoryTag: {
+    alignSelf: "flex-start",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#F9FAFB",
+  },
+  categoryTagText: { fontSize: 11, fontWeight: "800", color: "#4B5563" },
+
+  // legacy badge styles retained for now
 
   typeTag: {
     alignSelf: "flex-start",

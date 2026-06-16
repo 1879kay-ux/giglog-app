@@ -77,6 +77,11 @@ type BandMemberRow = {
   can_view_finance: boolean | null;
 };
 
+type CapabilityChip = {
+  name: string;
+  category: string | null;
+};
+
 export default function EditBandMemberScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -117,6 +122,7 @@ export default function EditBandMemberScreen() {
   const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [customInstruments, setCustomInstruments] = useState<string[]>([]);
   const [customInstrumentInput, setCustomInstrumentInput] = useState("");
+  const [loadedCapabilities, setLoadedCapabilities] = useState<CapabilityChip[]>([]);
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isActive, setIsActive] = useState(true);
@@ -201,6 +207,25 @@ export default function EditBandMemberScreen() {
 
       setInstruments((row.band_positions as Instrument[]) ?? []);
       setCustomInstruments((row.band_positions_other as string[]) ?? []);
+
+      const { data: capabilitiesRows, error: capabilitiesError } = await supabase
+        .from("person_capabilities")
+        .select("capabilities(name,category)")
+        .eq("member_id", row.member_id);
+
+      if (capabilitiesError) {
+        console.log("load capabilities error", capabilitiesError);
+        setLoadedCapabilities([]);
+      } else {
+        const nextCapabilities = ((capabilitiesRows ?? []) as any[])
+          .map((item) => item.capabilities)
+          .filter((item) => item?.name)
+          .map((item) => ({
+            name: item.name as string,
+            category: (item.category as string | null) ?? null,
+          }));
+        setLoadedCapabilities(nextCapabilities);
+      }
 
       setIsAdmin(!!row.is_admin);
       setIsActive(!!row.is_active);
@@ -521,6 +546,24 @@ export default function EditBandMemberScreen() {
               ))}
             </View>
           ) : null}
+
+          <Text style={styles.label}>{t("people.capabilities")}</Text>
+          {loadedCapabilities.length === 0 ? (
+            <Text style={styles.hint}>{t("people.noCapabilities")}</Text>
+          ) : (
+            <View style={[styles.chipWrap, { marginTop: 2 }]}>
+              {loadedCapabilities.map((capability, index) => (
+                <View
+                  key={`${capability.name}-${capability.category ?? "none"}-${index}`}
+                  style={[styles.chip, { borderColor: "#009999" }]}
+                >
+                  <Text style={[styles.chipText, { color: "#009999" }]}>
+                    {capability.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           <View style={styles.toggleRow}>
             <Pressable

@@ -68,6 +68,7 @@ type BandMemberRow = {
   band_id: string | null;
   display_name: string | null;
   email: string | null;
+  phone: string | null;
 
   member_type: MemberType | null;
 
@@ -124,6 +125,7 @@ export default function EditBandMemberScreen() {
 
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
 
   const [memberType, setMemberType] = useState<MemberType>("musician");
 
@@ -179,6 +181,7 @@ export default function EditBandMemberScreen() {
             "band_id",
             "display_name",
             "email",
+            "phone",
             "member_type",
             "band_role",
             "band_role_other",
@@ -208,6 +211,7 @@ export default function EditBandMemberScreen() {
 
       setDisplayName(row.display_name ?? "");
       setEmail(row.email ?? "");
+      setPhone(row.phone ?? "");
 
       const mt: MemberType = (row.member_type as MemberType) ?? "musician";
       setMemberType(mt);
@@ -479,6 +483,7 @@ export default function EditBandMemberScreen() {
     const payload: any = {
       display_name: name,
       email: emailClean,
+      phone: phone.trim() || null,
 
       member_type: memberType,
 
@@ -724,6 +729,15 @@ export default function EditBandMemberScreen() {
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
+            style={styles.input}
+          />
+          <Text style={styles.label}>{t("people.phone")}</Text>
+          <TextInput
+            value={phone}
+            onChangeText={setPhone}
+            placeholder={t("people.placeholderPhone")}
+            autoCapitalize="none"
+            keyboardType="phone-pad"
             style={styles.input}
           />
 

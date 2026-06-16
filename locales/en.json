@@ -234,6 +234,8 @@
   "people.titleAll": "People (All)",
   "people.capabilities": "Capabilities",
   "people.noCapabilities": "No capabilities",
+  "people.phone": "Phone",
+  "people.placeholderPhone": "e.g. +44 7700 900123",
   "people.category.performance": "Performance",
   "people.category.crew": "Crew",
   "people.category.logistics": "Logistics",

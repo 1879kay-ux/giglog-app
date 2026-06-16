@@ -1,7 +1,7 @@
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { supabase } from "@/lib/supabase";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -27,6 +27,11 @@ type BandMemberRow = {
   is_active: boolean | null;
   is_admin: boolean | null;
   is_dep: boolean | null;
+};
+
+type CapabilityRow = {
+  member_id: string;
+  capabilities: { name: string | null } | { name: string | null }[] | null;
 };
 
 const CREW_ROLE_SET = new Set<string>([
@@ -59,6 +64,7 @@ export default function BandMembersScreen() {
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<BandMemberRow[]>([]);
   const [showInactive, setShowInactive] = useState(false);
+  const [capabilitySummaryByMemberId, setCapabilitySummaryByMemberId] = useState<Record<string, string[]>>({});
 
   const title = useMemo(
   () =>
@@ -99,6 +105,54 @@ export default function BandMembersScreen() {
       return () => {};
     }, [loadMembers]),
   );
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadCapabilitySummaries = async () => {
+      const memberIds = members.map((m) => m.member_id);
+      if (memberIds.length === 0) {
+        if (alive) setCapabilitySummaryByMemberId({});
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("person_capabilities")
+        .select("member_id, capabilities(name)")
+        .in("member_id", memberIds);
+
+      if (!alive) return;
+
+      if (error) {
+        console.log("loadCapabilitySummaries error", error);
+        setCapabilitySummaryByMemberId({});
+        return;
+      }
+
+      const next: Record<string, string[]> = {};
+
+      ((data ?? []) as CapabilityRow[]).forEach((row) => {
+        const name =
+          Array.isArray(row.capabilities)
+            ? row.capabilities[0]?.name
+            : row.capabilities?.name;
+        if (!name) return;
+        if (!next[row.member_id]) next[row.member_id] = [];
+        next[row.member_id].push(name);
+      });
+
+      Object.keys(next).forEach((id) => {
+        next[id] = next[id].sort((a, b) => a.localeCompare(b));
+      });
+
+      if (alive) setCapabilitySummaryByMemberId(next);
+    };
+
+    loadCapabilitySummaries();
+    return () => {
+      alive = false;
+    };
+  }, [members]);
 
   const renderMemberRow = ({ item }: { item: BandMemberRow }) => {
     const presetPositions = item.band_positions ?? [];

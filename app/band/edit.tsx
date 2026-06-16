@@ -625,37 +625,51 @@ export default function EditBandMemberScreen() {
           {groupedCapabilities.length === 0 ? (
             <Text style={styles.hint}>{t("people.noCapabilities")}</Text>
           ) : (
-            <View style={{ marginTop: 2, gap: 4 }}>
+            <View style={{ marginTop: 4, gap: 8 }}>
               {groupedCapabilities.map((group) => {
                 const isExpanded = expandedCategories.has(group.category);
                 const selectedCount = group.items.filter((cap) =>
                   selectedCapabilityIds.includes(cap.capability_id),
                 ).length;
                 return (
-                  <View key={group.category}>
+                  <View key={group.category} style={styles.capabilityAccordionCard}>
                     <Pressable
                       onPress={() => toggleCategoryExpanded(group.category)}
-                      style={styles.capabilityAccordionHeader}
+                      style={[
+                        styles.capabilityAccordionHeader,
+                        isExpanded && styles.capabilityAccordionHeaderExpanded,
+                      ]}
                     >
-                      <Text style={[styles.hint, { flex: 1 }]}>
-                        {`${capabilityCategoryLabel(group.category)} (${selectedCount})`}
-                      </Text>
-                      <Ionicons
-                        name={isExpanded ? "chevron-up" : "chevron-down"}
-                        size={16}
-                        color="#666"
-                      />
+                      <View style={styles.capabilityAccordionHeaderAccent} />
+                      <View style={styles.capabilityAccordionHeaderContent}>
+                        <Text style={styles.capabilityAccordionTitle}>
+                          {capabilityCategoryLabel(group.category)}
+                        </Text>
+                        <View style={styles.capabilityAccordionHeaderRight}>
+                          <View style={styles.capabilityCountBadge}>
+                            <Text style={styles.capabilityCountBadgeText}>
+                              {selectedCount}
+                            </Text>
+                          </View>
+                          <Ionicons
+                            name={isExpanded ? "chevron-up" : "chevron-down"}
+                            size={18}
+                            color="#6B7280"
+                          />
+                        </View>
+                      </View>
                     </Pressable>
                     {isExpanded ? (
-                      <View style={[styles.chipWrap, { marginTop: 8 }]}>
-                        {group.items.map((capability) => {
-                          const selected = selectedCapabilityIds.includes(capability.capability_id);
-                          return (
-                            <Pressable
-                              key={capability.capability_id}
-                              onPress={() => toggleCapability(capability.capability_id)}
-                              style={[styles.chip, selected && styles.chipSelected]}
-                            >
+                      <View style={styles.capabilityAccordionBody}>
+                        <View style={styles.chipWrap}>
+                          {group.items.map((capability) => {
+                            const selected = selectedCapabilityIds.includes(capability.capability_id);
+                            return (
+                              <Pressable
+                                key={capability.capability_id}
+                                onPress={() => toggleCapability(capability.capability_id)}
+                                style={[styles.chip, selected && styles.chipSelected]}
+                              >
                               <Text
                                 style={[
                                   styles.chipText,
@@ -664,9 +678,10 @@ export default function EditBandMemberScreen() {
                               >
                                 {capability.name}
                               </Text>
-                            </Pressable>
-                          );
-                        })}
+                              </Pressable>
+                            );
+                          })}
+                        </View>
                       </View>
                     ) : null}
                   </View>
@@ -837,12 +852,71 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
+  capabilityAccordionCard: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
   capabilityAccordionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    backgroundColor: "#FAFAFA",
+  },
+  capabilityAccordionHeaderExpanded: {
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: "#F1F5F9",
+  },
+  capabilityAccordionHeaderAccent: {
+    width: 5,
+    alignSelf: "stretch",
+    backgroundColor: "#009999",
+  },
+  capabilityAccordionHeaderContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+  },
+  capabilityAccordionTitle: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1F2937",
+    paddingRight: 10,
+  },
+  capabilityAccordionHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginLeft: 10,
+  },
+  capabilityCountBadge: {
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 7,
+    borderRadius: 999,
+    backgroundColor: "#E6F7F7",
+    borderWidth: 1,
+    borderColor: "#009999",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  capabilityCountBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#007A7A",
+    lineHeight: 13,
+  },
+  capabilityAccordionBody: {
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 12,
   },
 
   toggleRow: { flexDirection: "row", gap: 10, marginTop: 16 },

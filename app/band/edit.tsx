@@ -621,64 +621,6 @@ export default function EditBandMemberScreen() {
             style={styles.input}
           />
 
-          <Text style={styles.label}>{t("bandEdit.instruments")}</Text>
-          <View style={styles.chipWrap}>
-            {INSTRUMENTS.map((p) => {
-              const selected = instruments.includes(p);
-              return (
-                <Pressable
-                  key={p}
-                  onPress={() => toggleInstrument(p)}
-                  style={[styles.chip, selected && styles.chipSelected]}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      selected && styles.chipTextSelected,
-                    ]}
-                  >
-                    {instrumentLabel(p)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Text style={styles.label}>{t("bandEdit.customInstruments")}</Text>
-          <View style={styles.customRow}>
-            <TextInput
-              value={customInstrumentInput}
-              onChangeText={setCustomInstrumentInput}
-              placeholder={t("bandEdit.placeholderCustomInstrument")}
-              style={[
-                styles.input,
-                { flex: 1, marginTop: 0, marginBottom: 0 },
-              ]}
-            />
-            <Pressable
-              style={styles.addButton}
-              onPress={addCustomInstrument}
-            >
-              <Text style={styles.addButtonText}>{t("bandEdit.add")}</Text>
-            </Pressable>
-          </View>
-
-          {customInstruments.length > 0 ? (
-            <View style={styles.customChipWrap}>
-              {customInstruments.map((p) => (
-                <Pressable
-                  key={p}
-                  style={[styles.chip, { borderColor: "#009999" }]}
-                  onPress={() => removeCustomInstrument(p)}
-                >
-                  <Text style={[styles.chipText, { color: "#009999" }]}>
-                    {p} ✕
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-
           <Text style={styles.label}>{t("people.capabilities")}</Text>
           {groupedCapabilities.length === 0 ? (
             <Text style={styles.hint}>{t("people.noCapabilities")}</Text>

@@ -173,6 +173,11 @@ export default function BandMembersScreen() {
     const typeLabel = crewLike
       ? t("bandMembers.typeCrew")
       : t("bandMembers.typeMusician");
+    const caps = capabilitySummaryByMemberId[item.member_id] ?? [];
+    const capSubtitle =
+      caps.length > 0
+        ? `${caps.slice(0, 3).join(" • ")}${caps.length > 3 ? ` +${caps.length - 3} more` : ""}`
+        : t("people.noCapabilities");
 
     return (
       <Pressable
@@ -192,10 +197,7 @@ export default function BandMembersScreen() {
             ) : null}
           </View>
 
-          <Text style={styles.meta}>
-            {roleDisplay}
-            {positions ? ` • ${positions}` : ""}
-          </Text>
+          <Text style={styles.meta}>{capSubtitle}</Text>
 
           {item.email ? <Text style={styles.meta2}>{item.email}</Text> : null}
 

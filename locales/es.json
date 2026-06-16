@@ -232,6 +232,8 @@
   "people.addTitle": "Añadir persona",
   "people.titleActive": "Personas",
   "people.titleAll": "Personas (Todas)",
+  "people.capabilities": "Capacidades",
+  "people.noCapabilities": "Sin capacidades",
   "acts.remove": "Eliminar",
   "home.nextEvent": "Próximo evento",
   "home.noUpcomingEvents": "No hay próximos eventos.",

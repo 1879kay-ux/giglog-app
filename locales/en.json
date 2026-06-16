@@ -232,6 +232,8 @@
   "people.addTitle": "Add Person",
   "people.titleActive": "People",
   "people.titleAll": "People (All)",
+  "people.capabilities": "Capabilities",
+  "people.noCapabilities": "No capabilities",
   "acts.remove": "Remove",
   "home.nextEvent": "Next Event",
   "home.noUpcomingEvents": "No upcoming events.",

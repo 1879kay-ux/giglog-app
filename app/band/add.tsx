@@ -1,7 +1,8 @@
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 import { supabase } from "@/lib/supabase";
+import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -34,20 +35,15 @@ const CREW_ROLES = [
 ] as const;
 type CrewRole = (typeof CREW_ROLES)[number];
 
-const INSTRUMENTS = [
-  "Lead Vox",
-  "Backing Vox",
-  "Drums",
-  "Bass",
-  "Lead Guitar",
-  "Guitar",
-  "Rhythm Guitar",
-  "Keyboards",
-  "Saxophone",
-  "Trumpet",
-  "Trombone",
+const CAPABILITY_CATEGORY_ORDER = [
+  "performance",
+  "crew",
+  "logistics",
+  "business",
+  "creative_specialist",
+  "other",
 ] as const;
-type Instrument = (typeof INSTRUMENTS)[number];
+type CapabilityCategory = (typeof CAPABILITY_CATEGORY_ORDER)[number];
 
 const CREW_ROLE_SET = new Set<string>([
   "Crew",
@@ -58,6 +54,12 @@ const CREW_ROLE_SET = new Set<string>([
   "Lighting",
   "Tech",
 ]);
+
+type CapabilityChip = {
+  capability_id: string;
+  name: string;
+  category: CapabilityCategory;
+};
 
 type InviteResponse =
   | {
@@ -84,6 +86,7 @@ export default function AddBandMemberScreen() {
 
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
 
   const [memberType, setMemberType] = useState<MemberType>("musician");
 
@@ -91,11 +94,6 @@ export default function AddBandMemberScreen() {
   const [musicianRole, setMusicianRole] = useState<MusicianRole>("Band");
   const [crewRole, setCrewRole] = useState<CrewRole>("Crew");
   const [roleOther, setRoleOther] = useState("");
-
-  // instruments (musician only)
-  const [instruments, setInstruments] = useState<Instrument[]>([]);
-  const [customInstruments, setCustomInstruments] = useState<string[]>([]);
-  const [customInstrumentInput, setCustomInstrumentInput] = useState("");
 
   const [isActive, setIsActive] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -105,27 +103,86 @@ export default function AddBandMemberScreen() {
   const [canViewBandAndCrew, setCanViewBandAndCrew] = useState(false);
   const [canViewBandDocs, setCanViewBandDocs] = useState(false);
   const [canViewFinance, setCanViewFinance] = useState(false);
+  const [bandId, setBandId] = useState<string | null>(null);
+  const [loadedCapabilities, setLoadedCapabilities] = useState<CapabilityChip[]>([]);
+  const [selectedCapabilityIds, setSelectedCapabilityIds] = useState<string[]>([]);
+  const [expandedCategories, setExpandedCategories] =  useState<Set<CapabilityCategory>>(new Set(["performance"]));
 
   const role = useMemo(() => {
     return memberType === "musician" ? musicianRole : crewRole;
   }, [memberType, musicianRole, crewRole]);
 
-  const toggleInstrument = (p: Instrument) => {
-    setInstruments((prev) =>
-      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p],
+  const toggleCapability = (capabilityId: string) => {
+    setSelectedCapabilityIds((prev) =>
+      prev.includes(capabilityId)
+        ? prev.filter((id) => id !== capabilityId)
+        : [...prev, capabilityId],
     );
   };
 
-  const addCustomInstrument = () => {
-    const v = customInstrumentInput.trim();
-    if (!v) return;
-    setCustomInstruments((prev) => (prev.includes(v) ? prev : [...prev, v]));
-    setCustomInstrumentInput("");
+  const toggleCategoryExpanded = (category: CapabilityCategory) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
   };
 
-  const removeCustomInstrument = (p: string) => {
-    setCustomInstruments((prev) => prev.filter((x) => x !== p));
-  };
+  useEffect(() => {
+    let alive = true;
+
+    const loadCapabilities = async () => {
+      const currentBandId = await getCurrentBandId();
+      if (!alive) return;
+
+      setBandId(currentBandId);
+
+      if (!currentBandId) {
+        setLoadedCapabilities([]);
+        setSelectedCapabilityIds([]);
+        setExpandedCategories(new Set<CapabilityCategory>(["performance"]),);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("capabilities")
+        .select("capability_id,name,category")
+        .eq("band_id", currentBandId)
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+
+      if (!alive) return;
+
+      if (error) {
+        console.log("load capabilities catalogue error", error);
+        setLoadedCapabilities([]);
+        return;
+      }
+
+      const nextCapabilities = ((data ?? []) as any[])
+        .filter(
+          (item) =>
+            item?.capability_id &&
+            item?.name &&
+            CAPABILITY_CATEGORY_ORDER.includes(item?.category as CapabilityCategory),
+        )
+        .map((item) => ({
+          capability_id: item.capability_id as string,
+          name: item.name as string,
+          category: item.category as CapabilityCategory,
+        }));
+      setLoadedCapabilities(nextCapabilities);
+    };
+
+    loadCapabilities();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   async function getCurrentBandId(): Promise<string | null> {
     const { data: sessionData, error: sessionErr } =
@@ -190,21 +247,22 @@ export default function AddBandMemberScreen() {
     const finalMemberType: MemberType = CREW_ROLE_SET.has(role)
       ? "crew"
       : memberType;
-    const finalPositions = finalMemberType === "musician" ? instruments : [];
-    const finalPositionsOther =
-      finalMemberType === "musician" ? customInstruments : [];
+    const finalPositions: string[] = [];
+    const finalPositionsOther: string[] = [];
 
     setSaving(true);
 
     try {
-      const bandId = await getCurrentBandId();
-      if (!bandId) {
+      const currentBandId = bandId ?? (await getCurrentBandId());
+      if (!currentBandId) {
         Alert.alert(
           i18n.t("bandAdd.alert.errorTitle"),
           i18n.t("bandAdd.alert.noBandIdFoundForCurrentUser"),
         );
         return;
       }
+
+      if (!bandId) setBandId(currentBandId);
 
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData?.session?.access_token;
@@ -226,9 +284,10 @@ export default function AddBandMemberScreen() {
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          band_id: bandId,
+          band_id: currentBandId,
           display_name: name,
           email: emailClean,
+          phone: phone.trim() || null,
           member_type: finalMemberType,
           is_active: isActive,
           is_admin: isAdmin,
@@ -270,6 +329,7 @@ export default function AddBandMemberScreen() {
       const patch: any = {
         band_role: role,
         band_role_other: role === "Other" ? roleOther.trim() || null : null,
+        phone: phone.trim() || null,
         band_positions: finalPositions,
         band_positions_other: finalPositionsOther,
         is_active: isActive,
@@ -290,6 +350,21 @@ export default function AddBandMemberScreen() {
 
       if (patchErr) throw new Error(patchErr.message);
 
+      if (selectedCapabilityIds.length > 0) {
+        const capabilityRows = selectedCapabilityIds.map((capabilityId) => ({
+          member_id: data.member_id,
+          capability_id: capabilityId,
+        }));
+
+        const { error: insertCapabilitiesError } = await supabase
+          .from("person_capabilities")
+          .insert(capabilityRows);
+
+        if (insertCapabilitiesError) {
+          throw new Error(insertCapabilitiesError.message);
+        }
+      }
+
       Alert.alert(
         i18n.t("bandAdd.alert.inviteSentTitle"),
         data.note ??
@@ -308,6 +383,24 @@ export default function AddBandMemberScreen() {
 
   const rolesToRender = memberType === "musician" ? MUSICIAN_ROLES : CREW_ROLES;
   const selectedRole = role;
+
+  const capabilityCategoryLabel = (category: CapabilityCategory) => {
+    if (category === "performance") return i18n.t("people.category.performance");
+    if (category === "crew") return i18n.t("people.category.crew");
+    if (category === "logistics") return i18n.t("people.category.logistics");
+    if (category === "business") return i18n.t("people.category.business");
+    if (category === "creative_specialist") {
+      return i18n.t("people.category.creativeSpecialist");
+    }
+    return i18n.t("people.category.other");
+  };
+
+  const groupedCapabilities = CAPABILITY_CATEGORY_ORDER
+    .map((category) => ({
+      category,
+      items: loadedCapabilities.filter((capability) => capability.category === category),
+    }))
+    .filter((group) => group.items.length > 0);
 
   const ToggleChip = (props: {
     label: string;
@@ -362,88 +455,79 @@ export default function AddBandMemberScreen() {
             keyboardType="email-address"
             style={styles.input}
           />
+          <Text style={styles.label}>{i18n.t("people.phone")}</Text>
+          <TextInput
+            value={phone}
+            onChangeText={setPhone}
+            placeholder={i18n.t("people.placeholderPhone")}
+            autoCapitalize="none"
+            keyboardType="phone-pad"
+            style={styles.input}
+          />
 
-          <>
-              <Text style={styles.label}>{i18n.t("bandAdd.instruments")}</Text>
-              <View style={styles.chipWrap}>
-                {INSTRUMENTS.map((p) => {
-                  const selected = instruments.includes(p);
-                  return (
+          <Text style={styles.label}>{i18n.t("people.capabilities")}</Text>
+          {groupedCapabilities.length === 0 ? (
+            <Text style={styles.hint}>{i18n.t("people.noCapabilities")}</Text>
+          ) : (
+            <View style={{ marginTop: 4, gap: 8 }}>
+              {groupedCapabilities.map((group) => {
+                const isExpanded = expandedCategories.has(group.category);
+                const selectedCount = group.items.filter((cap) =>
+                  selectedCapabilityIds.includes(cap.capability_id),
+                ).length;
+                return (
+                  <View key={group.category} style={styles.capabilityAccordionCard}>
                     <Pressable
-                      key={p}
-                      onPress={() => toggleInstrument(p)}
-                      style={[styles.chip, selected && styles.chipSelected]}
+                      onPress={() => toggleCategoryExpanded(group.category)}
+                      style={[
+                        styles.capabilityAccordionHeader,
+                        isExpanded && styles.capabilityAccordionHeaderExpanded,
+                      ]}
                     >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          selected && styles.chipTextSelected,
-                        ]}
-                      >
-                        {p === "Lead Vox"
-                          ? i18n.t("bandAdd.instrumentLeadVox")
-                          : p === "Backing Vox"
-                            ? i18n.t("bandAdd.instrumentBackingVox")
-                            : p === "Drums"
-                              ? i18n.t("bandAdd.instrumentDrums")
-                              : p === "Bass"
-                                ? i18n.t("bandAdd.instrumentBass")
-                                : p === "Lead Guitar"
-                                  ? i18n.t("bandAdd.instrumentLeadGuitar")
-                                  : p === "Guitar"
-                                    ? i18n.t("bandAdd.instrumentGuitar")
-                                    : p === "Rhythm Guitar"
-                                      ? i18n.t("bandAdd.instrumentRhythmGuitar")
-                                      : p === "Keyboards"
-                                        ? i18n.t("bandAdd.instrumentKeyboards")
-                                        : p === "Saxophone"
-                                          ? i18n.t("bandAdd.instrumentSaxophone")
-                                          : p === "Trumpet"
-                                            ? i18n.t("bandAdd.instrumentTrumpet")
-                                            : p === "Trombone"
-                                              ? i18n.t("bandAdd.instrumentTrombone")
-                                              : p}
-                      </Text>
+                      <View style={styles.capabilityAccordionHeaderAccent} />
+                      <View style={styles.capabilityAccordionHeaderContent}>
+                        <Text style={styles.capabilityAccordionTitle}>
+                          {capabilityCategoryLabel(group.category)}
+                        </Text>
+                        <View style={styles.capabilityAccordionHeaderRight}>
+                          <View style={styles.capabilityCountBadge}>
+                            <Text style={styles.capabilityCountBadgeText}>
+                              {selectedCount}
+                            </Text>
+                          </View>
+                          <Ionicons
+                            name={isExpanded ? "chevron-up" : "chevron-down"}
+                            size={18}
+                            color="#6B7280"
+                          />
+                        </View>
+                      </View>
                     </Pressable>
-                  );
-                })}
-              </View>
-
-              <Text style={styles.label}>{i18n.t("bandAdd.customInstruments")}</Text>
-              <View style={styles.customRow}>
-                <TextInput
-                  value={customInstrumentInput}
-                  onChangeText={setCustomInstrumentInput}
-                  placeholder={i18n.t("bandAdd.placeholderCustomInstrument")}
-                  style={[
-                    styles.input,
-                    { flex: 1, marginTop: 0, marginBottom: 0 },
-                  ]}
-                />
-                <Pressable
-                  style={styles.addButton}
-                  onPress={addCustomInstrument}
-                >
-                  <Text style={styles.addButtonText}>{i18n.t("bandAdd.add")}</Text>
-                </Pressable>
-              </View>
-
-              {customInstruments.length > 0 ? (
-                <View style={styles.customChipWrap}>
-                  {customInstruments.map((p) => (
-                    <Pressable
-                      key={p}
-                      style={[styles.chip, { borderColor: "#009999" }]}
-                      onPress={() => removeCustomInstrument(p)}
-                    >
-                      <Text style={[styles.chipText, { color: "#009999" }]}>
-                        {p} ✕
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : null}
-          </>
+                    {isExpanded ? (
+                      <View style={styles.capabilityAccordionBody}>
+                        <View style={styles.chipWrap}>
+                          {group.items.map((capability) => {
+                            const selected = selectedCapabilityIds.includes(capability.capability_id);
+                            return (
+                              <Pressable
+                                key={capability.capability_id}
+                                onPress={() => toggleCapability(capability.capability_id)}
+                                style={[styles.chip, selected && styles.chipSelected]}
+                              >
+                                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                                  {capability.name}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          )}
 
           <View style={styles.toggleRow}>
             <Pressable
@@ -609,20 +693,71 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 12, fontWeight: "700", color: "#333" },
   chipTextSelected: { color: "#fff" },
 
-  customRow: { flexDirection: "row", gap: 8, alignItems: "center" },
-  addButton: {
-    backgroundColor: "#009999",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+  capabilityAccordionCard: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
     borderRadius: 12,
+    overflow: "hidden",
+  },
+  capabilityAccordionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    backgroundColor: "#FAFAFA",
+  },
+  capabilityAccordionHeaderExpanded: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  capabilityAccordionHeaderAccent: {
+    width: 5,
+    alignSelf: "stretch",
+    backgroundColor: "#009999",
+  },
+  capabilityAccordionHeaderContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+  },
+  capabilityAccordionTitle: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1F2937",
+    paddingRight: 10,
+  },
+  capabilityAccordionHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginLeft: 10,
+  },
+  capabilityCountBadge: {
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 7,
+    borderRadius: 999,
+    backgroundColor: "#E6F7F7",
+    borderWidth: 1,
+    borderColor: "#009999",
+    alignItems: "center",
     justifyContent: "center",
   },
-  addButtonText: { color: "#fff", fontWeight: "800" },
-  customChipWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 10,
+  capabilityCountBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#007A7A",
+    lineHeight: 13,
+  },
+  capabilityAccordionBody: {
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 12,
   },
 
   toggleRow: { flexDirection: "row", gap: 10, marginTop: 16 },

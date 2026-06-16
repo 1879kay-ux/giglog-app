@@ -4,12 +4,13 @@ import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+  TextInput,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 
 type BandMemberRow = {
@@ -68,6 +69,7 @@ export default function BandMembersScreen() {
   const [members, setMembers] = useState<BandMemberRow[]>([]);
   const [showInactive, setShowInactive] = useState(false);
   const [capabilitySummaryByMemberId, setCapabilitySummaryByMemberId] = useState<Record<string, string[]>>({});
+  const [searchQuery, setSearchQuery] = useState("");
   const [capabilityCategoriesByMemberId, setCapabilityCategoriesByMemberId] = useState<Record<string, CapabilityCategory[]>>({});
 
   const title = useMemo(
@@ -203,6 +205,25 @@ export default function BandMembersScreen() {
     return t("people.category.other");
   };
 
+  const filteredMembers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return members;
+
+    return members.filter((m) => {
+      const name = (m.display_name ?? "").toLowerCase();
+      const email = (m.email ?? "").toLowerCase();
+      const capabilityText = (capabilitySummaryByMemberId[m.member_id] ?? [])
+        .join(" • ")
+        .toLowerCase();
+
+      return (
+        name.includes(q) ||
+        email.includes(q) ||
+        capabilityText.includes(q)
+      );
+    });
+  }, [members, capabilitySummaryByMemberId, searchQuery]);
+
   const renderMemberRow = ({ item }: { item: BandMemberRow }) => {
     const statusLabel = item.is_active ? "" : t("bandMembers.inactive");
 
@@ -308,8 +329,16 @@ export default function BandMembersScreen() {
         ) : (
           <View style={{ flex: 1 }}>
             <Text style={styles.sectionTitle}>{t("people.titleActive")}</Text>
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={t("people.searchPlaceholder")}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={styles.searchInput}
+            />
             <FlatList
-              data={members}
+              data={filteredMembers}
               keyExtractor={(item) => item.member_id}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
               renderItem={renderMemberRow}
@@ -361,6 +390,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     color: "#333",
+    marginBottom: 10,
+  },
+
+  searchInput: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    fontSize: 14,
     marginBottom: 10,
   },
 

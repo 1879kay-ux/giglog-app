@@ -53,8 +53,19 @@ const INSTRUMENTS = [
 ] as const;
 type Instrument = (typeof INSTRUMENTS)[number];
 
+const CAPABILITY_CATEGORY_ORDER = [
+  "performance",
+  "crew",
+  "logistics",
+  "business",
+  "creative_specialist",
+  "other",
+] as const;
+type CapabilityCategory = (typeof CAPABILITY_CATEGORY_ORDER)[number];
+
 type BandMemberRow = {
   member_id: string;
+  band_id: string | null;
   display_name: string | null;
   email: string | null;
 
@@ -78,8 +89,9 @@ type BandMemberRow = {
 };
 
 type CapabilityChip = {
+  capability_id: string;
   name: string;
-  category: string | null;
+  category: CapabilityCategory;
 };
 
 export default function EditBandMemberScreen() {
@@ -123,6 +135,7 @@ export default function EditBandMemberScreen() {
   const [customInstruments, setCustomInstruments] = useState<string[]>([]);
   const [customInstrumentInput, setCustomInstrumentInput] = useState("");
   const [loadedCapabilities, setLoadedCapabilities] = useState<CapabilityChip[]>([]);
+  const [selectedCapabilityIds, setSelectedCapabilityIds] = useState<string[]>([]);
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isActive, setIsActive] = useState(true);
@@ -157,6 +170,7 @@ export default function EditBandMemberScreen() {
         .select(
           [
             "member_id",
+            "band_id",
             "display_name",
             "email",
             "member_type",
@@ -208,23 +222,56 @@ export default function EditBandMemberScreen() {
       setInstruments((row.band_positions as Instrument[]) ?? []);
       setCustomInstruments((row.band_positions_other as string[]) ?? []);
 
-      const { data: capabilitiesRows, error: capabilitiesError } = await supabase
-        .from("person_capabilities")
-        .select("capabilities(name,category)")
-        .eq("member_id", row.member_id);
-
-      if (capabilitiesError) {
-        console.log("load capabilities error", capabilitiesError);
+      if (!row.band_id) {
         setLoadedCapabilities([]);
+        setSelectedCapabilityIds([]);
       } else {
-        const nextCapabilities = ((capabilitiesRows ?? []) as any[])
-          .map((item) => item.capabilities)
-          .filter((item) => item?.name)
-          .map((item) => ({
-            name: item.name as string,
-            category: (item.category as string | null) ?? null,
-          }));
-        setLoadedCapabilities(nextCapabilities);
+        const { data: capabilitiesRows, error: capabilitiesError } = await supabase
+          .from("capabilities")
+          .select("capability_id,name,category")
+          .eq("band_id", row.band_id)
+          .eq("is_active", true)
+          .order("name", { ascending: true });
+
+        if (capabilitiesError) {
+          console.log("load capabilities catalogue error", capabilitiesError);
+          setLoadedCapabilities([]);
+        } else {
+          const nextCapabilities = ((capabilitiesRows ?? []) as any[])
+            .filter(
+              (item) =>
+                item?.capability_id &&
+                item?.name &&
+                CAPABILITY_CATEGORY_ORDER.includes(
+                  item?.category as CapabilityCategory
+                ),
+            )
+            .map((item) => ({
+              capability_id: item.capability_id as string,
+              name: item.name as string,
+              category: item.category as CapabilityCategory,
+            }));
+          setLoadedCapabilities(nextCapabilities);
+        }
+
+        const { data: assignedRows, error: assignedError } = await supabase
+          .from("person_capabilities")
+          .select("capability_id")
+          .eq("member_id", row.member_id);
+
+        if (assignedError) {
+          console.log("load assigned capabilities error", assignedError);
+          setSelectedCapabilityIds([]);
+        } else {
+          const nextSelectedIds = Array.from(
+            new Set(
+              ((assignedRows ?? []) as any[])
+                .map((item) => item.capability_id)
+                .filter((value) => typeof value === "string"),
+            ),
+          );
+          setSelectedCapabilityIds(nextSelectedIds);
+        }
       }
 
       setIsAdmin(!!row.is_admin);
@@ -257,6 +304,14 @@ export default function EditBandMemberScreen() {
 
   const removeCustomInstrument = (p: string) => {
     setCustomInstruments((prev) => prev.filter((x) => x !== p));
+  };
+
+  const toggleCapability = (capabilityId: string) => {
+    setSelectedCapabilityIds((prev) =>
+      prev.includes(capabilityId)
+        ? prev.filter((id) => id !== capabilityId)
+        : [...prev, capabilityId],
+    );
   };
 
   const onSave = async () => {
@@ -314,13 +369,44 @@ export default function EditBandMemberScreen() {
       .update(payload)
       .eq("member_id", id);
 
-    setSaving(false);
-
     if (error) {
+      setSaving(false);
       console.log("update member error", error);
       Alert.alert("Error", error.message);
       return;
     }
+
+    const { error: deleteCapabilitiesError } = await supabase
+      .from("person_capabilities")
+      .delete()
+      .eq("member_id", id);
+
+    if (deleteCapabilitiesError) {
+      setSaving(false);
+      console.log("delete capabilities error", deleteCapabilitiesError);
+      Alert.alert("Error", deleteCapabilitiesError.message);
+      return;
+    }
+
+    if (selectedCapabilityIds.length > 0) {
+      const capabilityRows = selectedCapabilityIds.map((capabilityId) => ({
+        member_id: id,
+        capability_id: capabilityId,
+      }));
+
+      const { error: insertCapabilitiesError } = await supabase
+        .from("person_capabilities")
+        .insert(capabilityRows);
+
+      if (insertCapabilitiesError) {
+        setSaving(false);
+        console.log("insert capabilities error", insertCapabilitiesError);
+        Alert.alert("Error", insertCapabilitiesError.message);
+        return;
+      }
+    }
+
+    setSaving(false);
 
     router.back();
   };
@@ -403,6 +489,24 @@ export default function EditBandMemberScreen() {
     if (p === "Trombone") return t("bandEdit.instrumentTrombone");
     return p;
   };
+
+  const capabilityCategoryLabel = (category: CapabilityCategory) => {
+    if (category === "performance") return t("people.category.performance");
+    if (category === "crew") return t("people.category.crew");
+    if (category === "logistics") return t("people.category.logistics");
+    if (category === "business") return t("people.category.business");
+    if (category === "creative_specialist") {
+      return t("people.category.creativeSpecialist");
+    }
+    return t("people.category.other");
+  };
+
+  const groupedCapabilities = CAPABILITY_CATEGORY_ORDER
+    .map((category) => ({
+      category,
+      items: loadedCapabilities.filter((capability) => capability.category === category),
+    }))
+    .filter((group) => group.items.length > 0);
 
   if (!gateChecked || loading) {
     return (
@@ -548,18 +652,36 @@ export default function EditBandMemberScreen() {
           ) : null}
 
           <Text style={styles.label}>{t("people.capabilities")}</Text>
-          {loadedCapabilities.length === 0 ? (
+          {groupedCapabilities.length === 0 ? (
             <Text style={styles.hint}>{t("people.noCapabilities")}</Text>
           ) : (
-            <View style={[styles.chipWrap, { marginTop: 2 }]}>
-              {loadedCapabilities.map((capability, index) => (
-                <View
-                  key={`${capability.name}-${capability.category ?? "none"}-${index}`}
-                  style={[styles.chip, { borderColor: "#009999" }]}
-                >
-                  <Text style={[styles.chipText, { color: "#009999" }]}>
-                    {capability.name}
+            <View style={{ marginTop: 2, gap: 10 }}>
+              {groupedCapabilities.map((group) => (
+                <View key={group.category}>
+                  <Text style={[styles.hint, { marginBottom: 6 }]}>
+                    {capabilityCategoryLabel(group.category)}
                   </Text>
+                  <View style={styles.chipWrap}>
+                    {group.items.map((capability) => {
+                      const selected = selectedCapabilityIds.includes(capability.capability_id);
+                      return (
+                        <Pressable
+                          key={capability.capability_id}
+                          onPress={() => toggleCapability(capability.capability_id)}
+                          style={[styles.chip, selected && styles.chipSelected]}
+                        >
+                          <Text
+                            style={[
+                              styles.chipText,
+                              selected && styles.chipTextSelected,
+                            ]}
+                          >
+                            {capability.name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
                 </View>
               ))}
             </View>

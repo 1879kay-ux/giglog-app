@@ -70,6 +70,7 @@ export default function BandMembersScreen() {
   const [showInactive, setShowInactive] = useState(false);
   const [capabilitySummaryByMemberId, setCapabilitySummaryByMemberId] = useState<Record<string, string[]>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<"all" | CapabilityCategory>("all");
   const [capabilityCategoriesByMemberId, setCapabilityCategoriesByMemberId] = useState<Record<string, CapabilityCategory[]>>({});
 
   const title = useMemo(
@@ -207,14 +208,18 @@ export default function BandMembersScreen() {
 
   const filteredMembers = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return members;
-
     return members.filter((m) => {
+      if (selectedCategory !== "all") {
+        const categories = capabilityCategoriesByMemberId[m.member_id] ?? [];
+        if (!categories.includes(selectedCategory)) return false;
+      }
       const name = (m.display_name ?? "").toLowerCase();
       const email = (m.email ?? "").toLowerCase();
       const capabilityText = (capabilitySummaryByMemberId[m.member_id] ?? [])
         .join(" • ")
         .toLowerCase();
+
+      if (!q) return true;
 
       return (
         name.includes(q) ||
@@ -222,7 +227,7 @@ export default function BandMembersScreen() {
         capabilityText.includes(q)
       );
     });
-  }, [members, capabilitySummaryByMemberId, searchQuery]);
+  }, [members, capabilityCategoriesByMemberId, capabilitySummaryByMemberId, searchQuery, selectedCategory]);
 
   const renderMemberRow = ({ item }: { item: BandMemberRow }) => {
     const statusLabel = item.is_active ? "" : t("bandMembers.inactive");
@@ -337,6 +342,43 @@ export default function BandMembersScreen() {
               autoCorrect={false}
               style={styles.searchInput}
             />
+            <View style={styles.categoryFilterRow}>
+              <Pressable
+                onPress={() => setSelectedCategory("all")}
+                style={[
+                  styles.categoryFilterChip,
+                  selectedCategory === "all" && styles.categoryFilterChipSelected,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.categoryFilterChipText,
+                    selectedCategory === "all" && styles.categoryFilterChipTextSelected,
+                  ]}
+                >
+                  {t("people.filterAll")}
+                </Text>
+              </Pressable>
+              {CAPABILITY_CATEGORY_ORDER.map((category) => (
+                <Pressable
+                  key={category}
+                  onPress={() => setSelectedCategory(category)}
+                  style={[
+                    styles.categoryFilterChip,
+                    selectedCategory === category && styles.categoryFilterChipSelected,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.categoryFilterChipText,
+                      selectedCategory === category && styles.categoryFilterChipTextSelected,
+                    ]}
+                  >
+                    {capabilityCategoryLabel(category)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
             <FlatList
               data={filteredMembers}
               keyExtractor={(item) => item.member_id}
@@ -403,6 +445,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 10,
   },
+
+  categoryFilterRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 10,
+  },
+  categoryFilterChip: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  categoryFilterChipSelected: {
+    backgroundColor: "#009999",
+    borderColor: "#009999",
+  },
+  categoryFilterChipText: { fontSize: 12, fontWeight: "700", color: "#333" },
+  categoryFilterChipTextSelected: { color: "#fff" },
 
   row: {
     backgroundColor: "#fff",

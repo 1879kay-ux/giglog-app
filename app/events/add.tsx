@@ -7,19 +7,19 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    ActivityIndicator,
-    Alert,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { supabase } from "@/lib/supabase";
@@ -29,6 +29,12 @@ type VenueRow = {
   venue_id: string;
   event_venue_name: string;
   city: string;
+};
+
+type ActRow = {
+  act_id: string;
+  act_name: string;
+  is_default: boolean | null;
 };
 
 function todayIsoDate() {
@@ -70,6 +76,8 @@ export default function AddEventScreen() {
   const [noMatch, setNoMatch] = useState(false);
 
   const [bandId, setBandId] = useState<string | null>(null);
+  const [acts, setActs] = useState<ActRow[]>([]);
+  const [selectedActId, setSelectedActId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const eventTypes = useMemo(
@@ -171,6 +179,25 @@ export default function AddEventScreen() {
 
     setBandId(resolvedBandId);
 
+    const { data: actsData, error: actsErr } = await supabase
+      .from("acts")
+      .select("act_id,act_name,is_default")
+      .eq("band_id", resolvedBandId)
+      .order("act_name", { ascending: true });
+
+    if (actsErr) {
+      Alert.alert(t("eventsAdd.alert.errorTitle"), actsErr.message);
+      return;
+    }
+
+    const loadedActs = (actsData ?? []) as ActRow[];
+    setActs(loadedActs);
+
+    const defaultAct =
+      loadedActs.find((act) => act.is_default) ?? loadedActs[0] ?? null;
+
+    setSelectedActId(defaultAct?.act_id ?? null);
+
     const { data, error } = await supabase
       .from("venues")
       .select("venue_id,event_venue_name,city")
@@ -226,7 +253,8 @@ export default function AddEventScreen() {
 
     setSaveError("");
     Keyboard.dismiss();
-
+       
+    if (!selectedActId) return setSaveError("Please select an act.");
     if (!selectedVenue) return setSaveError(t("eventsAdd.validationChooseVenue"));
     if (!eventDate) return setSaveError(t("eventsAdd.validationChooseDate"));
     if (!eventType) return setSaveError(t("eventsAdd.validationSelectEventType"));
@@ -238,6 +266,7 @@ export default function AddEventScreen() {
     try {
       const payload = {
         band_id: bandId,
+        act_id: selectedActId,
         event_type: eventType,
         event_date: eventDate,
         event_status: eventStatus,
@@ -257,22 +286,50 @@ export default function AddEventScreen() {
 
       console.log("INSERT DATA:", data);
 
-      const { data: unavailableMembers } = await supabase
-        .from("member_unavailability")
+        const { data: actMembers } = await supabase
+        .from("act_members")
         .select("member_id")
-        .lte("start_date", eventDate)
-        .gte("end_date", eventDate);
+        .eq("act_id", selectedActId);
 
-      if (unavailableMembers && unavailableMembers.length > 0) {
-        await supabase.from("event_availability").upsert(
-          unavailableMembers.map((row: any) => ({
-            event_id: data.event_id,
-            member_id: row.member_id,
-            status: "unavailable",
-            status_source: "unavailability_period",
-          })),
-          { onConflict: "event_id,member_id" },
+      const actMemberIds = Array.from(
+  new Set(
+    (actMembers ?? []).map((row: any) => row.member_id).filter(Boolean),
+  ),
+);
+
+console.log("ACT MEMBERS FOR EVENT", selectedActId, actMemberIds);
+
+      if (actMemberIds.length > 0) {
+        const { data: unavailableMembers } = await supabase
+          .from("member_unavailability")
+          .select("member_id")
+          .in("member_id", actMemberIds)
+          .lte("start_date", eventDate)
+          .gte("end_date", eventDate);
+
+        const unavailableIds = new Set(
+          (unavailableMembers ?? []).map((row: any) => row.member_id),
         );
+
+         const { error: availabilitySeedError } = await supabase
+          .from("event_availability")
+          .upsert(
+            actMemberIds.map((memberId) => ({
+              event_id: data.event_id,
+              member_id: memberId,
+              status: unavailableIds.has(memberId) ? "unavailable" : null,
+              status_source: unavailableIds.has(memberId)
+  ? "unavailability_period"
+  : "manual",
+            })),
+            { onConflict: "event_id,member_id" },
+          );
+
+        if (availabilitySeedError) {
+          console.log("event availability seed error", availabilitySeedError);
+          setSaveError(availabilitySeedError.message);
+          return;
+        }
       }
 
       try {
@@ -360,6 +417,35 @@ body: `${eventType} at ${selectedVenue.event_venue_name}${selectedVenue.city ? `
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
+      <Text style={styles.label}>
+        Act <Text style={styles.required}>*</Text>
+      </Text>
+
+      <View style={styles.chipRow}>
+        {acts.map((act) => (
+          <TouchableOpacity
+            key={act.act_id}
+            style={[
+              styles.chip,
+              selectedActId === act.act_id && styles.chipSelected,
+            ]}
+            onPress={() => {
+              setSelectedActId(act.act_id);
+              setSaveError("");
+            }}
+          >
+            <Text
+              style={[
+                styles.chipText,
+                selectedActId === act.act_id && styles.chipTextSelected,
+              ]}
+            >
+              {act.act_name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <Text style={styles.label}>
         {t("eventsAdd.venue")} <Text style={styles.required}>*</Text>
       </Text>

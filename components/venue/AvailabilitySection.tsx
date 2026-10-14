@@ -13,29 +13,43 @@ import {
   Text,
   View,
 } from "react-native";
-
 type AvailabilityLabel =
   | "awaiting"
   | "available"
   | "provisional"
   | "unavailable"
   | "dep";
-
 type MemberType = "musician" | "crew";
 
+type CapabilityRow = {
+  capability_id: string;
+  name: string;
+  category: string;
+};
+
+type EventCapabilityRow = {
+  member_id: string;
+  capability_id: string;
+};
+
+const CATEGORIES = [
+  { key: "performance", label: "Performance" },
+  { key: "crew", label: "Crew" },
+  { key: "logistics", label: "Logistics" },
+  { key: "business", label: "Business" },
+  { key: "creative_specialist", label: "Creative Specialists" },
+  { key: "other", label: "Other" },
+] as const;
 type AvailabilityRow = {
   event_id: string;
   member_id: string;
-
   display_name: string | null;
   email: string | null;
-
   member_type: MemberType | null;
   band_role: string | null;
   band_role_other: string | null;
   band_positions: string[] | null;
   band_positions_other: string[] | null;
-
   availability_status:
     | "available"
     | "provisional"
@@ -45,7 +59,6 @@ type AvailabilityRow = {
   availability_label: AvailabilityLabel;
   notes?: string | null;
 };
-
 type AvailabilitySummaryRow = {
   event_id: string;
   available_count: number;
@@ -54,7 +67,6 @@ type AvailabilitySummaryRow = {
   awaiting_count: number;
   total_expected: number;
 };
-
 type Props = {
   eventId: string;
   memberId: string;
@@ -63,7 +75,6 @@ type Props = {
   eventDate?: string | null;
   venueName?: string | null;
 };
-
 type EventAvailabilityDbRow = {
   event_id: string;
   member_id: string;
@@ -79,10 +90,8 @@ type EventAvailabilityDbRow = {
     band_positions_other: string[] | null;
   } | null;
 };
-
 // fixed width for the status column (keeps pills + header aligned)
 const STATUS_W = 112;
-
 export default function AvailabilitySection({
   eventId,
   memberId,
@@ -93,12 +102,13 @@ export default function AvailabilitySection({
 }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
-
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<AvailabilityRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [summary, setSummary] = useState<AvailabilitySummaryRow | null>(null);
-
+  const [memberRoles, setMemberRoles] = useState<EventCapabilityRow[]>([]);
+  const [capabilities, setCapabilities] = useState<CapabilityRow[]>([]);
+  const [usesEventLineup, setUsesEventLineup] = useState(false);
   if (!memberId) {
     return (
       <InfoCard title={t("availabilitySection.yourAvailability")}>
@@ -108,24 +118,20 @@ export default function AvailabilitySection({
       </InfoCard>
     );
   }
-
   const computeSummary = useCallback(
     (event_id: string, list: AvailabilityRow[]): AvailabilitySummaryRow => {
       let available = 0;
       let provisional = 0;
       let unavailable = 0;
-
       for (const r of list) {
         const s = r.availability_label;
         if (s === "available") available += 1;
         else if (s === "provisional") provisional += 1;
         else if (s === "unavailable") unavailable += 1;
       }
-
       const awaiting_count = list.filter(
         (r) => r.availability_label === "awaiting",
       ).length;
-
       return {
         event_id,
         total_expected: list.length,
@@ -137,10 +143,55 @@ export default function AvailabilitySection({
     },
     [],
   );
-
   const load = useCallback(async () => {
     if (!eventId) return;
     setLoading(true);
+    // Event membership is authoritative for new events. Older events without
+    // event_members retain the legacy availability listing until migrated.
+    const { data: eventMembers, error: membersError } = await supabase
+      .from("event_members")
+      .select("member_id")
+      .eq("event_id", eventId);
+    if (membersError) {
+      Alert.alert(t("availabilitySection.errorTitle"), membersError.message);
+      setLoading(false);
+      return;
+    }
+    const assignedIds = new Set((eventMembers ?? []).map((r) => r.member_id as string));
+    const usesLineup = assignedIds.size > 0;
+    setUsesEventLineup(usesLineup);
+
+    if (usesLineup) {
+      const { data: roles, error: rolesError } = await supabase
+        .from("event_member_capabilities")
+        .select("member_id,capability_id")
+        .eq("event_id", eventId);
+      if (rolesError) {
+        Alert.alert(t("availabilitySection.errorTitle"), rolesError.message);
+        setLoading(false);
+        return;
+      }
+      const eventRoles = (roles ?? []) as EventCapabilityRow[];
+      setMemberRoles(eventRoles);
+      const capabilityIds = [...new Set(eventRoles.map((r) => r.capability_id))];
+      if (capabilityIds.length) {
+        const { data: caps, error: capsError } = await supabase
+          .from("capabilities")
+          .select("capability_id,name,category")
+          .in("capability_id", capabilityIds);
+        if (capsError) {
+          Alert.alert(t("availabilitySection.errorTitle"), capsError.message);
+          setLoading(false);
+          return;
+        }
+        setCapabilities((caps ?? []) as CapabilityRow[]);
+      } else {
+        setCapabilities([]);
+      }
+    } else {
+      setMemberRoles([]);
+      setCapabilities([]);
+    }
 
     const { data, error } = await supabase
       .from("event_availability")
@@ -162,7 +213,6 @@ export default function AvailabilitySection({
       `,
       )
       .eq("event_id", eventId);
-
     if (error) {
       console.log("availability load error", error);
       Alert.alert(t("availabilitySection.errorTitle"), error.message);
@@ -171,30 +221,24 @@ export default function AvailabilitySection({
       setLoading(false);
       return;
     }
-
-    const list = (data as unknown as EventAvailabilityDbRow[]) ?? [];
-
+    const list = ((data as unknown as EventAvailabilityDbRow[]) ?? [])
+      .filter((r) => !usesLineup || assignedIds.has(r.member_id));
     const mapped: AvailabilityRow[] = list
       .map((r) => {
         const bm = r.band_members;
         const status = r.status ?? null;
-
         const label: AvailabilityLabel =
           status === null ? "awaiting" : (status as AvailabilityLabel);
-
         return {
           event_id: r.event_id,
           member_id: r.member_id,
-
           display_name: bm?.display_name ?? null,
           email: bm?.email ?? null,
-
           member_type: bm?.member_type ?? null,
           band_role: bm?.band_role ?? null,
           band_role_other: bm?.band_role_other ?? null,
           band_positions: bm?.band_positions ?? null,
           band_positions_other: bm?.band_positions_other ?? null,
-
           availability_status: status,
           availability_label: label,
           notes: r.notes ?? null,
@@ -203,45 +247,68 @@ export default function AvailabilitySection({
       .sort((a, b) =>
         (a.display_name ?? "").localeCompare(b.display_name ?? ""),
       );
-
     setRows(mapped);
     setSummary(computeSummary(eventId, mapped));
     setLoading(false);
   }, [computeSummary, eventId]);
-
   useEffect(() => {
     load();
   }, [load, hasCustomLineup]);
-
   useFocusEffect(
     useCallback(() => {
       load();
     }, [load]),
   );
+  const roleDisplay = (r: AvailabilityRow) => {
+    if ((r.band_role ?? "") === "Other") return r.band_role_other ?? "Other";
+    return r.band_role ?? "";
+  };
+  const instrumentsDisplay = (r: AvailabilityRow) => {
+    const preset = r.band_positions ?? [];
+    const custom = r.band_positions_other ?? [];
+    const all = [...preset, ...custom].filter(Boolean);
+    return all.join(", ");
+  };
 
-  const musicians = useMemo(
-    () => rows.filter((r) => r.member_type === "musician"),
-    [rows],
-  );
-  const crew = useMemo(
-    () => rows.filter((r) => r.member_type === "crew"),
-    [rows],
-  );
+  // A person appears once in each relevant category; their availability
+  // remains a single event_availability record and is counted only once.
+  const grouped = useMemo(() => CATEGORIES.map((category) => {
+    const entries = rows.flatMap((person) => {
+      const assigned = memberRoles
+        .filter((role) => role.member_id === person.member_id)
+        .map((role) => capabilities.find((cap) => cap.capability_id === role.capability_id))
+        .filter((cap): cap is CapabilityRow => !!cap);
+      const categoryRoles = usesEventLineup
+        ? assigned.filter((cap) => cap.category === category.key).map((cap) => cap.name)
+        : category.key === (person.member_type === "musician" ? "performance" : "crew")
+          ? [person.member_type === "musician"
+              ? instrumentsDisplay(person) || "Musician"
+              : roleDisplay(person) || "Crew"]
+          : [];
+      if (categoryRoles.length) {
+        return [{ person, roles: categoryRoles.join(", ") }];
+      }
+      // Event members without a role still need to appear in the availability
+      // list so that no outstanding response is concealed.
+      if (usesEventLineup && assigned.length === 0 && category.key === "other") {
+        return [{ person, roles: "Role not assigned" }];
+      }
+      return [];
+    });
+    return { ...category, entries };
+  }), [rows, memberRoles, capabilities, usesEventLineup]);
 
   const currentRow = useMemo(
     () => rows.find((r) => r.member_id === memberId) ?? null,
     [rows, memberId],
   );
-
   const currentLabel: AvailabilityLabel =
     currentRow?.availability_label ?? "awaiting";
-
   async function sendAvailabilityReminder() {
     try {
       const awaitingIds = rows
         .filter((r) => r.availability_label === "awaiting")
         .map((r) => r.member_id);
-
       if (awaitingIds.length === 0) {
         Alert.alert(
           t("availabilitySection.noRemindersNeeded"),
@@ -249,13 +316,10 @@ export default function AvailabilitySection({
         );
         return;
       }
-
       const title = t("availabilitySection.availabilityReminder");
-
       const body = `${t("availabilitySection.notificationPleaseConfirmAvailabilityFor")} ${
         venueName ?? t("availabilitySection.notificationThisEvent")
       }${eventDate ? ` ${t("availabilitySection.notificationOn")} ${eventDate}` : ""}.`;
-
       const { error } = await supabase.functions.invoke(
         "send-push-notification",
         {
@@ -271,9 +335,7 @@ export default function AvailabilitySection({
           },
         },
       );
-
       if (error) throw error;
-
       Alert.alert(
         t("availabilitySection.reminderSent"),
         awaitingIds.length === 1
@@ -291,19 +353,6 @@ export default function AvailabilitySection({
       );
     }
   }
-
-  const roleDisplay = (r: AvailabilityRow) => {
-    if ((r.band_role ?? "") === "Other") return r.band_role_other ?? "Other";
-    return r.band_role ?? "";
-  };
-
-  const instrumentsDisplay = (r: AvailabilityRow) => {
-    const preset = r.band_positions ?? [];
-    const custom = r.band_positions_other ?? [];
-    const all = [...preset, ...custom].filter(Boolean);
-    return all.join(", ");
-  };
-
   async function setAvailability(label: AvailabilityLabel) {
     setSaving(true);
     try {
@@ -326,7 +375,6 @@ export default function AvailabilitySection({
                 : label === "dep"
                   ? "dep"
                   : null;
-
         const { error } = await supabase
           .from("event_availability")
           .upsert(
@@ -335,9 +383,7 @@ export default function AvailabilitySection({
           );
         if (error) throw error;
       }
-
       await load();
-
       if (label === "available") {
         Alert.alert(
           t("availabilitySection.availabilityUpdated"),
@@ -364,10 +410,8 @@ export default function AvailabilitySection({
       setSaving(false);
     }
   }
-
   const chip = (label: AvailabilityLabel, text: string) => {
     const selected = currentLabel === label;
-
     const bg =
       label === "available"
         ? "#2ECC71"
@@ -378,7 +422,6 @@ export default function AvailabilitySection({
             : label === "dep"
               ? "#5B6CFF"
               : "#e0e0e0";
-
     return (
       <Pressable
         key={label}
@@ -395,7 +438,6 @@ export default function AvailabilitySection({
       </Pressable>
     );
   };
-
   if (loading) {
     return (
       <View style={styles.loading}>
@@ -403,7 +445,6 @@ export default function AvailabilitySection({
       </View>
     );
   }
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <InfoCard title={t("availabilitySection.yourAvailability")}>
@@ -417,36 +458,28 @@ export default function AvailabilitySection({
             </Text>
           </View>
         ) : null}
-
-        
-
         <View style={styles.chipRow}>
           {chip("available", t("availabilitySection.chipAvailable"))}
           {chip("provisional", t("availabilitySection.chipProvisional"))}
           {chip("unavailable", t("availabilitySection.chipUnavailable"))}
         </View>
-
         {saving ? <Text style={styles.saving}>{t("availabilitySection.saving")}</Text> : null}
       </InfoCard>
-
   <InfoCard title={t("availabilitySection.eventSummary")}>
   <View style={styles.summaryRow}>
     <Text style={styles.summaryItem}>
       {t("availabilitySection.total")}: {summary?.total_expected ?? 0} | {t("availabilitySection.awaiting")}: {summary?.awaiting_count ?? 0}
     </Text>
   </View>
-
   <View style={styles.summaryRow}>
     <Text style={styles.summaryItem}>
       {t("availabilitySection.available")}: {summary?.available_count ?? 0} | {t("availabilitySection.provisional")}: {summary?.provisional_count ?? 0} | {t("availabilitySection.unavailable")}: {summary?.unavailable_count ?? 0}
     </Text>
   </View>
-
   <Text style={styles.smallNote}>
     {t("availabilitySection.countsExpectedToRespond")}
   </Text>
 </InfoCard>
-
                 {canEdit ? (
         <>
           <Pressable
@@ -459,10 +492,8 @@ export default function AvailabilitySection({
               {summary?.awaiting_count ? ` (${summary.awaiting_count})` : ""}
             </Text>
           </Pressable>
-
           <View style={styles.lineupActionRow}>
             <Text style={styles.lineupActionText}>{t("availabilitySection.expectedLineup")}</Text>
-
             <Pressable
               onPress={() => router.push(`/events/${eventId}/lineup`)}
               hitSlop={10}
@@ -473,142 +504,66 @@ export default function AvailabilitySection({
           </View>
         </>
       ) : null}
-
-      {/* MUSICIANS */}
-      <InfoCard title={t("availabilitySection.musicians")}>
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text
-              style={[styles.cell, styles.cellHeader, { flex: 1.1 }]}
-            >
-              {t("availabilitySection.member")}
-            </Text>
-            <Text
-              style={[styles.cell, styles.cellHeader, { flex: 2.1 }]}
-            >
-              {t("availabilitySection.instruments")}
-            </Text>
-
-            <View style={[styles.statusHeaderCell, { width: STATUS_W }]}>
-              <Text style={styles.cellHeader}>
-                {t("availabilitySection.availability")}
+      {grouped.map((category) => (
+        <InfoCard key={category.key} title={category.label}>
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.cell, styles.cellHeader, { flex: 1.1 }]}>
+                {t("availabilitySection.member")}
               </Text>
-            </View>
-          </View>
-
-          {musicians.map((r) => (
-            <View
-              key={r.member_id}
-              style={[
-                styles.tableRow,
-                r.member_id === memberId ? styles.currentUserRow : null,
-              ]}
-            >
-              <Text style={[styles.cell, { flex: 1.1 }]} numberOfLines={1}>
-                {r.display_name ?? "Unnamed"}
+              <Text style={[styles.cell, styles.cellHeader, { flex: 2.1 }]}>
+                {t("availabilitySection.role")}
               </Text>
-
-              <Text style={[styles.cell, { flex: 2.1 }]} numberOfLines={1}>
-                {instrumentsDisplay(r) || "—"}
-              </Text>
-
-              <View style={[styles.statusCell, { width: STATUS_W }]}>
-                <View
-                  style={[
-                    styles.statusPill,
-                    { backgroundColor: statusBg(r.availability_label) },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusText,
-                      { color: statusText(r.availability_label) },
-                    ]}
-                    numberOfLines={1}
-                    ellipsizeMode="clip"
-                  >
-                    {labelText(r.availability_label, t)}
-                  </Text>
-                </View>
+              <View style={[styles.statusHeaderCell, { width: STATUS_W }]}>
+                <Text style={styles.cellHeader}>
+                  {t("availabilitySection.availability")}
+                </Text>
               </View>
             </View>
-          ))}
 
-          {musicians.length === 0 ? (
-            <Text style={styles.empty}>{t("availabilitySection.noMusiciansFound")}</Text>
-          ) : null}
-        </View>
-      </InfoCard>
-
-      {/* CREW */}
-      <InfoCard title={t("availabilitySection.crew")}>
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text
-              style={[styles.cell, styles.cellHeader, { flex: 1.1 }]}
-            >
-              {t("availabilitySection.member")}
-            </Text>
-            <Text
-              style={[styles.cell, styles.cellHeader, { flex: 2.1 }]}
-            >
-              {t("availabilitySection.role")}
-            </Text>
-
-            <View style={[styles.statusHeaderCell, { width: STATUS_W }]}>
-              <Text style={styles.cellHeader}>
-                {t("availabilitySection.availability")}
-              </Text>
-            </View>
-          </View>
-
-          {crew.map((r) => (
-            <View
-              key={r.member_id}
-              style={[
-                styles.tableRow,
-                r.member_id === memberId ? styles.currentUserRow : null,
-              ]}
-            >
-              <Text style={[styles.cell, { flex: 1.1 }]} numberOfLines={1}>
-                {r.display_name ?? "Unnamed"}
-              </Text>
-
-              <Text style={[styles.cell, { flex: 2.1 }]} numberOfLines={1}>
-                {roleDisplay(r) || "—"}
-              </Text>
-
-              <View style={[styles.statusCell, { width: STATUS_W }]}>
-                <View
-                  style={[
+            {category.entries.map(({ person, roles }) => (
+              <View
+                key={person.member_id}
+                style={[
+                  styles.tableRow,
+                  person.member_id === memberId ? styles.currentUserRow : null,
+                ]}
+              >
+                <Text style={[styles.cell, { flex: 1.1 }]} numberOfLines={1}>
+                  {person.display_name ?? "Unnamed"}
+                </Text>
+                <Text style={[styles.cell, { flex: 2.1 }]}>
+                  {roles}
+                </Text>
+                <View style={[styles.statusCell, { width: STATUS_W }]}>
+                  <View style={[
                     styles.statusPill,
-                    { backgroundColor: statusBg(r.availability_label) },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusText,
-                      { color: statusText(r.availability_label) },
-                    ]}
-                    numberOfLines={1}
-                    ellipsizeMode="clip"
-                  >
-                    {labelText(r.availability_label, t)}
-                  </Text>
+                    { backgroundColor: statusBg(person.availability_label) },
+                  ]}>
+                    <Text
+                      style={[
+                        styles.statusText,
+                        { color: statusText(person.availability_label) },
+                      ]}
+                      numberOfLines={1}
+                      ellipsizeMode="clip"
+                    >
+                      {labelText(person.availability_label, t)}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          ))}
+            ))}
 
-          {crew.length === 0 ? (
-            <Text style={styles.empty}>{t("availabilitySection.noCrewFound")}</Text>
-          ) : null}
-        </View>
-      </InfoCard>
+            {category.entries.length === 0 ? (
+              <Text style={styles.empty}>No members assigned</Text>
+            ) : null}
+          </View>
+        </InfoCard>
+      ))}
     </ScrollView>
   );
 }
-
 function labelText(v: AvailabilityLabel, t: (key: string) => string) {
   if (v === "awaiting") return t("availabilitySection.statusAwaiting");
   if (v === "available") return t("availabilitySection.statusAvailable");
@@ -616,7 +571,6 @@ function labelText(v: AvailabilityLabel, t: (key: string) => string) {
   if (v === "unavailable") return t("availabilitySection.statusUnavailable");
   return t("availabilitySection.dep");
 }
-
 function statusBg(v: AvailabilityLabel) {
   if (v === "available") return "#E8F7EE";
   if (v === "provisional") return "#FFF6DF";
@@ -624,7 +578,6 @@ function statusBg(v: AvailabilityLabel) {
   if (v === "dep") return "#EEF0FF";
   return "#F3F3F3";
 }
-
 function statusText(v: AvailabilityLabel) {
   if (v === "available") return "#1E8E3E";
   if (v === "provisional") return "#B26A00";
@@ -632,15 +585,11 @@ function statusText(v: AvailabilityLabel) {
   if (v === "dep") return "#2C3BE5";
   return "#666";
 }
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16 },
-
   loading: { paddingVertical: 16, alignItems: "center" },
-
   smallNote: { fontSize: 12, color: "#666", marginBottom: 10 },
-
   confirmPrompt: {
     borderWidth: 1,
     borderColor: "rgba(13,148,136,0.35)",
@@ -649,20 +598,17 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 12,
   },
-
   confirmPromptTitle: {
     fontSize: 14,
     fontWeight: "900",
     color: colors.primary,
     marginBottom: 3,
   },
-
   confirmPromptText: {
     fontSize: 12,
     fontWeight: "700",
     color: "#555",
   },
-
    reminderButton: {
     height: 44,
     borderRadius: 12,
@@ -673,7 +619,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
-
   lineupActionRow: {
     minHeight: 50,
     borderRadius: 12,
@@ -686,13 +631,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 12,
   },
-
   lineupActionText: {
     fontSize: 14,
     fontWeight: "900",
     color: colors.primary,
   },
-
   editLineupButton: {
     height: 34,
     paddingHorizontal: 14,
@@ -701,20 +644,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   editLineupButtonText: {
     fontSize: 12,
     fontWeight: "900",
     color: "#fff",
   },
-
   reminderPillText: {
     fontSize: 11,
     fontWeight: "900",
     color: "#DC2626",
     lineHeight: 14,
   },
-
  chipRow: {
   flexDirection: "row",
   gap: 10,
@@ -741,9 +681,7 @@ chipText: {
   textAlign: "center",
   flexShrink: 1,
 },
-
   saving: { marginTop: 6, fontSize: 12, color: "#666", fontStyle: "italic" },
-
    summaryRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -751,7 +689,6 @@ chipText: {
     marginBottom: 6,
   },
   summaryItem: { fontSize: 13, fontWeight: "800", color: "#333" },
-
   table: { borderRadius: 10, overflow: "hidden", backgroundColor: "#fff" },
   tableHeader: {
     flexDirection: "row",
@@ -766,11 +703,9 @@ chipText: {
     borderBottomColor: "#eee",
     alignItems: "center",
   },
-
   currentUserRow: {
     backgroundColor: "#F0FAFA",
   },
-
   cell: {
     paddingVertical: 10,
     paddingHorizontal: 8,
@@ -783,19 +718,16 @@ chipText: {
   fontWeight: "800",
   color: "#666",
 },
-
   statusHeaderCell: {
     alignItems: "center",
     justifyContent: "center",
     paddingRight: 12,
   },
-
   statusCell: {
     alignItems: "center",
     justifyContent: "center",
     paddingRight: 12,
   },
-
   statusPill: {
     width: STATUS_W,
     paddingVertical: 6,
@@ -805,6 +737,5 @@ chipText: {
     justifyContent: "center",
   },
   statusText: { fontSize: 12, fontWeight: "900" },
-
   empty: { padding: 12, color: "#666" },
 });

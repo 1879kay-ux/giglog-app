@@ -533,6 +533,7 @@
   "tours.maybeCount": "Maybe: {{count}}",
   "tours.notAvailableCount": "Not Available: {{count}}",
   "tours.awaitingResponseCount": "Awaiting response: {{count}}",
+  "tours.otherProtectedResponseCount": "Other protected responses: {{count}}",
   "tours.addCount": "Add ({{count}})",
   "tours.roleChangesCount": "Role changes ({{count}})",
   "tours.protectedResponseCount": "Event-only responses protected ({{count}})",

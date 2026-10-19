@@ -17,7 +17,7 @@ type EventAssignment = { event_id: string; member_id: string };
 type EventRole = { event_id: string; member_id: string; capability_id: string };
 type Availability = { event_id: string; member_id: string; status: string | null };
 type Person = { member_id: string; display_name: string | null };
-type ResponseCounts = { available: number; maybe: number; unavailable: number; awaiting: number };
+type ResponseCounts = { available: number; maybe: number; unavailable: number; awaiting: number; other: number };
 type Diff = { event: Gig; additions: string[]; roleUpdates: string[]; extra: string[]; protectedExtras: string[]; unconfirmedExtras: string[]; responses: ResponseCounts };
 const MODES: { key: Mode; titleKey: string; noteKey: string }[] = [
   { key: "add", titleKey: "tours.addMissingPeople", noteKey: "tours.addMissingPeopleNote" },
@@ -29,6 +29,16 @@ function dateLabel(value: string, language: string) {
   return new Intl.DateTimeFormat(language, { day: "numeric", month: "short", year: "numeric" }).format(new Date(y, m - 1, d));
 }
 function roleSignature(roles: string[]) { return [...new Set(roles)].sort().join("|"); }
+function classifyAvailability(status: string | null | undefined): keyof ResponseCounts {
+  if (status == null) return "awaiting";
+  const normalized = status.trim().toLowerCase();
+  if (normalized === "awaiting") return "awaiting";
+  if (normalized === "available") return "available";
+  if (normalized === "provisional") return "maybe";
+  if (normalized === "unavailable") return "unavailable";
+  // Includes dep, tbc and unknown values: only explicit unanswered states are removable.
+  return "other";
+}
 export default function TourAssignmentPreview() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
@@ -110,20 +120,14 @@ export default function TourAssignmentPreview() {
     // Count actual responses from assigned Event members, not all availability rows.
     // This is independent of whether anyone is at risk in replacement mode.
     const statuses = new Map(availability.filter(a => a.event_id === event.event_id)
-      .map(a => [a.member_id, (a.status ?? "").trim().toLowerCase()]));
-    const responses: ResponseCounts = { available: 0, maybe: 0, unavailable: 0, awaiting: 0 };
+      .map(a => [a.member_id, a.status]));
+    const responseFor = (id: string) => classifyAvailability(statuses.get(id));
+    const responses: ResponseCounts = { available: 0, maybe: 0, unavailable: 0, awaiting: 0, other: 0 };
     for (const id of assigned) {
-      const status = statuses.get(id);
-      if (status === "available") responses.available++;
-      else if (status === "maybe") responses.maybe++;
-      else if (status === "not available" || status === "not_available" || status === "unavailable") responses.unavailable++;
-      else responses.awaiting++;
+      responses[responseFor(id)]++;
     }
-    const protectedExtras = extra.filter(id => {
-      const status = statuses.get(id);
-      return status === "available" || status === "maybe" || status === "not available" || status === "not_available" || status === "unavailable";
-    });
-    return { event, additions, roleUpdates, extra, protectedExtras, unconfirmedExtras: extra.filter(id => !protectedExtras.includes(id)), responses };
+    const protectedExtras = extra.filter(id => responseFor(id) !== "awaiting");
+    return { event, additions, roleUpdates, extra, protectedExtras, unconfirmedExtras: extra.filter(id => responseFor(id) === "awaiting"), responses };
   }), [events, selectedIds, eventAssignments, tourMembers, tourRoles, eventRoles, availability]);
   const selectedCount = selectedIds.length;
   const totals = diffs.reduce((acc, d) => ({ add: acc.add + d.additions.length, update: acc.update + d.roleUpdates.length, protected: acc.protected + d.protectedExtras.length, review: acc.review + d.unconfirmedExtras.length }), { add: 0, update: 0, protected: 0, review: 0 });
@@ -281,6 +285,7 @@ export default function TourAssignmentPreview() {
             <Text style={styles.availabilityTitle}>{t("tours.existingEventAvailability")}</Text>
             <Text style={styles.muted}>{t("tours.availableCount", { count: d.responses.available })} · {t("tours.maybeCount", { count: d.responses.maybe })} · {t("tours.notAvailableCount", { count: d.responses.unavailable })}</Text>
             <Text style={styles.muted}>{t("tours.awaitingResponseCount", { count: d.responses.awaiting })}</Text>
+            {d.responses.other > 0 ? <Text style={styles.muted}>{t("tours.otherProtectedResponseCount", { count: d.responses.other })}</Text> : null}
           </View>
           <Text style={styles.line}><Text style={styles.bold}>{t("tours.addCount", { count: d.additions.length })}: </Text>{d.additions.length ? display(d.additions) : t("tours.none")}</Text>
           {mode !== "add" ? <Text style={styles.line}><Text style={styles.bold}>{t("tours.roleChangesCount", { count: d.roleUpdates.length })}: </Text>{d.roleUpdates.length ? display(d.roleUpdates) : t("tours.none")}</Text> : null}

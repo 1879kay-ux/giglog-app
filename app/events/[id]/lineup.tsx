@@ -1,5 +1,6 @@
 // app/events/[id]/lineup.tsx
 import { supabase } from "@/lib/supabase";
+import { capabilityDisplayName } from "@/lib/capabilities";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
@@ -10,17 +11,23 @@ import {
 } from "react-native";
 
 type Person = { member_id: string; display_name: string | null; member_type: string | null };
-type Capability = { capability_id: string; name: string; category: string; sort_order: number };
+type Capability = {
+  capability_id: string;
+  name: string;
+  standard_key: string | null;
+  category: string;
+  sort_order: number;
+};
 type CapabilityLink = { member_id: string; capability_id: string };
 type EventRow = { event_id: string; band_id: string; act_id: string | null };
 
 const CATEGORIES = [
-  { key: "performance", label: "Performance" },
-  { key: "crew", label: "Crew" },
-  { key: "logistics", label: "Logistics" },
-  { key: "business", label: "Business" },
-  { key: "creative_specialist", label: "Creative Specialists" },
-  { key: "other", label: "Other" },
+  { key: "performance", titleKey: "people.category.performance" },
+  { key: "crew", titleKey: "people.category.crew" },
+  { key: "logistics", titleKey: "people.category.logistics" },
+  { key: "business", titleKey: "people.category.business" },
+  { key: "creative_specialist", titleKey: "people.category.creativeSpecialist" },
+  { key: "other", titleKey: "people.category.other" },
 ];
 
 export default function EventLineupScreen() {
@@ -75,7 +82,7 @@ export default function EventLineupScreen() {
       setPeople(loadedPeople);
 
       const { data: capData, error: capError } = await supabase.from("capabilities")
-        .select("capability_id,name,category,sort_order")
+        .select("capability_id,name,standard_key,category,sort_order")
         .eq("band_id", ev.band_id).eq("is_active", true)
         .order("category", { ascending: true }).order("sort_order", { ascending: true });
       if (capError) throw capError;
@@ -111,9 +118,9 @@ export default function EventLineupScreen() {
       } else setActRoles([]);
     } catch (e: any) {
       console.log("event lineup load error", e);
-      Alert.alert("Error", e?.message ?? "Failed to load event line-up");
+      Alert.alert(t("common.error"), e?.message ?? t("eventsLineup.loadError"));
     } finally { setLoading(false); }
-  }, [eventId]);
+  }, [eventId, t]);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
@@ -125,7 +132,12 @@ export default function EventLineupScreen() {
 
   const memberCapabilities = (memberId: string) => personRoles
     .filter((r) => r.member_id === memberId)
-    .map((r) => capabilities.find((c) => c.capability_id === r.capability_id)?.name)
+    .map((r) => {
+      const capability = capabilities.find((c) => c.capability_id === r.capability_id);
+      return capability
+        ? capabilityDisplayName(capability.name, capability.standard_key)
+        : undefined;
+    })
     .filter(Boolean).join(", ");
   const assignedCapabilities = (memberId: string, category: string) => eventRoles
     .filter((r) => r.member_id === memberId)
@@ -149,7 +161,7 @@ export default function EventLineupScreen() {
     const memberId = addingMemberId ?? editingMemberId;
     if (!memberId || !eventId || saving) return;
     if (!selectedRoleIds.length) {
-      Alert.alert("Assign role", "Please select at least one role before saving.");
+      Alert.alert(t("acts.assignRole"), t("acts.selectRoleBeforeSaving"));
       return;
     }
     setSaving(true);
@@ -193,17 +205,17 @@ export default function EventLineupScreen() {
           .delete().eq("event_id", eventId).eq("member_id", memberId);
         if (rollbackError) console.log("event lineup rollback error", rollbackError);
       }
-      Alert.alert("Error", e?.message ?? "Failed to save event roles");
+      Alert.alert(t("common.error"), e?.message ?? t("eventsLineup.saveRolesError"));
       await load();
     } finally { setSaving(false); }
   }
 
   function removeMember(memberId: string) {
-    const name = people.find((p) => p.member_id === memberId)?.display_name ?? "This person";
-    Alert.alert("Remove from event?",
-      `${name} will be removed from this event and their availability response will be deleted.`, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Remove", style: "destructive", onPress: () => { void confirmRemove(memberId); } },
+    const name = people.find((p) => p.member_id === memberId)?.display_name ?? t("acts.member");
+    Alert.alert(t("eventsLineup.removeTitle"),
+      t("eventsLineup.removeMessage", { name }), [
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("eventsLineup.remove"), style: "destructive", onPress: () => { void confirmRemove(memberId); } },
       ]);
   }
   async function confirmRemove(memberId: string) {
@@ -220,7 +232,7 @@ export default function EventLineupScreen() {
       await load();
     } catch (e: any) {
       console.log("event lineup remove error", e);
-      Alert.alert("Error", e?.message ?? "Failed to remove event member");
+      Alert.alert(t("common.error"), e?.message ?? t("eventsLineup.removeError"));
       await load();
     } finally { setSaving(false); }
   }
@@ -228,7 +240,7 @@ export default function EventLineupScreen() {
   if (!eventId) return <View style={styles.center}><Text>{t("eventsLineup.missingEventId")}</Text></View>;
   if (loading) return <View style={styles.center}><ActivityIndicator /></View>;
   const rolePersonId = editingMemberId ?? addingMemberId;
-  const rolePersonName = people.find((p) => p.member_id === rolePersonId)?.display_name ?? "Member";
+  const rolePersonName = people.find((p) => p.member_id === rolePersonId)?.display_name ?? t("acts.member");
   const allowedRoleIds = new Set(personRoles.filter((r) => r.member_id === rolePersonId)
     .map((r) => r.capability_id));
   const roleOptions = capabilities.filter((c) => allowedRoleIds.has(c.capability_id) ||
@@ -243,10 +255,10 @@ export default function EventLineupScreen() {
     }} />
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.headerCard}>
-        <Text style={styles.headerTitle}>Event Line-up</Text>
+        <Text style={styles.headerTitle}>{t("eventsLineup.heading")}</Text>
         <Pressable style={styles.addButton} onPress={() => { setMemberSearch(""); setPickerOpen(true); }}>
           <Ionicons name="add-circle-outline" size={18} color="#fff" />
-          <Text style={styles.addButtonText}>Add member</Text>
+          <Text style={styles.addButtonText}>{t("acts.addMember")}</Text>
         </Pressable>
       </View>
       {CATEGORIES.map((category) => {
@@ -256,15 +268,17 @@ export default function EventLineupScreen() {
           .sort((a, b) => (a.display_name ?? "").localeCompare(b.display_name ?? ""));
         if (!peopleInCategory.length) return null;
         return <View key={category.key} style={styles.section}>
-          <Text style={styles.sectionTitle}>{category.label}</Text>
+          <Text style={styles.sectionTitle}>{t(category.titleKey)}</Text>
           {peopleInCategory.map((person) => {
-            const names = assignedCapabilities(person.member_id, category.key).map((c) => c.name).join(", ");
+            const names = assignedCapabilities(person.member_id, category.key)
+              .map((c) => capabilityDisplayName(c.name, c.standard_key))
+              .join(", ");
             return <View key={`${person.member_id}-${category.key}`} style={styles.memberCard}>
-              <Text style={styles.memberName}>{person.display_name ?? "Unnamed"}</Text>
-              <Text style={[styles.memberSub, !names ? styles.warning : null]}>{names || "Assign role"}</Text>
+              <Text style={styles.memberName}>{person.display_name ?? t("eventsLineup.unnamed")}</Text>
+              <Text style={[styles.memberSub, !names ? styles.warning : null]}>{names || t("acts.assignRole")}</Text>
               <View style={styles.memberActions}>
                 <Pressable disabled={saving} style={styles.editButton} onPress={() => openRoles(person.member_id, false)}>
-                  <Text style={styles.editButtonText}>Edit roles</Text>
+                  <Text style={styles.editButtonText}>{t("acts.editRoles")}</Text>
                 </Pressable>
                 <Pressable disabled={saving} style={styles.removeButton} onPress={() => removeMember(person.member_id)}>
                   <Text style={styles.removeButtonText}>{t("eventsLineup.remove")}</Text>
@@ -274,7 +288,7 @@ export default function EventLineupScreen() {
           })}
         </View>;
       })}
-      {assignedPeople.length === 0 && <Text style={styles.empty}>No event members assigned.</Text>}
+      {assignedPeople.length === 0 && <Text style={styles.empty}>{t("eventsLineup.noMembersAssigned")}</Text>}
     </ScrollView>
 
     <Modal visible={pickerOpen} animationType="slide" transparent onRequestClose={() => setPickerOpen(false)}>
@@ -282,18 +296,18 @@ export default function EventLineupScreen() {
         <Pressable style={StyleSheet.absoluteFill} onPress={() => setPickerOpen(false)} />
         <View style={[styles.modalCard, styles.memberPickerModalCard]}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Add member</Text>
+            <Text style={styles.modalTitle}>{t("acts.addMember")}</Text>
             <Pressable onPress={() => setPickerOpen(false)}><Ionicons name="close" size={22} color="#111" /></Pressable>
           </View>
-          <TextInput style={styles.searchInput} placeholder="Search people" value={memberSearch}
+          <TextInput style={styles.searchInput} placeholder={t("people.searchPlaceholder")} value={memberSearch}
             onChangeText={setMemberSearch} autoCorrect={false} />
           <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
             {unassignedPeople.map((person) => <Pressable key={person.member_id} style={styles.pickerRow}
               onPress={() => openRoles(person.member_id, true)}>
-              <Text style={styles.memberName}>{person.display_name ?? "Unnamed"}</Text>
-              <Text style={styles.memberSub}>{memberCapabilities(person.member_id) || "No capabilities registered"}</Text>
+              <Text style={styles.memberName}>{person.display_name ?? t("eventsLineup.unnamed")}</Text>
+              <Text style={styles.memberSub}>{memberCapabilities(person.member_id) || t("acts.noCapabilitiesRegistered")}</Text>
             </Pressable>)}
-            {unassignedPeople.length === 0 && <Text style={styles.empty}>No matching people.</Text>}
+            {unassignedPeople.length === 0 && <Text style={styles.empty}>{t("eventsLineup.noMatchingPeople")}</Text>}
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -304,10 +318,10 @@ export default function EventLineupScreen() {
         <Pressable style={StyleSheet.absoluteFill} onPress={closeRoles} />
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{rolePersonName} — Roles</Text>
+            <Text style={styles.modalTitle}>{t("acts.rolesTitle", { member: rolePersonName })}</Text>
             <Pressable disabled={saving} onPress={closeRoles}><Ionicons name="close" size={22} color="#111" /></Pressable>
           </View>
-          <Text style={styles.hint}>Select the roles applicable to this event.</Text>
+          <Text style={styles.hint}>{t("eventsLineup.selectRolesHint")}</Text>
           <ScrollView contentContainerStyle={styles.modalContent}>
             {roleOptions.map((capability) => {
               const selected = selectedRoleIds.includes(capability.capability_id);
@@ -318,18 +332,18 @@ export default function EventLineupScreen() {
                 <View style={styles.capabilityRow}>
                   <Ionicons name={selected ? "checkbox" : "square-outline"} size={23} color="#0D9488" />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.memberName}>{capability.name}</Text>
-                    <Text style={styles.memberSub}>{capability.category}</Text>
+                    <Text style={styles.memberName}>{capabilityDisplayName(capability.name, capability.standard_key)}</Text>
+                    <Text style={styles.memberSub}>{t(CATEGORIES.find((category) => category.key === capability.category)?.titleKey ?? "people.category.other")}</Text>
                   </View>
                 </View>
               </Pressable>;
             })}
             {roleOptions.length === 0 && <Text style={styles.hint}>
-              No capabilities registered. Add capabilities to this person in People first.
+              {t("acts.noCapabilitiesForPerson")}
             </Text>}
           </ScrollView>
           <Pressable style={[styles.addButton, saving ? styles.disabled : null]} disabled={saving} onPress={saveRoles}>
-            <Text style={styles.addButtonText}>{saving ? "Saving…" : "Save roles"}</Text>
+            <Text style={styles.addButtonText}>{saving ? t("acts.savingRoles") : t("common.save")}</Text>
           </Pressable>
         </View>
       </View>

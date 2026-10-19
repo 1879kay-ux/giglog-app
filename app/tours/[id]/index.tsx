@@ -2,6 +2,8 @@
 
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
 
+import { capabilityDisplayName } from "@/lib/capabilities";
+
 import { supabase } from "@/lib/supabase";
 
 import { colors } from "@/theme/colors";
@@ -65,7 +67,13 @@ type MemberName = { member_id: string; display_name: string | null };
 
 type MemberCapability = { tour_member_id: string; capability_id: string };
 
-type Capability = { capability_id: string; name: string; category: string; sort_order: number };
+type Capability = {
+  capability_id: string;
+  name: string;
+  standard_key: string | null;
+  category: string;
+  sort_order: number;
+};
 
 
 
@@ -270,7 +278,7 @@ export default function TourOverviewScreen() {
 
           .from("capabilities")
 
-          .select("capability_id, name, category, sort_order")
+          .select("capability_id, name, standard_key, category, sort_order")
 
           .eq("band_id", bandId);
 
@@ -352,7 +360,9 @@ export default function TourOverviewScreen() {
 
           name: namesById.get(member.member_id) ?? t("tours.unknownMember"),
 
-          roleNames: roles.map((r) => r.name).join(" · ") || t("tours.noRoleAssigned"),
+          roleNames: roles
+            .map((r) => capabilityDisplayName(r.name, r.standard_key))
+            .join(" · ") || t("tours.noRoleAssigned"),
 
         };
 
@@ -364,7 +374,7 @@ export default function TourOverviewScreen() {
 
     }).filter((category) => category.people.length > 0);
 
-  }, [tourMembers, memberNames, memberCapabilities, capabilities, t]);
+  }, [tourMembers, memberNames, memberCapabilities, capabilities, i18n.language, t]);
 
   const translateTourStatus = (value: string) => {
     switch (value.trim().toLowerCase()) {

@@ -1,4 +1,5 @@
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
+import { capabilityDisplayName } from "@/lib/capabilities";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
@@ -92,13 +93,14 @@ type BandMemberRow = {
 type CapabilityChip = {
   capability_id: string;
   name: string;
+  standard_key: string | null;
   category: CapabilityCategory;
 };
 
 export default function EditBandMemberScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -242,7 +244,7 @@ export default function EditBandMemberScreen() {
       } else {
         const { data: capabilitiesRows, error: capabilitiesError } = await supabase
           .from("capabilities")
-          .select("capability_id,name,category")
+          .select("capability_id,name,standard_key,category")
           .eq("band_id", row.band_id)
           .eq("is_active", true)
           .order("name", { ascending: true });
@@ -264,6 +266,7 @@ export default function EditBandMemberScreen() {
             .map((item) => ({
               capability_id: item.capability_id as string,
               name: item.name as string,
+              standard_key: typeof item.standard_key === "string" ? item.standard_key : null,
               category: item.category as CapabilityCategory,
             }));
           setLoadedCapabilities(nextCapabilities);
@@ -387,7 +390,7 @@ export default function EditBandMemberScreen() {
         sort_order: 999,
         is_active: true,
       })
-      .select("capability_id,name,category")
+      .select("capability_id,name,standard_key,category")
       .single();
 
     if (insertError) {
@@ -401,7 +404,7 @@ export default function EditBandMemberScreen() {
 
       const { data: existingCapability, error: existingError } = await supabase
         .from("capabilities")
-        .select("capability_id,name,category")
+        .select("capability_id,name,standard_key,category")
         .eq("band_id", bandId)
         .eq("name", name)
         .eq("category", category)
@@ -423,6 +426,7 @@ export default function EditBandMemberScreen() {
         capabilityToSelect = {
           capability_id: existingCapability.capability_id as string,
           name: existingCapability.name as string,
+          standard_key: typeof existingCapability.standard_key === "string" ? existingCapability.standard_key : null,
           category: existingCapability.category as CapabilityCategory,
         };
       }
@@ -430,6 +434,7 @@ export default function EditBandMemberScreen() {
       capabilityToSelect = {
         capability_id: insertedCapability.capability_id as string,
         name: insertedCapability.name as string,
+        standard_key: typeof insertedCapability.standard_key === "string" ? insertedCapability.standard_key : null,
         category: insertedCapability.category as CapabilityCategory,
       };
     }
@@ -438,7 +443,12 @@ export default function EditBandMemberScreen() {
       setLoadedCapabilities((prev) =>
         prev.some((cap) => cap.capability_id === capabilityToSelect!.capability_id)
           ? prev
-          : [...prev, capabilityToSelect!].sort((a, b) => a.name.localeCompare(b.name)),
+          : [...prev, capabilityToSelect!].sort((a, b) =>
+              capabilityDisplayName(a.name, a.standard_key).localeCompare(
+                capabilityDisplayName(b.name, b.standard_key),
+                i18n.language,
+              ),
+            ),
       );
       setSelectedCapabilityIds((prev) =>
         prev.includes(capabilityToSelect!.capability_id)
@@ -797,7 +807,7 @@ export default function EditBandMemberScreen() {
                                   selected && styles.chipTextSelected,
                                 ]}
                               >
-                                {capability.name}
+                                {capabilityDisplayName(capability.name, capability.standard_key)}
                               </Text>
                               </Pressable>
                             );

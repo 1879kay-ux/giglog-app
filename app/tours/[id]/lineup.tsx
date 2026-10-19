@@ -1,5 +1,6 @@
 // app/tours/[id]/lineup.tsx
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
+import { capabilityDisplayName } from "@/lib/capabilities";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,7 +19,13 @@ type TourMember = {
   member_id: string;
   band_members: Person | Person[] | null;
 };
-type Capability = { capability_id: string; name: string; category: string; sort_order: number };
+type Capability = {
+  capability_id: string;
+  name: string;
+  standard_key: string | null;
+  category: string;
+  sort_order: number;
+};
 type Assignment = { tour_member_id: string; capability_id: string };
 type PersonCapability = { member_id: string; capability_id: string };
 type ActMember = { act_member_id: string; member_id: string };
@@ -78,7 +85,7 @@ export default function TourLineupScreen() {
           .eq("band_id", bandId).eq("is_active", true)
           .order("display_name", { ascending: true }),
         supabase.from("capabilities")
-          .select("capability_id, name, category, sort_order")
+          .select("capability_id, name, standard_key, category, sort_order")
           .eq("band_id", bandId).eq("is_active", true)
           .order("sort_order", { ascending: true }),
       ]);
@@ -295,7 +302,10 @@ export default function TourLineupScreen() {
 
   const renderMember = (m: TourMember, category: string) => {
     const name = memberInfo(m)?.display_name ?? t("tours.unknownMember");
-    const roleNames = assignedCapabilitiesFor(m).filter(c => c.category === category).map(c => c.name).join(", ");
+    const roleNames = assignedCapabilitiesFor(m)
+      .filter(c => c.category === category)
+      .map(c => capabilityDisplayName(c.name, c.standard_key))
+      .join(", ");
     return (
       <View key={`${m.tour_member_id}-${category}`} style={styles.memberCard}>
         <Text style={styles.memberName}>{name}</Text>
@@ -356,7 +366,12 @@ export default function TourLineupScreen() {
               {availablePeople.map(p => <Pressable key={p.member_id} onPress={() => startAdd(p)} style={styles.pickerRow}>
                 <Text style={styles.memberName}>{p.display_name ?? t("tours.unknownMember")}</Text>
                 <Text style={styles.memberSub}>{personCapabilities.filter(pc => pc.member_id === p.member_id)
-                  .map(pc => capabilities.find(c => c.capability_id === pc.capability_id)?.name).filter(Boolean).join(" · ") || t("tours.noCapabilitiesRegistered")}</Text>
+                  .map(pc => {
+                    const capability = capabilities.find(c => c.capability_id === pc.capability_id);
+                    return capability
+                      ? capabilityDisplayName(capability.name, capability.standard_key)
+                      : undefined;
+                  }).filter(Boolean).join(" · ") || t("tours.noCapabilitiesRegistered")}</Text>
               </Pressable>)}
             </ScrollView>
           </View>
@@ -373,7 +388,7 @@ export default function TourLineupScreen() {
               {allowedCapabilities.map(c => <Pressable key={c.capability_id} disabled={busy} onPress={() => setSelectedCapabilities(prev => prev.includes(c.capability_id) ? prev.filter(id => id !== c.capability_id) : [...prev, c.capability_id])} style={styles.pickerRow}>
                 <View style={styles.capRow}>
                   <Ionicons name={selectedCapabilities.includes(c.capability_id) ? "checkbox" : "square-outline"} size={23} color={colors.primary} />
-                  <View style={{ flex: 1 }}><Text style={styles.memberName}>{c.name}</Text><Text style={styles.memberSub}>{categoryLabel(c.category)}</Text></View>
+                  <View style={{ flex: 1 }}><Text style={styles.memberName}>{capabilityDisplayName(c.name, c.standard_key)}</Text><Text style={styles.memberSub}>{categoryLabel(c.category)}</Text></View>
                 </View>
               </Pressable>)}
               {allowedCapabilities.length === 0 ? <Text style={styles.hint}>{t("tours.noCapabilitiesRegisteredHint")}</Text> : null}

@@ -1,4 +1,5 @@
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
+import { capabilityDisplayName } from "@/lib/capabilities";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
@@ -58,6 +59,7 @@ const CREW_ROLE_SET = new Set<string>([
 type CapabilityChip = {
   capability_id: string;
   name: string;
+  standard_key: string | null;
   category: CapabilityCategory;
 };
 
@@ -150,7 +152,7 @@ export default function AddBandMemberScreen() {
 
       const { data, error } = await supabase
         .from("capabilities")
-        .select("capability_id,name,category")
+        .select("capability_id,name,standard_key,category")
         .eq("band_id", currentBandId)
         .eq("is_active", true)
         .order("name", { ascending: true });
@@ -173,8 +175,15 @@ export default function AddBandMemberScreen() {
         .map((item) => ({
           capability_id: item.capability_id as string,
           name: item.name as string,
+          standard_key: typeof item.standard_key === "string" ? item.standard_key : null,
           category: item.category as CapabilityCategory,
-        }));
+        }))
+        .sort((a, b) =>
+          capabilityDisplayName(a.name, a.standard_key).localeCompare(
+            capabilityDisplayName(b.name, b.standard_key),
+            i18n.language,
+          ),
+        );
       setLoadedCapabilities(nextCapabilities);
     };
 
@@ -515,7 +524,7 @@ export default function AddBandMemberScreen() {
                                 style={[styles.chip, selected && styles.chipSelected]}
                               >
                                 <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                                  {capability.name}
+                                  {capabilityDisplayName(capability.name, capability.standard_key)}
                                 </Text>
                               </Pressable>
                             );

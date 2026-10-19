@@ -50,9 +50,9 @@ const isSmallScreen = Dimensions.get("window").height < 700;
 /* ---------------------------------------------------------
    DATE FORMATTER
 --------------------------------------------------------- */
-function formatEventDate(dateString: string) {
+function formatEventDate(dateString: string, language: string) {
   const date = new Date(dateString);
-  return date.toLocaleDateString("en-GB", {
+  return date.toLocaleDateString(language.startsWith("es") ? "es-ES" : "en-GB", {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -154,7 +154,7 @@ type SectionKey =
 --------------------------------------------------------- */
 export default function EventDetailsScreen() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const cm = useCurrentMember() as any;
   const isAdmin = !!cm?.isAdmin;
@@ -163,6 +163,29 @@ export default function EventDetailsScreen() {
 
   const canEdit = isAdmin && adminModeEnabled;
   const canSeeFinance = isAdmin || canViewFinance;
+
+  const translateEventType = (value: string | null) => {
+    const keys: Record<string, string> = {
+      Gig: "eventsAdd.typeGig",
+      Rehearsal: "eventsAdd.typeRehearsal",
+      Recording: "eventsAdd.typeRecording",
+      Promo: "eventsAdd.typePromo",
+      Meeting: "eventsAdd.typeMeeting",
+      Other: "eventsAdd.typeOther",
+    };
+    const key = value ? keys[value] : undefined;
+    return key ? t(key, { defaultValue: value ?? undefined }) : value;
+  };
+
+  const translateEventStatus = (value: string | null) => {
+    const keys: Record<string, string> = {
+      Confirmed: "eventsAdd.statusConfirmed",
+      Provisional: "eventsAdd.statusProvisional",
+      Cancelled: "eventsAdd.statusCancelled",
+    };
+    const key = value ? keys[value] : undefined;
+    return key ? t(key, { defaultValue: value ?? undefined }) : value;
+  };
 
   const params = useLocalSearchParams<{
     id?: string | string[];
@@ -561,7 +584,7 @@ export default function EventDetailsScreen() {
     <>
       <Stack.Screen
         options={{
-          title: venue?.event_venue_name || "Event Details",
+          title: venue?.event_venue_name || t("eventDetails.title"),
           headerLeft: () => (
             <View style={styles.headerIconWrapper}>
               <TouchableOpacity onPress={() => router.back()}>
@@ -592,7 +615,7 @@ export default function EventDetailsScreen() {
           <>
             <View style={styles.eventSummary}>
               <Text style={styles.eventSummaryDate}>
-                {formatEventDate(event.event_date)}
+                {formatEventDate(event.event_date, i18n.language)}
               </Text>
 
               <Text style={styles.eventSummaryVenue}>
@@ -601,8 +624,10 @@ export default function EventDetailsScreen() {
               </Text>
 
               <Text style={styles.eventSummaryMeta}>
-                {event.event_type || "Event"}
-                {event.event_status ? `, ${event.event_status}` : ""}
+                {translateEventType(event.event_type) || t("home.typeEvent")}
+                {translateEventStatus(event.event_status)
+                  ? `, ${translateEventStatus(event.event_status)}`
+                  : ""}
               </Text>
             </View>
 

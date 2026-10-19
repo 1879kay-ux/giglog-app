@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { capabilityDisplayName } from "@/lib/capabilities";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -102,7 +103,13 @@ type ActMemberRow = {
 
 };
 
-type Capability = { capability_id: string; name: string; category: string; sort_order: number };
+type Capability = {
+  capability_id: string;
+  name: string;
+  standard_key: string | null;
+  category: string;
+  sort_order: number;
+};
 
 type PersonCapability = { member_id: string; capability_id: string };
 
@@ -240,7 +247,7 @@ export default function ActLineupScreen() {
 
         .from("capabilities")
 
-        .select("capability_id, name, category, sort_order")
+        .select("capability_id, name, standard_key, category, sort_order")
 
         .eq("band_id", actRow.band_id).eq("is_active", true)
 
@@ -286,13 +293,13 @@ export default function ActLineupScreen() {
 
       console.log("act lineup load error", e);
 
-      Alert.alert("Error", e?.message ?? "Failed to load line-up");
+      Alert.alert(t("common.error"), e?.message ?? t("acts.loadLineupError"));
 
       setAct(null); setLineup([]); setAvailableMembers([]);
 
     } finally { setLoading(false); }
 
-  }, [actId]);
+  }, [actId, t]);
 
 
 
@@ -310,12 +317,12 @@ export default function ActLineupScreen() {
 
   // A person may appear in several categories, but retains one act membership.
   const categorySections = [
-    { key: "performance", title: "Performance" },
-    { key: "crew", title: "Crew" },
-    { key: "logistics", title: "Logistics" },
-    { key: "business", title: "Business" },
-    { key: "creative_specialist", title: "Creative Specialists" },
-    { key: "other", title: "Other" },
+    { key: "performance", titleKey: "people.category.performance" },
+    { key: "crew", titleKey: "people.category.crew" },
+    { key: "logistics", titleKey: "people.category.logistics" },
+    { key: "business", titleKey: "people.category.business" },
+    { key: "creative_specialist", titleKey: "people.category.creativeSpecialist" },
+    { key: "other", titleKey: "people.category.other" },
   ];
 
   const assignedRolesForCategory = (row: ActMemberRow, category: string) =>
@@ -340,9 +347,19 @@ export default function ActLineupScreen() {
   const memberCapabilitiesDisplay = (memberId: string) =>
     personCapabilities
       .filter((p) => p.member_id === memberId)
-      .map((p) => capabilities.find((c) => c.capability_id === p.capability_id)?.name)
+      .map((p) => {
+        const capability = capabilities.find((c) => c.capability_id === p.capability_id);
+        return capability
+          ? capabilityDisplayName(capability.name, capability.standard_key)
+          : undefined;
+      })
       .filter(Boolean)
       .join(" · ");
+
+  const capabilityCategoryLabel = (category: string) => {
+    const section = categorySections.find((item) => item.key === category);
+    return section ? t(section.titleKey) : t("people.category.other");
+  };
 
   function beginAdding(member: BandMemberRow) {
 
@@ -393,7 +410,7 @@ export default function ActLineupScreen() {
     if (!actId || (!selectedMember && !editingAssignment)) return;
 
     if (selectedCapabilityIds.length === 0) {
-      Alert.alert("Assign role", "Please select at least one role before saving.");
+      Alert.alert(t("acts.assignRole"), t("acts.selectRoleBeforeSaving"));
       return;
     }
 
@@ -427,7 +444,7 @@ export default function ActLineupScreen() {
 
       }
 
-      if (!assignmentId) throw new Error("Act membership could not be identified");
+      if (!assignmentId) throw new Error(t("acts.membershipNotIdentified"));
 
 
 
@@ -473,7 +490,7 @@ export default function ActLineupScreen() {
 
       console.log("act capability save error", e);
 
-      Alert.alert("Error", e?.message ?? "Failed to save roles");
+      Alert.alert(t("common.error"), e?.message ?? t("acts.saveRolesError"));
 
     } finally { setSavingId(null); }
 
@@ -499,7 +516,7 @@ export default function ActLineupScreen() {
 
       console.log("act lineup remove member error", e);
 
-      Alert.alert("Error", e?.message ?? "Failed to remove member");
+      Alert.alert(t("common.error"), e?.message ?? t("acts.removeMemberError"));
 
     } finally { setSavingId(null); }
 
@@ -510,14 +527,16 @@ export default function ActLineupScreen() {
   const renderLineupCard = (row: ActMemberRow, category: string) => {
 
     const member = getBandMember(row);
-    const name = member?.display_name ?? "Unnamed";
+    const name = member?.display_name ?? t("acts.unnamedMember");
     const saving = savingId === row.act_member_id;
-    const assignedNames = assignedRolesForCategory(row, category).map((c) => c.name).join(", ");
+    const assignedNames = assignedRolesForCategory(row, category)
+      .map((c) => capabilityDisplayName(c.name, c.standard_key))
+      .join(", ");
     const instruments = [...(member?.band_positions ?? []), ...(member?.band_positions_other ?? [])]
       .filter(Boolean).join(", ");
     const crewRole = member?.band_role === "Other" ? member?.band_role_other : member?.band_role;
     const needsRole = !hasAssignedRoles(row);
-    const subtitle = needsRole ? "Assign role" : assignedNames;
+    const subtitle = needsRole ? t("acts.assignRole") : assignedNames;
 
     return (
       <View key={`${row.act_member_id}-${category}`} style={styles.memberCard}>
@@ -530,7 +549,7 @@ export default function ActLineupScreen() {
         <View style={styles.memberActions}>
           <Pressable onPress={() => beginEditing(row)} disabled={saving}
             style={[styles.editButton, saving ? styles.disabled : null]}>
-            <Text style={styles.editButtonText}>Edit roles</Text>
+            <Text style={styles.editButtonText}>{t("acts.editRoles")}</Text>
           </Pressable>
           <Pressable onPress={() => removeMember(row.act_member_id)} disabled={saving}
             style={[styles.removeButton, saving ? styles.disabled : null]}>
@@ -579,7 +598,7 @@ export default function ActLineupScreen() {
 
         <View style={styles.headerCard}>
 
-          <Text style={styles.actName}>{act?.act_name ?? "Untitled"}</Text>
+          <Text style={styles.actName}>{act?.act_name ?? t("acts.untitled")}</Text>
 
           <Pressable style={styles.addButton} onPress={() => { setMemberSearch(""); setPickerOpen(true); }}>
 
@@ -599,7 +618,7 @@ export default function ActLineupScreen() {
           if (categoryMembers.length === 0) return null;
           return (
             <View key={category.key} style={styles.section}>
-              <Text style={styles.sectionTitle}>{category.title}</Text>
+              <Text style={styles.sectionTitle}>{t(category.titleKey)}</Text>
               {categoryMembers.map((row) => renderLineupCard(row, category.key))}
             </View>
           );
@@ -629,7 +648,7 @@ export default function ActLineupScreen() {
 
             </View>
 
-            <TextInput style={styles.searchInput} placeholder="Search people" value={memberSearch}
+            <TextInput style={styles.searchInput} placeholder={t("people.searchPlaceholder")} value={memberSearch}
 
               onChangeText={setMemberSearch} autoCorrect={false} />
 
@@ -643,10 +662,10 @@ export default function ActLineupScreen() {
 
                   style={[styles.memberPickerRow, savingId === member.member_id ? styles.disabled : null]}>
 
-                  <Text style={styles.memberPickerName}>{member.display_name ?? "Unnamed"}</Text>
+                  <Text style={styles.memberPickerName}>{member.display_name ?? t("acts.unnamedMember")}</Text>
 
                   <Text style={styles.memberPickerType}>
-                    {memberCapabilitiesDisplay(member.member_id) || "No capabilities registered"}
+                    {memberCapabilitiesDisplay(member.member_id) || t("acts.noCapabilitiesRegistered")}
                   </Text>
 
                 </Pressable>
@@ -675,7 +694,7 @@ export default function ActLineupScreen() {
 
             <View style={styles.modalHeader}>
 
-              <Text style={styles.modalTitle}>{editingName ?? "Member"} — Roles</Text>
+              <Text style={styles.modalTitle}>{t("acts.rolesTitle", { member: editingName ?? t("acts.member") })}</Text>
 
               <Pressable onPress={closeCapabilityPicker} hitSlop={10} disabled={savingId !== null}>
 
@@ -685,7 +704,7 @@ export default function ActLineupScreen() {
 
             </View>
 
-            <Text style={styles.hint}>Select the capabilities applicable to this act.</Text>
+            <Text style={styles.hint}>{t("acts.selectCapabilitiesHint")}</Text>
 
             <ScrollView contentContainerStyle={styles.modalContent}>
 
@@ -705,9 +724,13 @@ export default function ActLineupScreen() {
 
                       <View style={{ flex: 1 }}>
 
-                        <Text style={styles.memberPickerName}>{capability.name}</Text>
+                        <Text style={styles.memberPickerName}>
+                          {capabilityDisplayName(capability.name, capability.standard_key)}
+                        </Text>
 
-                        <Text style={styles.memberPickerType}>{capability.category}</Text>
+                        <Text style={styles.memberPickerType}>
+                          {capabilityCategoryLabel(capability.category)}
+                        </Text>
 
                       </View>
 
@@ -721,7 +744,7 @@ export default function ActLineupScreen() {
 
               {availableCapabilities.length === 0 && <Text style={styles.hint}>
 
-                No capabilities registered for this person. Add them in People first.
+                {t("acts.noCapabilitiesForPerson")}
 
               </Text>}
 
@@ -731,7 +754,7 @@ export default function ActLineupScreen() {
 
               disabled={savingId !== null} onPress={saveCapabilities}>
 
-              <Text style={styles.addButtonText}>{savingId !== null ? "Saving…" : "Save roles"}</Text>
+              <Text style={styles.addButtonText}>{savingId !== null ? t("acts.savingRoles") : t("common.save")}</Text>
 
             </Pressable>
 

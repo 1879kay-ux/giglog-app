@@ -1,4 +1,5 @@
 import { useCurrentMember } from "@/components/auth/CurrentMemberContext";
+import { capabilityDisplayName } from "@/lib/capabilities";
 import { supabase } from "@/lib/supabase";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -50,14 +51,14 @@ const CAPABILITY_CATEGORY_ORDER: CapabilityCategory[] = [
 type CapabilityRow = {
   member_id: string;
   capabilities:
-    | { name: string | null; category: CapabilityCategory | null }
-    | { name: string | null; category: CapabilityCategory | null }[]
+    | { name: string | null; standard_key: string | null; category: CapabilityCategory | null }
+    | { name: string | null; standard_key: string | null; category: CapabilityCategory | null }[]
     | null;
 };
 
 export default function BandMembersScreen() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     isAdmin,
     adminModeEnabled,
@@ -126,7 +127,7 @@ export default function BandMembersScreen() {
 
       const { data, error } = await supabase
         .from("person_capabilities")
-        .select("member_id, capabilities(name,category)")
+        .select("member_id, capabilities(name,standard_key,category)")
         .in("member_id", memberIds);
 
       if (!alive) return;
@@ -147,7 +148,7 @@ export default function BandMembersScreen() {
             ? row.capabilities[0]
             : row.capabilities;
 
-        const name = capability?.name?.trim();
+        const name = capability?.name;
         const category = capability?.category ?? null;
 
         if (!name) return;
@@ -155,7 +156,9 @@ export default function BandMembersScreen() {
         if (!nextSummaryByMemberId[row.member_id]) {
           nextSummaryByMemberId[row.member_id] = [];
         }
-        nextSummaryByMemberId[row.member_id].push(name);
+        nextSummaryByMemberId[row.member_id].push(
+          capabilityDisplayName(name, capability?.standard_key),
+        );
 
         if (
           category &&
@@ -173,7 +176,7 @@ export default function BandMembersScreen() {
 
       Object.keys(nextSummaryByMemberId).forEach((id) => {
         nextSummaryByMemberId[id] = nextSummaryByMemberId[id].sort((a, b) =>
-          a.localeCompare(b),
+          a.localeCompare(b, i18n.language),
         );
       });
 
@@ -195,7 +198,7 @@ export default function BandMembersScreen() {
     return () => {
       alive = false;
     };
-  }, [members]);
+  }, [i18n.language, members]);
 
   const capabilityCategoryLabel = (category: CapabilityCategory) => {
     if (category === "performance") return t("people.category.performance");

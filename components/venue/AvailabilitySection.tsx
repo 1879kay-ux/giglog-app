@@ -1,4 +1,5 @@
 import InfoCard from "@/components/InfoCard";
+import { capabilityDisplayName } from "@/lib/capabilities";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/colors";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -24,6 +25,7 @@ type MemberType = "musician" | "crew";
 type CapabilityRow = {
   capability_id: string;
   name: string;
+  standard_key: string | null;
   category: string;
 };
 
@@ -33,12 +35,12 @@ type EventCapabilityRow = {
 };
 
 const CATEGORIES = [
-  { key: "performance", label: "Performance" },
-  { key: "crew", label: "Crew" },
-  { key: "logistics", label: "Logistics" },
-  { key: "business", label: "Business" },
-  { key: "creative_specialist", label: "Creative Specialists" },
-  { key: "other", label: "Other" },
+  { key: "performance", titleKey: "people.category.performance" },
+  { key: "crew", titleKey: "people.category.crew" },
+  { key: "logistics", titleKey: "people.category.logistics" },
+  { key: "business", titleKey: "people.category.business" },
+  { key: "creative_specialist", titleKey: "people.category.creativeSpecialist" },
+  { key: "other", titleKey: "people.category.other" },
 ] as const;
 type AvailabilityRow = {
   event_id: string;
@@ -100,7 +102,7 @@ export default function AvailabilitySection({
   eventDate,
   venueName,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<AvailabilityRow[]>([]);
@@ -177,7 +179,7 @@ export default function AvailabilitySection({
       if (capabilityIds.length) {
         const { data: caps, error: capsError } = await supabase
           .from("capabilities")
-          .select("capability_id,name,category")
+          .select("capability_id,name,standard_key,category")
           .in("capability_id", capabilityIds);
         if (capsError) {
           Alert.alert(t("availabilitySection.errorTitle"), capsError.message);
@@ -250,7 +252,7 @@ export default function AvailabilitySection({
     setRows(mapped);
     setSummary(computeSummary(eventId, mapped));
     setLoading(false);
-  }, [computeSummary, eventId]);
+  }, [computeSummary, eventId, t]);
   useEffect(() => {
     load();
   }, [load, hasCustomLineup]);
@@ -260,7 +262,7 @@ export default function AvailabilitySection({
     }, [load]),
   );
   const roleDisplay = (r: AvailabilityRow) => {
-    if ((r.band_role ?? "") === "Other") return r.band_role_other ?? "Other";
+    if ((r.band_role ?? "") === "Other") return r.band_role_other ?? t("availabilitySection.otherRole");
     return r.band_role ?? "";
   };
   const instrumentsDisplay = (r: AvailabilityRow) => {
@@ -279,11 +281,13 @@ export default function AvailabilitySection({
         .map((role) => capabilities.find((cap) => cap.capability_id === role.capability_id))
         .filter((cap): cap is CapabilityRow => !!cap);
       const categoryRoles = usesEventLineup
-        ? assigned.filter((cap) => cap.category === category.key).map((cap) => cap.name)
+        ? assigned
+            .filter((cap) => cap.category === category.key)
+            .map((cap) => capabilityDisplayName(cap.name, cap.standard_key))
         : category.key === (person.member_type === "musician" ? "performance" : "crew")
           ? [person.member_type === "musician"
-              ? instrumentsDisplay(person) || "Musician"
-              : roleDisplay(person) || "Crew"]
+              ? instrumentsDisplay(person) || t("availabilitySection.musician")
+              : roleDisplay(person) || t("availabilitySection.crew")]
           : [];
       if (categoryRoles.length) {
         return [{ person, roles: categoryRoles.join(", ") }];
@@ -291,12 +295,12 @@ export default function AvailabilitySection({
       // Event members without a role still need to appear in the availability
       // list so that no outstanding response is concealed.
       if (usesEventLineup && assigned.length === 0 && category.key === "other") {
-        return [{ person, roles: "Role not assigned" }];
+        return [{ person, roles: t("availabilitySection.roleNotAssigned") }];
       }
       return [];
     });
     return { ...category, entries };
-  }), [rows, memberRoles, capabilities, usesEventLineup]);
+  }), [rows, memberRoles, capabilities, usesEventLineup, i18n.language, t]);
 
   const currentRow = useMemo(
     () => rows.find((r) => r.member_id === memberId) ?? null,
@@ -505,7 +509,7 @@ export default function AvailabilitySection({
         </>
       ) : null}
       {grouped.map((category) => (
-        <InfoCard key={category.key} title={category.label}>
+        <InfoCard key={category.key} title={t(category.titleKey)}>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
               <Text style={[styles.cell, styles.cellHeader, { flex: 1.1 }]}>
@@ -530,7 +534,7 @@ export default function AvailabilitySection({
                 ]}
               >
                 <Text style={[styles.cell, { flex: 1.1 }]} numberOfLines={1}>
-                  {person.display_name ?? "Unnamed"}
+                  {person.display_name ?? t("eventsLineup.unnamed")}
                 </Text>
                 <Text style={[styles.cell, { flex: 2.1 }]}>
                   {roles}
@@ -556,7 +560,7 @@ export default function AvailabilitySection({
             ))}
 
             {category.entries.length === 0 ? (
-              <Text style={styles.empty}>No members assigned</Text>
+              <Text style={styles.empty}>{t("eventsLineup.noMembersAssigned")}</Text>
             ) : null}
           </View>
         </InfoCard>

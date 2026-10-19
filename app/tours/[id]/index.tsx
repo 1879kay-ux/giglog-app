@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 
 import React, { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
 
@@ -70,27 +71,27 @@ type Capability = { capability_id: string; name: string; category: string; sort_
 
 const CATEGORIES = [
 
-  { key: "performance", title: "Performance" },
+  { key: "performance", titleKey: "people.category.performance" },
 
-  { key: "crew", title: "Crew" },
+  { key: "crew", titleKey: "people.category.crew" },
 
-  { key: "logistics", title: "Logistics" },
+  { key: "logistics", titleKey: "people.category.logistics" },
 
-  { key: "business", title: "Business" },
+  { key: "business", titleKey: "people.category.business" },
 
-  { key: "creative_specialist", title: "Creative Specialists" },
+  { key: "creative_specialist", titleKey: "people.category.creativeSpecialist" },
 
-  { key: "other", title: "Other" },
+  { key: "other", titleKey: "people.category.other" },
 
 ];
 
 
 
-function formatDate(dateOnly: string): string {
+function formatDate(dateOnly: string, language: string): string {
 
   const [year, month, day] = dateOnly.split("-").map(Number);
 
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat(language, {
 
     day: "numeric",
 
@@ -105,6 +106,7 @@ function formatDate(dateOnly: string): string {
 export default function TourOverviewScreen() {
 
   const router = useRouter();
+  const { t, i18n } = useTranslation();
 
   const params = useLocalSearchParams<{ id?: string | string[] }>();
 
@@ -120,7 +122,7 @@ export default function TourOverviewScreen() {
 
   const [tour, setTour] = useState<TourRow | null>(null);
 
-  const [actName, setActName] = useState<string>("");
+  const [actName, setActName] = useState<string | null>(null);
 
   const [events, setEvents] = useState<TourEventRow[]>([]);
 
@@ -136,7 +138,7 @@ export default function TourOverviewScreen() {
 
     if (!tourId || !bandId) {
 
-      setErrorMessage("Tour or organisation not available.");
+      setErrorMessage(t("tours.unavailableTour"));
 
       setLoading(false);
 
@@ -200,7 +202,7 @@ export default function TourOverviewScreen() {
 
       setTour(loadedTour);
 
-      setActName(actResult.data?.act_name ?? "Unknown Act");
+      setActName(actResult.data?.act_name ?? null);
 
         setEvents((eventsResult.data ?? []) as unknown as TourEventRow[]);
 
@@ -280,7 +282,7 @@ export default function TourOverviewScreen() {
 
       console.log("tour overview load error", error);
 
-      setErrorMessage(error?.message ?? "Unable to load tour.");
+      setErrorMessage(error?.message ?? t("tours.loadOverviewError"));
 
       setTour(null);
 
@@ -300,25 +302,27 @@ export default function TourOverviewScreen() {
 
     }
 
-  }, [bandId, tourId]);
+  }, [bandId, tourId, t]);
 
   useFocusEffect(useCallback(() => { void loadTour(); }, [loadTour]));
 
   const dateRange = useMemo(() => {
 
-    if (events.length === 0) return "Dates to be confirmed";
+    if (events.length === 0) return t("tours.datesToBeConfirmed");
 
     const first = events[0].event_date;
 
     const last = events[events.length - 1].event_date;
 
-    return first === last ? formatDate(first) : `${formatDate(first)} – ${formatDate(last)}`;
+    return first === last
+      ? formatDate(first, i18n.language)
+      : `${formatDate(first, i18n.language)} – ${formatDate(last, i18n.language)}`;
 
-  }, [events]);
+  }, [events, i18n.language, t]);
 
   const sections = useMemo(() => {
 
-    const namesById = new Map(memberNames.map((m) => [m.member_id, m.display_name ?? "Unnamed"]));
+    const namesById = new Map(memberNames.map((m) => [m.member_id, m.display_name ?? t("tours.unknownMember")]));
 
     const capabilitiesById = new Map(capabilities.map((c) => [c.capability_id, c]));
 
@@ -346,9 +350,9 @@ export default function TourOverviewScreen() {
 
           id: member.member_id,
 
-          name: namesById.get(member.member_id) ?? "Unnamed",
+          name: namesById.get(member.member_id) ?? t("tours.unknownMember"),
 
-          roleNames: roles.map((r) => r.name).join(" · ") || "No role assigned",
+          roleNames: roles.map((r) => r.name).join(" · ") || t("tours.noRoleAssigned"),
 
         };
 
@@ -360,7 +364,46 @@ export default function TourOverviewScreen() {
 
     }).filter((category) => category.people.length > 0);
 
-  }, [tourMembers, memberNames, memberCapabilities, capabilities]);
+  }, [tourMembers, memberNames, memberCapabilities, capabilities, t]);
+
+  const translateTourStatus = (value: string) => {
+    switch (value.trim().toLowerCase()) {
+      case "planning":
+        return t("tours.statusPlanning");
+      case "confirmed":
+        return t("tours.statusConfirmed");
+      case "completed":
+        return t("tours.statusCompleted");
+      case "cancelled":
+        return t("tours.statusCancelled");
+      default:
+        return t("tours.statusUnknown");
+    }
+  };
+
+  const translateEventType = (value: string) => {
+    const key = value.trim().toLowerCase();
+    const translationKeys: Record<string, string> = {
+      gig: "eventsIndex.typeGig",
+      rehearsal: "eventsIndex.typeRehearsal",
+      recording: "eventsIndex.typeRecording",
+      promo: "eventsIndex.typePromo",
+      meeting: "eventsIndex.typeMeeting",
+      other: "eventsIndex.typeOther",
+    };
+    return translationKeys[key] ? t(translationKeys[key]) : t("eventsIndex.typeOther");
+  };
+
+  const translateEventStatus = (value: string) => {
+    const key = value.trim().toLowerCase();
+    const translationKeys: Record<string, string> = {
+      confirmed: "eventsIndex.statusConfirmed",
+      provisional: "eventsIndex.statusProvisional",
+      cancelled: "eventsIndex.statusCancelled",
+      deleted: "eventsIndex.statusDeleted",
+    };
+    return translationKeys[key] ? t(translationKeys[key]) : t("eventsIndex.statusUnknown");
+  };
 
 
 
@@ -372,7 +415,7 @@ export default function TourOverviewScreen() {
 
         options={{
 
-          title: "Tour Overview",
+          title: t("tours.overviewTitle"),
 
           headerStyle: { backgroundColor: colors.primary },
 
@@ -414,7 +457,7 @@ export default function TourOverviewScreen() {
 
           <Pressable onPress={() => void loadTour()} style={styles.retryButton}>
 
-            <Text style={styles.retryText}>Try again</Text>
+            <Text style={styles.retryText}>{t("tours.tryAgain")}</Text>
 
           </Pressable>
 
@@ -432,13 +475,13 @@ export default function TourOverviewScreen() {
 
               <View style={styles.statusBadge}>
 
-                <Text style={styles.statusText}>{tour.status}</Text>
+                <Text style={styles.statusText}>{translateTourStatus(tour.status)}</Text>
 
               </View>
 
             </View>
 
-            <Text style={styles.actName}>{actName}</Text>
+            <Text style={styles.actName}>{actName ?? t("tours.unknownAct")}</Text>
 
             <View style={styles.metaRow}>
 
@@ -452,7 +495,7 @@ export default function TourOverviewScreen() {
 
               <Ionicons name="musical-notes-outline" size={18} color={colors.primary} />
 
-              <Text style={styles.metaText}>{events.length} {events.length === 1 ? "event" : "events"}</Text>
+              <Text style={styles.metaText}>{t(events.length === 1 ? "tours.eventCount_one" : "tours.eventCount_other", { count: events.length })}</Text>
 
             </View>
 
@@ -474,19 +517,19 @@ export default function TourOverviewScreen() {
 
               <Ionicons name="create-outline" size={19} color="#fff" />
 
-              <Text style={styles.editTourButtonText}>Edit Tour</Text>
+              <Text style={styles.editTourButtonText}>{t("tours.edit")}</Text>
 
             </Pressable>
 
           ) : null}
 
-          <Text style={styles.sectionTitle}>Tour Events</Text>
+          <Text style={styles.sectionTitle}>{t("tours.events")}</Text>
 
           <View style={styles.card}>
 
             {events.length === 0 ? (
 
-              <Text style={styles.empty}>No events assigned to this tour yet.</Text>
+              <Text style={styles.empty}>{t("tours.noEventsAssigned")}</Text>
 
             ) : (
 
@@ -504,15 +547,15 @@ export default function TourOverviewScreen() {
 
                   <View style={styles.eventInfo}>
 
-                    <Text style={styles.venueName}>{event.venues?.event_venue_name || "Venue TBC"}</Text>
+                    <Text style={styles.venueName}>{event.venues?.event_venue_name || t("tours.venueToBeConfirmed")}</Text>
 
                     <Text style={styles.eventDetail}>
 
-                      {formatDate(event.event_date)} · {event.venues?.city || "Location TBC"}
+                      {formatDate(event.event_date, i18n.language)} · {event.venues?.city || t("tours.locationToBeConfirmed")}
 
                     </Text>
 
-                    <Text style={styles.eventDetail}>{event.event_type} · {event.event_status}</Text>
+                    <Text style={styles.eventDetail}>{translateEventType(event.event_type)} · {translateEventStatus(event.event_status)}</Text>
 
                   </View>
 
@@ -526,19 +569,19 @@ export default function TourOverviewScreen() {
 
           </View>
 
-          <Text style={styles.sectionTitle}>Tour Line-up</Text>
+          <Text style={styles.sectionTitle}>{t("tours.lineup")}</Text>
 
           <View style={styles.card}>
 
                           <Text style={styles.lineupSummary}>
 
-                {tourMembers.length} {tourMembers.length === 1 ? "person" : "people"}
+                {t(tourMembers.length === 1 ? "tours.personCount_one" : "tours.personCount_other", { count: tourMembers.length })}
 
               </Text>
 
               {tourMembers.length === 0 ? (
 
-                <Text style={styles.empty}>No Tour line-up assigned yet.</Text>
+                <Text style={styles.empty}>{t("tours.noLineupAssigned")}</Text>
 
               ) : (
 
@@ -546,7 +589,7 @@ export default function TourOverviewScreen() {
 
                   <View key={section.key} style={styles.lineupSection}>
 
-                    <Text style={styles.lineupSectionTitle}>{section.title}</Text>
+                    <Text style={styles.lineupSectionTitle}>{t(section.titleKey)}</Text>
 
                     {section.people.map((person) => (
 
@@ -566,7 +609,7 @@ export default function TourOverviewScreen() {
 
               )}
 
-              <Text style={styles.empty}>Tour roles are independent of the Act and individual Events.</Text>
+              <Text style={styles.empty}>{t("tours.rolesIndependent")}</Text>
 
             {canManage ? (
 
@@ -582,7 +625,7 @@ export default function TourOverviewScreen() {
 
                 <Ionicons name="people-outline" size={19} color="#fff" />
 
-                <Text style={styles.editTourButtonText}>Manage Tour Line-up</Text>
+                <Text style={styles.editTourButtonText}>{t("tours.manageLineup")}</Text>
 
               </Pressable>
 
@@ -595,7 +638,7 @@ export default function TourOverviewScreen() {
                   style={styles.assignButton}
                 >
                   <Ionicons name="copy-outline" size={19} color="#fff" />
-                  <Text style={styles.editTourButtonText}>Assign Line-up to Events</Text>
+                  <Text style={styles.editTourButtonText}>{t("tours.assignLineupToEvents")}</Text>
                 </Pressable>
               ) : null}
 
@@ -605,7 +648,7 @@ export default function TourOverviewScreen() {
 
       ) : (
 
-        <View style={styles.center}><Text style={styles.error}>Tour not found.</Text></View>
+        <View style={styles.center}><Text style={styles.error}>{t("tours.tourNotFound")}</Text></View>
 
       )}
 

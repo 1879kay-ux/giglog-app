@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   ActivityIndicator,
@@ -66,13 +67,13 @@ const statusOptions: TourStatus[] = ["planning", "confirmed", "completed", "canc
 
 
 
-function dateLabel(value: string): string {
+function dateLabel(value: string, language: string): string {
 
   const [y, m, d] = value.split("-").map(Number);
 
   if (!y || !m || !d) return value;
 
-  return new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", year: "numeric" }).format(new Date(y, m - 1, d));
+  return new Intl.DateTimeFormat(language, { day: "numeric", month: "short", year: "numeric" }).format(new Date(y, m - 1, d));
 
 }
 
@@ -86,14 +87,12 @@ function toISODate(value: Date): string {
 
 
 
-function ukDateLabel(value: string): string {
-
-  if (!validDate(value)) return "Choose date";
-
+function inputDateLabel(value: string, language: string, chooseDateLabel: string): string {
+  if (!validDate(value)) return chooseDateLabel;
   const [year, month, day] = value.split("-");
-
-  return `${day}/${month}/${year}`;
-
+  return new Intl.DateTimeFormat(language, { day: "2-digit", month: "2-digit", year: "numeric" }).format(
+    new Date(Number(year), Number(month) - 1, Number(day)),
+  );
 }
 
 
@@ -113,9 +112,8 @@ function validDate(value: string): boolean {
 
 
 export default function CreateTourScreen() {
-
   const router = useRouter();
-
+  const { t, i18n } = useTranslation();
   const { bandId, isAdmin, adminModeEnabled } = useCurrentMember();
 
   const canManage = isAdmin && adminModeEnabled;
@@ -157,6 +155,33 @@ export default function CreateTourScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [showReview, setShowReview] = useState(false);
+
+  const statusLabel = (value: TourStatus) => t(`tours.status${value[0].toUpperCase()}${value.slice(1)}`);
+  const eventTypeLabel = (value: string) => {
+    const key = value.trim().toLowerCase();
+    const translationKeys: Record<string, string> = {
+      gig: "eventsAdd.typeGig",
+      rehearsal: "eventsAdd.typeRehearsal",
+      recording: "eventsAdd.typeRecording",
+      promo: "eventsAdd.typePromo",
+      meeting: "eventsAdd.typeMeeting",
+      other: "eventsAdd.typeOther",
+    };
+    return translationKeys[key] ? t(translationKeys[key]) : value;
+  };
+  const eventStatusLabel = (value: string) => {
+    const key = value.trim().toLowerCase();
+    const translationKeys: Record<string, string> = {
+      confirmed: "eventsAdd.statusConfirmed",
+      provisional: "eventsAdd.statusProvisional",
+      cancelled: "eventsAdd.statusCancelled",
+    };
+    return translationKeys[key] ? t(translationKeys[key]) : value;
+  };
+  const calendarMonth = new Intl.DateTimeFormat(i18n.language, { month: "long", year: "numeric" }).format(pickerMonth);
+  const calendarWeekdays = Array.from({ length: 7 }, (_, index) => (
+    new Intl.DateTimeFormat(i18n.language, { weekday: "short" }).format(new Date(2024, 0, index + 1))
+  ));
 
 
 
@@ -403,11 +428,11 @@ export default function CreateTourScreen() {
 
     if (saving || !bandId || !selectedActId || !canManage) return;
 
-    if (!tourName.trim()) { Alert.alert("Tour name required", "Enter a name for this tour."); return; }
+    if (!tourName.trim()) { Alert.alert(t("tours.tourNameRequired"), t("tours.enterTourName")); return; }
 
-    if (selectedIds.size === 0) { Alert.alert("Select events", "Choose at least one event for the tour."); return; }
+    if (selectedIds.size === 0) { Alert.alert(t("tours.selectEvents"), t("tours.chooseAtLeastOneEvent")); return; }
 
-    if (mode === "range" && !dateRangeValid) { Alert.alert("Invalid date range", "Choose a valid From and To date."); return; }
+    if (mode === "range" && !dateRangeValid) { Alert.alert(t("tours.invalidDateRange"), t("tours.chooseValidDateRange")); return; }
 
     setSaving(true);
 
@@ -481,7 +506,7 @@ export default function CreateTourScreen() {
 
         if (rollbackError) {
 
-          Alert.alert("Save incomplete", `The tour could not be saved completely, and automatic clean-up failed. Please check the Tours list before retrying.\n\n${rollbackError.message}`);
+          Alert.alert(t("tours.saveIncomplete"), t("tours.saveIncompleteMessage", { error: rollbackError.message }));
 
           setSaving(false);
 
@@ -491,7 +516,7 @@ export default function CreateTourScreen() {
 
       }
 
-      Alert.alert("Couldn't create tour", error?.message ?? "Please try again.");
+      Alert.alert(t("tours.createError"), error?.message ?? t("tours.tryAgain"));
 
       void loadEvents();
 
@@ -505,7 +530,7 @@ export default function CreateTourScreen() {
 
 
 
-  if (!canManage) return <View style={styles.center}><Text style={styles.message}>Administrator mode is required to create tours.</Text></View>;
+  if (!canManage) return <View style={styles.center}><Text style={styles.message}>{t("tours.adminModeRequiredCreate")}</Text></View>;
 
 
 
@@ -513,7 +538,7 @@ export default function CreateTourScreen() {
 
     <>
 
-      <Stack.Screen options={{ title: "Create Tour", headerStyle: { backgroundColor: colors.primary }, headerTintColor: "#fff" }} />
+      <Stack.Screen options={{ title: t("tours.createTitle"), headerStyle: { backgroundColor: colors.primary }, headerTintColor: "#fff" }} />
 
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
 
@@ -523,19 +548,19 @@ export default function CreateTourScreen() {
 
           {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
 
-          {!loading && acts.length === 0 ? <Text style={styles.message}>Create an Act before creating a tour.</Text> : null}
+          {!loading && acts.length === 0 ? <Text style={styles.message}>{t("tours.createActFirst")}</Text> : null}
 
-          <Text style={styles.sectionTitle}>Tour details</Text>
+          <Text style={styles.sectionTitle}>{t("tours.details")}</Text>
 
-          <Text style={styles.label}>Tour name<Text style={styles.required}> *</Text></Text>
+          <Text style={styles.label}>{t("tours.name")}<Text style={styles.required}> *</Text></Text>
 
-          <TextInput style={styles.input} value={tourName} onChangeText={setTourName} placeholder="e.g. Summer Tour 2027" maxLength={120} editable={!saving} />
+          <TextInput style={styles.input} value={tourName} onChangeText={setTourName} placeholder={t("tours.namePlaceholder")} maxLength={120} editable={!saving} />
 
-            <Text style={styles.requiredHint}>* Required field</Text>
+            <Text style={styles.requiredHint}>{t("tours.requiredField")}</Text>
 
 
 
-          <Text style={styles.label}>Act</Text>
+          <Text style={styles.label}>{t("tours.act")}</Text>
 
           <View style={styles.chips}>
 
@@ -549,37 +574,37 @@ export default function CreateTourScreen() {
 
 
 
-          <Text style={styles.label}>Status</Text>
+          <Text style={styles.label}>{t("tours.status")}</Text>
 
           <View style={styles.chips}>
 
             {statusOptions.map((s) => <Pressable key={s} disabled={saving} onPress={() => setStatus(s)} style={[styles.chip, status === s && styles.chipSelected]}>
 
-              <Text style={[styles.chipText, status === s && styles.chipTextSelected]}>{s[0].toUpperCase() + s.slice(1)}</Text>
+              <Text style={[styles.chipText, status === s && styles.chipTextSelected]}>{statusLabel(s)}</Text>
 
             </Pressable>)}
 
           </View>
 
-          <Text style={styles.label}>Notes (optional)</Text>
+          <Text style={styles.label}>{t("tours.notesOptional")}</Text>
 
-          <TextInput style={[styles.input, styles.notes]} value={notes} onChangeText={setNotes} multiline textAlignVertical="top" placeholder="Tour notes" editable={!saving} />
+          <TextInput style={[styles.input, styles.notes]} value={notes} onChangeText={setNotes} multiline textAlignVertical="top" placeholder={t("tours.notesPlaceholder")} editable={!saving} />
 
 
 
-          <Text style={styles.sectionTitle}>Choose existing events</Text>
+          <Text style={styles.sectionTitle}>{t("tours.chooseExistingEvents")}</Text>
 
           <View style={styles.modeRow}>
 
             <Pressable style={[styles.modeButton, mode === "range" && styles.modeSelected]} onPress={() => changeMode("range")} disabled={saving}>
 
-              <Text style={[styles.modeText, mode === "range" && styles.modeTextSelected]}>Date range</Text>
+              <Text style={[styles.modeText, mode === "range" && styles.modeTextSelected]}>{t("tours.dateRange")}</Text>
 
             </Pressable>
 
             <Pressable style={[styles.modeButton, mode === "individual" && styles.modeSelected]} onPress={() => changeMode("individual")} disabled={saving}>
 
-              <Text style={[styles.modeText, mode === "individual" && styles.modeTextSelected]}>Individual events</Text>
+              <Text style={[styles.modeText, mode === "individual" && styles.modeTextSelected]}>{t("tours.individualEvents")}</Text>
 
             </Pressable>
 
@@ -593,11 +618,11 @@ export default function CreateTourScreen() {
 
                 <View style={styles.dateField}>
 
-                  <Text style={styles.label}>From</Text>
+                  <Text style={styles.label}>{t("tours.from")}</Text>
 
-                  <Pressable accessibilityRole="button" accessibilityLabel="Choose tour start date" disabled={saving} onPress={() => openDatePicker("start")} style={styles.datePickerButton}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={t("tours.chooseStartDate")} disabled={saving} onPress={() => openDatePicker("start")} style={styles.datePickerButton}>
 
-                    <Text style={[styles.datePickerText, !startDate && styles.datePlaceholder]}>{ukDateLabel(startDate)}</Text>
+                    <Text style={[styles.datePickerText, !startDate && styles.datePlaceholder]}>{inputDateLabel(startDate, i18n.language, t("tours.chooseDate"))}</Text>
 
                     <Ionicons name="calendar-outline" size={20} color={colors.primary} />
 
@@ -607,11 +632,11 @@ export default function CreateTourScreen() {
 
                 <View style={styles.dateField}>
 
-                  <Text style={styles.label}>To</Text>
+                  <Text style={styles.label}>{t("tours.to")}</Text>
 
-                  <Pressable accessibilityRole="button" accessibilityLabel="Choose tour end date" disabled={saving} onPress={() => openDatePicker("end")} style={styles.datePickerButton}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={t("tours.chooseEndDate")} disabled={saving} onPress={() => openDatePicker("end")} style={styles.datePickerButton}>
 
-                    <Text style={[styles.datePickerText, !endDate && styles.datePlaceholder]}>{ukDateLabel(endDate)}</Text>
+                    <Text style={[styles.datePickerText, !endDate && styles.datePlaceholder]}>{inputDateLabel(endDate, i18n.language, t("tours.chooseDate"))}</Text>
 
                     <Ionicons name="calendar-outline" size={20} color={colors.primary} />
 
@@ -621,27 +646,27 @@ export default function CreateTourScreen() {
 
               </View>
 
-              {!dateRangeValid ? <Text style={styles.hint}>Choose a From and To date to show matching events.</Text> : null}
+              {!dateRangeValid ? <Text style={styles.hint}>{t("tours.dateRangeHint")}</Text> : null}
 
             </>
 
           ) : null}
 
-          <Text style={styles.hint}>Only events for this Act that aren't already in another tour are available.</Text>
+          <Text style={styles.hint}>{t("tours.eventAvailabilityHint")}</Text>
 
-          <TextInput style={styles.input} value={search} onChangeText={setSearch} placeholder="Search venues, cities or dates" autoCapitalize="none" />
+          <TextInput style={styles.input} value={search} onChangeText={setSearch} placeholder={t("tours.searchEventsPlaceholder")} autoCapitalize="none" />
 
           <View style={styles.toolbar}>
 
-            <Text style={styles.count}>{eligible.length} eligible · {selectedIds.size} selected</Text>
+            <Text style={styles.count}>{t("tours.eligibleSelected", { eligible: eligible.length, selected: selectedIds.size })}</Text>
 
-            <Pressable onPress={selectAllEligible} disabled={saving || eligible.length === 0}><Text style={styles.actionText}>Select all</Text></Pressable>
+            <Pressable onPress={selectAllEligible} disabled={saving || eligible.length === 0}><Text style={styles.actionText}>{t("tours.selectAll")}</Text></Pressable>
 
-            <Pressable onPress={clearSelection} disabled={saving}><Text style={styles.actionText}>Clear</Text></Pressable>
+            <Pressable onPress={clearSelection} disabled={saving}><Text style={styles.actionText}>{t("tours.clear")}</Text></Pressable>
 
           </View>
 
-          {loadingEvents ? <ActivityIndicator /> : visibleEvents.length === 0 ? <Text style={styles.hint}>No matching events.</Text> : (
+          {loadingEvents ? <ActivityIndicator /> : visibleEvents.length === 0 ? <Text style={styles.hint}>{t("tours.noMatchingEvents")}</Text> : (
 
             <View style={styles.eventList}>
 
@@ -653,11 +678,9 @@ export default function CreateTourScreen() {
 
                   <View style={styles.eventInfo}>
 
-                    <Text style={styles.eventName}>{e.venues?.event_venue_name || "Venue TBC"}</Text>
-
-                    <Text style={styles.eventMeta}>{dateLabel(e.event_date)} · {e.venues?.city || "Location TBC"}</Text>
-
-                    <Text style={styles.eventMeta}>{e.event_type} · {e.event_status}</Text>
+                    <Text style={styles.eventName}>{e.venues?.event_venue_name || t("tours.venueToBeConfirmed")}</Text>
+                    <Text style={styles.eventMeta}>{dateLabel(e.event_date, i18n.language)} · {e.venues?.city || t("tours.locationToBeConfirmed")}</Text>
+                    <Text style={styles.eventMeta}>{eventTypeLabel(e.event_type)} · {eventStatusLabel(e.event_status)}</Text>
 
                   </View>
 
@@ -671,27 +694,27 @@ export default function CreateTourScreen() {
 
           <Pressable onPress={() => setShowReview((v) => !v)} style={styles.reviewButton} disabled={selectedIds.size === 0 || saving}>
 
-            <Text style={styles.reviewText}>{showReview ? "Hide review" : `Review ${selectedIds.size} selected events`}</Text>
+            <Text style={styles.reviewText}>{showReview ? t("tours.hideReview") : t(selectedIds.size === 1 ? "tours.reviewSelectedEvents_one" : "tours.reviewSelectedEvents_other", { count: selectedIds.size })}</Text>
 
           </Pressable>
 
           {showReview ? <View style={styles.review}>
 
-            <Text style={styles.sectionTitle}>Review tour</Text>
+            <Text style={styles.sectionTitle}>{t("tours.reviewTour")}</Text>
 
-            <Text style={styles.hint}>{tourName.trim() || "Unnamed tour"} · {acts.find((a) => a.act_id === selectedActId)?.act_name ?? ""}</Text>
+            <Text style={styles.hint}>{tourName.trim() || t("tours.unnamedTour")} · {acts.find((a) => a.act_id === selectedActId)?.act_name ?? ""}</Text>
 
-            {selectedEvents.map((e) => <Text key={e.event_id} style={styles.reviewLine}>• {dateLabel(e.event_date)} — {e.venues?.event_venue_name || "Venue TBC"}</Text>)}
+            {selectedEvents.map((e) => <Text key={e.event_id} style={styles.reviewLine}>• {dateLabel(e.event_date, i18n.language)} — {e.venues?.event_venue_name || t("tours.venueToBeConfirmed")}</Text>)}
 
           </View> : null}
 
           <Pressable onPress={() => void saveTour()} disabled={saving || loading || loadingEvents || !selectedActId || !tourName.trim() || selectedIds.size === 0} style={[styles.saveButton, (saving || !selectedActId || !tourName.trim() || selectedIds.size === 0) && styles.disabled]}>
 
-            {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Save Tour</Text>}
+            {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>{t("tours.saveTour")}</Text>}
 
           </Pressable>
 
-          <Text style={styles.hint}>A new tour starts without a Tour Line-up. We'll add its independent line-up in the next development stage; existing event assignments won't be changed.</Text>
+          <Text style={styles.hint}>{t("tours.createLineupHint")}</Text>
 
         </ScrollView>
 
@@ -705,9 +728,9 @@ export default function CreateTourScreen() {
 
             <View style={styles.calendarTitleRow}>
 
-              <Text style={styles.calendarTitle}>{pickerTarget === "start" ? "From date" : "To date"}</Text>
+              <Text style={styles.calendarTitle}>{pickerTarget === "start" ? t("tours.fromDate") : t("tours.toDate")}</Text>
 
-              <Pressable onPress={() => setPickerTarget(null)} hitSlop={10} accessibilityLabel="Close calendar">
+              <Pressable onPress={() => setPickerTarget(null)} hitSlop={10} accessibilityLabel={t("tours.closeCalendar")}>
 
                 <Ionicons name="close" size={25} color="#555" />
 
@@ -717,21 +740,21 @@ export default function CreateTourScreen() {
 
             <View style={styles.calendarNav}>
 
-              <Pressable onPress={() => movePickerMonth(-12)} style={styles.calendarArrow} accessibilityLabel="Previous year"><Ionicons name="chevron-back" size={16} color={colors.primary} /><Ionicons name="chevron-back" size={16} color={colors.primary} /></Pressable>
+              <Pressable onPress={() => movePickerMonth(-12)} style={styles.calendarArrow} accessibilityLabel={t("tours.previousYear")}><Ionicons name="chevron-back" size={16} color={colors.primary} /><Ionicons name="chevron-back" size={16} color={colors.primary} /></Pressable>
 
-              <Pressable onPress={() => movePickerMonth(-1)} style={styles.calendarArrow} accessibilityLabel="Previous month"><Ionicons name="chevron-back" size={22} color={colors.primary} /></Pressable>
+              <Pressable onPress={() => movePickerMonth(-1)} style={styles.calendarArrow} accessibilityLabel={t("tours.previousMonth")}><Ionicons name="chevron-back" size={22} color={colors.primary} /></Pressable>
 
-              <Text style={styles.calendarMonth}>{new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(pickerMonth)}</Text>
+              <Text style={styles.calendarMonth}>{calendarMonth}</Text>
 
-              <Pressable onPress={() => movePickerMonth(1)} style={styles.calendarArrow} accessibilityLabel="Next month"><Ionicons name="chevron-forward" size={22} color={colors.primary} /></Pressable>
+              <Pressable onPress={() => movePickerMonth(1)} style={styles.calendarArrow} accessibilityLabel={t("tours.nextMonth")}><Ionicons name="chevron-forward" size={22} color={colors.primary} /></Pressable>
 
-              <Pressable onPress={() => movePickerMonth(12)} style={styles.calendarArrow} accessibilityLabel="Next year"><Ionicons name="chevron-forward" size={16} color={colors.primary} /><Ionicons name="chevron-forward" size={16} color={colors.primary} /></Pressable>
+              <Pressable onPress={() => movePickerMonth(12)} style={styles.calendarArrow} accessibilityLabel={t("tours.nextYear")}><Ionicons name="chevron-forward" size={16} color={colors.primary} /><Ionicons name="chevron-forward" size={16} color={colors.primary} /></Pressable>
 
             </View>
 
             <View style={styles.calendarGrid}>
               <View style={styles.calendarWeekRow}>
-                {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => (
+                {calendarWeekdays.map((day, i) => (
                   <View key={`heading-${i}`} style={styles.calendarDay}>
                     <Text style={styles.calendarWeekday}>{day}</Text>
                   </View>
@@ -750,7 +773,7 @@ export default function CreateTourScreen() {
                           <Pressable
                             onPress={() => chooseDate(day)}
                             style={[styles.calendarDayButton, chosen && styles.calendarDaySelected]}
-                            accessibilityLabel={`Choose ${day} ${new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(pickerMonth)}`}
+                            accessibilityLabel={t("tours.chooseCalendarDate", { day, month: calendarMonth })}
                           >
                             <Text style={[styles.calendarDayText, chosen && styles.calendarSelectedText]}>{day}</Text>
                           </Pressable>
@@ -762,7 +785,7 @@ export default function CreateTourScreen() {
               ))}
             </View>
 
-            <Text style={styles.calendarHelp}>Dates display as DD/MM/YYYY.</Text>
+            <Text style={styles.calendarHelp}>{t("tours.calendarHelp")}</Text>
 
           </View>
 

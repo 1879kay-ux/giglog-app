@@ -5,6 +5,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform,
   Pressable, ScrollView, StyleSheet, Text, TextInput, View,
@@ -24,12 +25,12 @@ type ActMember = { act_member_id: string; member_id: string };
 type ActAssignment = { act_member_id: string; capability_id: string };
 
 const categories = [
-  { key: "performance", title: "Performance" },
-  { key: "crew", title: "Crew" },
-  { key: "logistics", title: "Logistics" },
-  { key: "business", title: "Business" },
-  { key: "creative_specialist", title: "Creative Specialists" },
-  { key: "other", title: "Other" },
+  { key: "performance", titleKey: "people.category.performance" },
+  { key: "crew", titleKey: "people.category.crew" },
+  { key: "logistics", titleKey: "people.category.logistics" },
+  { key: "business", titleKey: "people.category.business" },
+  { key: "creative_specialist", titleKey: "people.category.creativeSpecialist" },
+  { key: "other", titleKey: "people.category.other" },
 ];
 
 function memberInfo(row: TourMember): Person | null {
@@ -38,6 +39,7 @@ function memberInfo(row: TourMember): Person | null {
 
 export default function TourLineupScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const tourId = Array.isArray(params.id) ? params.id[0] : params.id;
   const { bandId, isAdmin, adminModeEnabled } = useCurrentMember();
@@ -108,11 +110,11 @@ export default function TourLineupScreen() {
       setPersonCapabilities((personCapResult.data ?? []) as PersonCapability[]);
     } catch (e: any) {
       console.log("tour lineup load error", e);
-      Alert.alert("Unable to load Tour Line-up", e?.message ?? "Please try again.");
+      Alert.alert(t("tours.loadLineupError"), e?.message ?? t("tours.tryAgain"));
     } finally {
       setLoading(false);
     }
-  }, [tourId, bandId]);
+  }, [tourId, bandId, t]);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
@@ -134,6 +136,17 @@ export default function TourLineupScreen() {
     personCapabilities.some(p => p.member_id === currentPersonId && p.capability_id === c.capability_id) ||
     selectedCapabilities.includes(c.capability_id)
   );
+  const categoryLabel = (category: string) => {
+    const translationKeys: Record<string, string> = {
+      performance: "people.category.performance",
+      crew: "people.category.crew",
+      logistics: "people.category.logistics",
+      business: "people.category.business",
+      creative_specialist: "people.category.creativeSpecialist",
+      other: "people.category.other",
+    };
+    return translationKeys[category] ? t(translationKeys[category]) : t("people.category.other");
+  };
 
   function startAdd(person: Person) {
     setAddingPerson(person);
@@ -151,7 +164,7 @@ export default function TourLineupScreen() {
   async function saveRoles() {
     if (!tourId || !canManage || busy) return;
     if (!selectedCapabilities.length) {
-      Alert.alert("Assign role", "Please select at least one role before saving.");
+      Alert.alert(t("tours.assignRole"), t("tours.selectRoleBeforeSaving"));
       return;
     }
     setBusy(true);
@@ -192,7 +205,7 @@ export default function TourLineupScreen() {
       setEditingMember(null);
       await load();
     } catch (e: any) {
-      Alert.alert("Could not save roles", e?.message ?? "Please try again.");
+      Alert.alert(t("tours.saveRolesError"), e?.message ?? t("tours.tryAgain"));
       await load();
     } finally {
       setBusy(false);
@@ -201,10 +214,10 @@ export default function TourLineupScreen() {
 
   function confirmRemoval(m: TourMember) {
     if (!canManage || busy) return;
-    const name = memberInfo(m)?.display_name ?? "this person";
-    Alert.alert("Remove from tour?", `${name} will be removed from the Tour Line-up. Existing events will not change.`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Remove", style: "destructive", onPress: () => { void removeMember(m.tour_member_id); } },
+    const name = memberInfo(m)?.display_name ?? t("tours.thisPerson");
+    Alert.alert(t("tours.removeFromTourTitle"), t("tours.removeFromTourMessage", { name }), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("acts.remove"), style: "destructive", onPress: () => { void removeMember(m.tour_member_id); } },
     ]);
   }
   async function removeMember(id: string) {
@@ -214,15 +227,15 @@ export default function TourLineupScreen() {
       if (error) throw error;
       await load();
     } catch (e: any) {
-      Alert.alert("Could not remove member", e?.message ?? "Please try again.");
+      Alert.alert(t("tours.removeMemberError"), e?.message ?? t("tours.tryAgain"));
     } finally { setBusy(false); }
   }
 
   function confirmImport() {
     if (!tour || !canManage || busy || members.length > 0) return;
-    Alert.alert("Copy Act Line-up?", "Copy the Act's current members and roles into this tour? This is a one-time starting point. Existing Event line-ups will not change.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Copy line-up", onPress: () => { void importActLineup(); } },
+    Alert.alert(t("tours.copyActLineupTitle"), t("tours.copyActLineupMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("tours.copyLineup"), onPress: () => { void importActLineup(); } },
     ]);
   }
   async function importActLineup() {
@@ -234,13 +247,13 @@ export default function TourLineupScreen() {
       const { data: existing, error: existingError } = await supabase.from("tour_members")
         .select("tour_member_id").eq("tour_id", tour.tour_id).limit(1);
       if (existingError) throw existingError;
-      if ((existing ?? []).length) throw new Error("This tour already has a line-up. No import was made.");
+      if ((existing ?? []).length) throw new Error(t("tours.lineupAlreadyExists"));
 
       const { data: actMembers, error: memberError } = await supabase.from("act_members")
         .select("act_member_id, member_id").eq("act_id", tour.act_id);
       if (memberError) throw memberError;
       const source = (actMembers ?? []) as ActMember[];
-      if (!source.length) throw new Error("This Act has no members to copy.");
+      if (!source.length) throw new Error(t("tours.actHasNoMembers"));
       const { data: actCaps, error: capError } = await supabase.from("act_member_capabilities")
         .select("act_member_id, capability_id").in("act_member_id", source.map(m => m.act_member_id));
       if (capError) throw capError;
@@ -263,71 +276,72 @@ export default function TourLineupScreen() {
         if (error) throw error;
       }
       await load();
-      Alert.alert("Line-up copied", "The Tour Line-up is now independent of the Act. Existing Event line-ups are unchanged.");
+      Alert.alert(t("tours.lineupCopied"), t("tours.lineupCopiedMessage"));
     } catch (e: any) {
       // Best-effort removal of the rows created during this import.
       if (newMemberIds.length) {
         const { error } = await supabase.from("tour_members").delete().in("tour_member_id", newMemberIds);
         if (error) {
-          Alert.alert("Import incomplete", `${e?.message ?? "Import failed"}. Automatic cleanup also failed: ${error.message}`);
+          Alert.alert(t("tours.importIncomplete"), t("tours.importIncompleteMessage", { error: e?.message ?? t("tours.importFailed"), cleanupError: error.message }));
           await load();
           setBusy(false);
           return;
         }
       }
-      Alert.alert("Could not copy line-up", e?.message ?? "Please try again.");
+      Alert.alert(t("tours.copyLineupError"), e?.message ?? t("tours.tryAgain"));
       await load();
     } finally { setBusy(false); }
   }
 
   const renderMember = (m: TourMember, category: string) => {
-    const name = memberInfo(m)?.display_name ?? "Unnamed";
+    const name = memberInfo(m)?.display_name ?? t("tours.unknownMember");
     const roleNames = assignedCapabilitiesFor(m).filter(c => c.category === category).map(c => c.name).join(", ");
     return (
       <View key={`${m.tour_member_id}-${category}`} style={styles.memberCard}>
         <Text style={styles.memberName}>{name}</Text>
-        <Text style={styles.memberSub}>{roleNames || "Assign role"}</Text>
+        <Text style={styles.memberSub}>{roleNames || t("tours.assignRole")}</Text>
         {canManage ? <View style={styles.actions}>
-          <Pressable disabled={busy} onPress={() => startEdit(m)} style={styles.editButton}><Text style={styles.editText}>Edit roles</Text></Pressable>
-          <Pressable disabled={busy} onPress={() => confirmRemoval(m)} style={styles.removeButton}><Text style={styles.removeText}>Remove</Text></Pressable>
+          <Pressable disabled={busy} onPress={() => startEdit(m)} style={styles.editButton}><Text style={styles.editText}>{t("tours.editRoles")}</Text></Pressable>
+          <Pressable disabled={busy} onPress={() => confirmRemoval(m)} style={styles.removeButton}><Text style={styles.removeText}>{t("acts.remove")}</Text></Pressable>
         </View> : null}
       </View>
     );
   };
 
   return <>
-    <Stack.Screen options={{ title: "Tour Line-up", headerStyle: { backgroundColor: colors.primary }, headerTintColor: "#fff",
+    <Stack.Screen options={{ title: t("tours.lineup"), headerStyle: { backgroundColor: colors.primary }, headerTintColor: "#fff",
       headerLeft: () => <Pressable style={styles.headerBtn} onPress={() => router.back()}><Ionicons name="arrow-back" size={22} color="#fff" /></Pressable>,
     }} />
-    {loading ? <View style={styles.center}><ActivityIndicator /></View> : !tour ? <View style={styles.center}><Text>Tour not found.</Text></View> : <>
+    {loading ? <View style={styles.center}><ActivityIndicator /></View> : !tour ? <View style={styles.center}><Text>{t("tours.tourNotFound")}</Text></View> : <>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.headerCard}>
           <Text style={styles.tourName}>{tour.tour_name}</Text>
-          <Text style={styles.hint}>This line-up is specific to this tour. Changes here do not automatically update the Act or existing Events.</Text>
+          <Text style={styles.hint}>{t(members.length === 1 ? "tours.personCount_one" : "tours.personCount_other", { count: members.length })}</Text>
+          <Text style={styles.hint}>{t("tours.lineupSpecificToTour")}</Text>
           {canManage && members.length === 0 ? <Pressable disabled={busy} onPress={confirmImport} style={[styles.primaryButton, busy && styles.disabled]}>
             <Ionicons name="copy-outline" size={18} color="#fff" />
-            <Text style={styles.primaryText}>{busy ? "Working…" : "Copy from Act Line-up"}</Text>
+            <Text style={styles.primaryText}>{busy ? t("tours.working") : t("tours.copyFromActLineup")}</Text>
           </Pressable> : null}
           {canManage ? <Pressable disabled={busy} onPress={() => { setSearch(""); setPickerOpen(true); }} style={[styles.primaryButton, busy && styles.disabled]}>
             <Ionicons name="add-circle-outline" size={18} color="#fff" />
-            <Text style={styles.primaryText}>Add Member</Text>
+            <Text style={styles.primaryText}>{t("acts.addMember")}</Text>
           </Pressable> : null}
         </View>
-        {members.length === 0 ? <Text style={styles.hint}>No Tour Line-up yet. Copy the Act Line-up or add members individually.</Text> : null}
+        {members.length === 0 ? <Text style={styles.hint}>{t("tours.noLineupYet")}</Text> : null}
         {categories.map(category => {
           const list = categoryMembers(category.key);
           if (!list.length) return null;
           return <View key={category.key} style={styles.section}>
-            <Text style={styles.sectionTitle}>{category.title}</Text>
+            <Text style={styles.sectionTitle}>{t(category.titleKey)}</Text>
             {list.map(m => renderMember(m, category.key))}
           </View>;
         })}
         {unassignedMembers.length ? <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Unassigned roles</Text>
+          <Text style={styles.sectionTitle}>{t("tours.unassignedRoles")}</Text>
           {unassignedMembers.map(m => <View key={m.tour_member_id} style={styles.memberCard}>
-            <Text style={styles.memberName}>{memberInfo(m)?.display_name ?? "Unnamed"}</Text>
-            <Text style={styles.warning}>Assign role</Text>
-            {canManage ? <Pressable onPress={() => startEdit(m)} style={styles.editButton}><Text style={styles.editText}>Edit roles</Text></Pressable> : null}
+            <Text style={styles.memberName}>{memberInfo(m)?.display_name ?? t("tours.unknownMember")}</Text>
+            <Text style={styles.warning}>{t("tours.assignRole")}</Text>
+            {canManage ? <Pressable onPress={() => startEdit(m)} style={styles.editButton}><Text style={styles.editText}>{t("tours.editRoles")}</Text></Pressable> : null}
           </View>)}
         </View> : null}
       </ScrollView>
@@ -335,14 +349,14 @@ export default function TourLineupScreen() {
         <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setPickerOpen(false)} />
           <View style={styles.modalCard}>
-            <View style={styles.modalHeader}><Text style={styles.modalTitle}>Add Member</Text>
+            <View style={styles.modalHeader}><Text style={styles.modalTitle}>{t("acts.addMember")}</Text>
               <Pressable onPress={() => setPickerOpen(false)}><Ionicons name="close" size={24} color="#111" /></Pressable></View>
-            <TextInput value={search} onChangeText={setSearch} placeholder="Search people" style={styles.searchInput} autoCorrect={false} />
+            <TextInput value={search} onChangeText={setSearch} placeholder={t("tours.searchPeople")} style={styles.searchInput} autoCorrect={false} />
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalContent}>
               {availablePeople.map(p => <Pressable key={p.member_id} onPress={() => startAdd(p)} style={styles.pickerRow}>
-                <Text style={styles.memberName}>{p.display_name ?? "Unnamed"}</Text>
+                <Text style={styles.memberName}>{p.display_name ?? t("tours.unknownMember")}</Text>
                 <Text style={styles.memberSub}>{personCapabilities.filter(pc => pc.member_id === p.member_id)
-                  .map(pc => capabilities.find(c => c.capability_id === pc.capability_id)?.name).filter(Boolean).join(" · ") || "No capabilities registered"}</Text>
+                  .map(pc => capabilities.find(c => c.capability_id === pc.capability_id)?.name).filter(Boolean).join(" · ") || t("tours.noCapabilitiesRegistered")}</Text>
               </Pressable>)}
             </ScrollView>
           </View>
@@ -352,19 +366,19 @@ export default function TourLineupScreen() {
         <View style={styles.overlay}>
           <Pressable style={StyleSheet.absoluteFill} onPress={closeRoles} />
           <View style={styles.modalCard}>
-            <View style={styles.modalHeader}><Text style={styles.modalTitle}>{addingPerson?.display_name ?? (editingMember ? memberInfo(editingMember)?.display_name : "Member")} — Roles</Text>
+            <View style={styles.modalHeader}><Text style={styles.modalTitle}>{t("tours.memberRoles", { member: addingPerson?.display_name ?? (editingMember ? memberInfo(editingMember)?.display_name : null) ?? t("tours.member") })}</Text>
               <Pressable disabled={busy} onPress={closeRoles}><Ionicons name="close" size={24} color="#111" /></Pressable></View>
-            <Text style={styles.hint}>Select the capabilities applicable to this tour.</Text>
+            <Text style={styles.hint}>{t("tours.selectCapabilitiesHint")}</Text>
             <ScrollView contentContainerStyle={styles.modalContent}>
               {allowedCapabilities.map(c => <Pressable key={c.capability_id} disabled={busy} onPress={() => setSelectedCapabilities(prev => prev.includes(c.capability_id) ? prev.filter(id => id !== c.capability_id) : [...prev, c.capability_id])} style={styles.pickerRow}>
                 <View style={styles.capRow}>
                   <Ionicons name={selectedCapabilities.includes(c.capability_id) ? "checkbox" : "square-outline"} size={23} color={colors.primary} />
-                  <View style={{ flex: 1 }}><Text style={styles.memberName}>{c.name}</Text><Text style={styles.memberSub}>{c.category}</Text></View>
+                  <View style={{ flex: 1 }}><Text style={styles.memberName}>{c.name}</Text><Text style={styles.memberSub}>{categoryLabel(c.category)}</Text></View>
                 </View>
               </Pressable>)}
-              {allowedCapabilities.length === 0 ? <Text style={styles.hint}>No registered capabilities. Add them in People first.</Text> : null}
+              {allowedCapabilities.length === 0 ? <Text style={styles.hint}>{t("tours.noCapabilitiesRegisteredHint")}</Text> : null}
             </ScrollView>
-            <Pressable disabled={busy} onPress={() => { void saveRoles(); }} style={[styles.primaryButton, busy && styles.disabled]}><Text style={styles.primaryText}>{busy ? "Saving…" : "Save roles"}</Text></Pressable>
+            <Pressable disabled={busy} onPress={() => { void saveRoles(); }} style={[styles.primaryButton, busy && styles.disabled]}><Text style={styles.primaryText}>{busy ? t("tours.saving") : t("tours.saveRoles")}</Text></Pressable>
           </View>
         </View>
       </Modal>

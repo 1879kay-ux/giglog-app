@@ -6,6 +6,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 type TourDbRow = {
@@ -25,7 +26,7 @@ type EventDbRow = {
 type TourListRow = {
   tour_id: string;
   tour_name: string;
-  act_name: string;
+  act_name: string | null;
   status: string;
   created_at: string;
   start_date: string | null;
@@ -33,10 +34,10 @@ type TourListRow = {
   event_count: number;
 };
 
-function formatDate(value: string): string {
+function formatDate(value: string, language: string): string {
   // event_date is a date-only value. Parse locally to avoid timezone date shifts.
   const [year, month, day] = value.split("-").map(Number);
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(language, {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -59,6 +60,7 @@ function tourSort(a: TourListRow, b: TourListRow, today: string): number {
 
 export default function ToursScreen() {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const { bandId, isAdmin, adminModeEnabled } = useCurrentMember();
   const canManage = isAdmin && adminModeEnabled;
   const [loading, setLoading] = useState(true);
@@ -118,7 +120,7 @@ export default function ToursScreen() {
         return {
           tour_id: tour.tour_id,
           tour_name: tour.tour_name,
-          act_name: act?.act_name ?? "Unknown Act",
+          act_name: act?.act_name ?? null,
           status: tour.status,
           created_at: tour.created_at,
           start_date: stat?.start ?? null,
@@ -130,12 +132,12 @@ export default function ToursScreen() {
       setTours(mapped);
     } catch (error: any) {
       console.log("tours load error", error);
-      setErrorMessage(error?.message ?? "Unable to load tours.");
+      setErrorMessage(error?.message ?? t("tours.loadError"));
       setTours([]);
     } finally {
       setLoading(false);
     }
-  }, [bandId]);
+  }, [bandId, t]);
 
   useFocusEffect(useCallback(() => { void loadTours(); }, [loadTours]));
 
@@ -148,6 +150,21 @@ export default function ToursScreen() {
     [router],
   );
 
+  const translateStatus = (value: string) => {
+    switch (value.trim().toLowerCase()) {
+      case "planning":
+        return t("tours.statusPlanning");
+      case "confirmed":
+        return t("tours.statusConfirmed");
+      case "completed":
+        return t("tours.statusCompleted");
+      case "cancelled":
+        return t("tours.statusCancelled");
+      default:
+        return t("tours.statusUnknown");
+    }
+  };
+
   const renderTour = ({ item }: { item: TourListRow }) => (
     <Pressable
       style={({ pressed }) => [styles.card, pressed ? styles.pressed : null]}
@@ -156,19 +173,19 @@ export default function ToursScreen() {
       <View style={styles.titleRow}>
         <Text style={styles.title}>{item.tour_name}</Text>
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>{item.status || "Planning"}</Text>
+          <Text style={styles.badgeText}>{translateStatus(item.status)}</Text>
         </View>
       </View>
-      <Text style={styles.detail}>{item.act_name}</Text>
+      <Text style={styles.detail}>{item.act_name ?? t("tours.unknownAct")}</Text>
       <Text style={styles.detail}>
         {item.start_date && item.end_date
           ? item.start_date === item.end_date
-            ? formatDate(item.start_date)
-            : `${formatDate(item.start_date)} – ${formatDate(item.end_date)}`
-          : "Dates to be confirmed"}
+            ? formatDate(item.start_date, i18n.language)
+            : `${formatDate(item.start_date, i18n.language)} – ${formatDate(item.end_date, i18n.language)}`
+          : t("tours.datesToBeConfirmed")}
       </Text>
       <Text style={styles.count}>
-        {item.event_count} {item.event_count === 1 ? "event" : "events"}
+        {t(item.event_count === 1 ? "tours.eventCount_one" : "tours.eventCount_other", { count: item.event_count })}
       </Text>
     </Pressable>
   );
@@ -177,7 +194,7 @@ export default function ToursScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "Tours",
+          title: t("tours.title"),
           headerLeft: () => (
             <Pressable onPress={() => router.back()} hitSlop={10} style={styles.headerBtn}>
               <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -195,7 +212,7 @@ export default function ToursScreen() {
             onPress={() => router.push("/tours/add" as any)}
           >
             <Ionicons name="add-circle-outline" size={21} color="#fff" />
-            <Text style={styles.addButtonText}>Create Tour</Text>
+            <Text style={styles.addButtonText}>{t("tours.create")}</Text>
           </Pressable>
         ) : null}
         {loading ? (
@@ -204,16 +221,16 @@ export default function ToursScreen() {
           <View style={styles.center}>
             <Text style={styles.errorText}>{errorMessage}</Text>
             <Pressable onPress={() => void loadTours()} style={styles.retryButton}>
-              <Text style={styles.retryText}>Try again</Text>
+              <Text style={styles.retryText}>{t("tours.tryAgain")}</Text>
             </Pressable>
           </View>
         ) : tours.length === 0 ? (
           <View style={styles.center}>
-            <Text style={styles.emptyTitle}>No tours yet</Text>
+            <Text style={styles.emptyTitle}>{t("tours.emptyTitle")}</Text>
             <Text style={styles.emptyText}>
               {canManage
-                ? "Create a tour to organise existing events and manage its line-up."
-                : "There are no tours to display."}
+                ? t("tours.emptyDescriptionManage")
+                : t("tours.emptyDescriptionReadOnly")}
             </Text>
           </View>
         ) : (

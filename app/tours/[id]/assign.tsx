@@ -6,6 +6,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 type Mode = "add" | "update" | "replace";
 type Tour = { tour_id: string; tour_name: string; band_id: string; act_id: string };
@@ -18,18 +19,19 @@ type Availability = { event_id: string; member_id: string; status: string | null
 type Person = { member_id: string; display_name: string | null };
 type ResponseCounts = { available: number; maybe: number; unavailable: number; awaiting: number };
 type Diff = { event: Gig; additions: string[]; roleUpdates: string[]; extra: string[]; protectedExtras: string[]; unconfirmedExtras: string[]; responses: ResponseCounts };
-const MODES: { key: Mode; title: string; note: string }[] = [
-  { key: "add", title: "Add missing people", note: "Safest: leave existing event members and roles unchanged." },
-  { key: "update", title: "Update matching roles", note: "Add missing people and synchronise roles for those already on the Tour." },
-  { key: "replace", title: "Replace Event Line-up", note: "Preview possible removals. Responses and exceptions are protected; nothing is removed here." },
+const MODES: { key: Mode; titleKey: string; noteKey: string }[] = [
+  { key: "add", titleKey: "tours.addMissingPeople", noteKey: "tours.addMissingPeopleNote" },
+  { key: "update", titleKey: "tours.updateMatchingRoles", noteKey: "tours.updateMatchingRolesNote" },
+  { key: "replace", titleKey: "tours.replaceEventLineup", noteKey: "tours.replaceEventLineupNote" },
 ];
-function dateLabel(value: string) {
+function dateLabel(value: string, language: string) {
   const [y, m, d] = value.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(y, m - 1, d));
+  return new Intl.DateTimeFormat(language, { day: "numeric", month: "short", year: "numeric" }).format(new Date(y, m - 1, d));
 }
 function roleSignature(roles: string[]) { return [...new Set(roles)].sort().join("|"); }
 export default function TourAssignmentPreview() {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const tourId = Array.isArray(params.id) ? params.id[0] : params.id;
   const { bandId, isAdmin, adminModeEnabled } = useCurrentMember();
@@ -48,7 +50,7 @@ export default function TourAssignmentPreview() {
   const [availability, setAvailability] = useState<Availability[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
   const load = useCallback(async () => {
-    if (!tourId || !bandId) { setError("Tour or organisation not available."); setLoading(false); return; }
+    if (!tourId || !bandId) { setError(t("tours.unavailableTour")); setLoading(false); return; }
     setLoading(true); setError(null);
     try {
       const { data: tourData, error: tourError } = await supabase.from("tours")
@@ -91,12 +93,12 @@ export default function TourAssignmentPreview() {
       setSelectedIds(current => current.length ? current.filter(id => gigIds.includes(id)) : gigIds);
     } catch (e: any) {
       console.log("tour bulk preview load error", e);
-      setError(e?.message ?? "Unable to load the bulk assignment preview.");
+      setError(e?.message ?? t("tours.loadAssignmentError"));
     } finally { setLoading(false); }
-  }, [tourId, bandId]);
+  }, [tourId, bandId, t]);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
-  const names = useMemo(() => new Map(people.map(p => [p.member_id, p.display_name || "Unnamed"])), [people]);
-  const display = (ids: string[]) => ids.map(id => names.get(id) ?? "Unknown member").sort((a,b) => a.localeCompare(b)).join(", ");
+  const names = useMemo(() => new Map(people.map(p => [p.member_id, p.display_name || t("tours.unknownMember")])), [people, t]);
+  const display = (ids: string[]) => ids.map(id => names.get(id) ?? t("tours.unknownMember")).sort((a,b) => a.localeCompare(b)).join(", ");
   const diffs = useMemo<Diff[]>(() => events.filter(g => selectedIds.includes(g.event_id)).map(event => {
     const assigned = new Set(eventAssignments.filter(a => a.event_id === event.event_id).map(a => a.member_id));
     const tourSet = new Set(tourMembers.map(m => m.member_id));
@@ -130,25 +132,28 @@ export default function TourAssignmentPreview() {
   function confirmAddMissing() {
     if (saving || loading || !canManage || mode !== "add" || !tourId || !bandId) return;
     if (!diffs.length) {
-      Alert.alert("Select events", "Select at least one event first.");
+      Alert.alert(t("tours.selectEvents"), t("tours.selectAtLeastOneEvent"));
       return;
     }
     if (!totals.add) {
-      Alert.alert("Nothing to add", "All selected events already have the Tour members.");
+      Alert.alert(t("tours.nothingToAdd"), t("tours.allMembersAlreadyAssigned"));
       return;
     }
     const missingWithoutRoles = diffs.flatMap(d => d.additions.filter(id =>
       !tourRoles.some(r => r.member_id === id)));
     if (missingWithoutRoles.length) {
-      Alert.alert("Roles required", "Assign roles to every new Tour member before adding them to Events.");
+      Alert.alert(t("tours.rolesRequired"), t("tours.assignRolesBeforeEvents"));
       return;
     }
     Alert.alert(
-      "Add Tour members to Events?",
-      `Add ${totals.add} member assignment${totals.add === 1 ? "" : "s"} across ${diffs.length} selected Event${diffs.length === 1 ? "" : "s"}?\n\nExisting members, roles and availability responses will not be changed.`,
+      t("tours.addMembersToEventsTitle"),
+      t(totals.add === 1 ? "tours.addMembersToEventsMessage_one" : "tours.addMembersToEventsMessage_other", {
+        assignments: totals.add,
+        events: diffs.length,
+      }),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Add missing people", onPress: () => { void applyAddMissing(); } },
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("tours.addMissingPeople"), onPress: () => { void applyAddMissing(); } },
       ],
     );
   }
@@ -165,7 +170,7 @@ export default function TourAssignmentPreview() {
         .from("tour_members").select("tour_member_id,member_id").eq("tour_id", tourId);
       if (membersError) throw membersError;
       const currentMembers = (freshMembers ?? []) as TourMember[];
-      if (!currentMembers.length) throw new Error("The Tour no longer has a line-up.");
+      if (!currentMembers.length) throw new Error(t("tours.lineupNoLongerAvailable"));
       const { data: freshRoles, error: rolesError } = await supabase
         .from("tour_member_capabilities")
         .select("tour_member_id,capability_id")
@@ -186,7 +191,7 @@ export default function TourAssignmentPreview() {
           if (!currentEvent || currentEvent.tour_id !== tourId || currentEvent.band_id !== bandId ||
               currentEvent.act_id !== tour?.act_id ||
               currentEvent.event_status?.toLowerCase() === "deleted") {
-            throw new Error("Event is no longer eligible for this Tour.");
+            throw new Error(t("tours.eventNoLongerEligible"));
           }
           const { data: currentAssignments, error: assignedError } = await supabase.from("event_members")
             .select("member_id").eq("event_id", currentEvent.event_id);
@@ -196,7 +201,7 @@ export default function TourAssignmentPreview() {
             if (existing.has(member.member_id)) { skipped++; continue; }
             const roleIds = [...new Set(rolesByAssignment.get(member.tour_member_id) ?? [])];
             if (!roleIds.length) {
-              failures.push(`${eventName}: ${names.get(member.member_id) ?? "Unknown member"} has no Tour roles`);
+              failures.push(`${eventName}: ${names.get(member.member_id) ?? t("tours.unknownMember")} ${t("tours.memberHasNoRoles")}`);
               continue;
             }
             try {
@@ -218,20 +223,20 @@ export default function TourAssignmentPreview() {
                   { onConflict: "event_id,member_id", ignoreDuplicates: true });
               if (availError) throw availError;
             } catch (err: any) {
-              failures.push(`${eventName} / ${names.get(member.member_id) ?? "Unknown member"}: ${err?.message ?? "Unknown error"}`);
+              failures.push(`${eventName} / ${names.get(member.member_id) ?? t("tours.unknownMember")}: ${err?.message ?? t("tours.unknownError")}`);
             }
           }
         } catch (err: any) {
-          failures.push(`${eventName}: ${err?.message ?? "Unable to update Event"}`);
+          failures.push(`${eventName}: ${err?.message ?? t("tours.unableToUpdateEvent")}`);
         }
       }
       await load();
-      const message = `${added} new Event assignment${added === 1 ? "" : "s"} created.\nExisting assignments skipped: ${skipped}.` +
-        (failures.length ? `\n\n${failures.length} issue(s) require attention:\n${failures.slice(0, 4).join("\n")}` :
-          "\n\nExisting availability responses were not overwritten.");
-      Alert.alert(failures.length ? "Completed with issues" : "Assignments complete", message);
+      const message = t(added === 1 ? "tours.assignmentsCreated_one" : "tours.assignmentsCreated_other", { count: added, skipped }) +
+        (failures.length ? t(failures.length === 1 ? "tours.assignmentIssues_one" : "tours.assignmentIssues_other", { count: failures.length, issues: failures.slice(0, 4).join("\n") }) :
+          t("tours.availabilityPreserved"));
+      Alert.alert(failures.length ? t("tours.completedWithIssues") : t("tours.assignmentsComplete"), message);
     } catch (err: any) {
-      Alert.alert("Unable to apply assignments", err?.message ?? "Please try again.");
+      Alert.alert(t("tours.applyAssignmentsError"), err?.message ?? t("tours.tryAgain"));
       await load();
     } finally {
       setSaving(false);
@@ -239,62 +244,60 @@ export default function TourAssignmentPreview() {
   }
 
   return <>
-    <Stack.Screen options={{ title: "Bulk Tour Line-up Preview", headerStyle: { backgroundColor: colors.primary }, headerTintColor: "#fff", headerLeft: () => <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 8 }}><Ionicons name="arrow-back" size={22} color="#fff" /></Pressable> }} />
-    {loading ? <View style={styles.center}><ActivityIndicator /></View> : error ? <View style={styles.center}><Text style={styles.error}>{error}</Text><Pressable onPress={() => void load()} style={styles.action}><Text style={styles.actionText}>Try again</Text></Pressable></View> :
+    <Stack.Screen options={{ title: t("tours.assignmentPreviewTitle"), headerStyle: { backgroundColor: colors.primary }, headerTintColor: "#fff", headerLeft: () => <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 8 }}><Ionicons name="arrow-back" size={22} color="#fff" /></Pressable> }} />
+    {loading ? <View style={styles.center}><ActivityIndicator /></View> : error ? <View style={styles.center}><Text style={styles.error}>{error}</Text><Pressable onPress={() => void load()} style={styles.action}><Text style={styles.actionText}>{t("tours.tryAgain")}</Text></Pressable></View> :
       <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-        <Text style={styles.heading}>{tour?.tour_name ?? "Tour"}</Text>
-        <Text style={styles.info}>Review proposed changes before applying them. Only Add missing people is enabled for saving.</Text>
-        {!canManage ? <Text style={styles.warning}>Admin Mode is required to apply assignments.</Text> : null}
-        <Text style={styles.section}>1. Select Tour events</Text>
+        <Text style={styles.heading}>{tour?.tour_name ?? t("tours.title")}</Text>
+        <Text style={styles.info}>{t("tours.assignmentInfo")}</Text>
+        {!canManage ? <Text style={styles.warning}>{t("tours.adminModeRequiredAssignment")}</Text> : null}
+        <Text style={styles.section}>{t("tours.selectTourEvents")}</Text>
         <View style={styles.card}>
           <Pressable disabled={saving} onPress={() => setSelectedIds(selectedCount === events.length ? [] : events.map(e => e.event_id))} style={styles.selectAll}>
-            <Text style={styles.link}>{selectedCount === events.length ? "Deselect all" : "Select all"}</Text>
-            <Text style={styles.muted}>{selectedCount} of {events.length} events</Text>
+            <Text style={styles.link}>{selectedCount === events.length ? t("tours.deselectAll") : t("tours.selectAll")}</Text>
+            <Text style={styles.muted}>{t(selectedCount === 1 ? "tours.selectedEventCount_one" : "tours.selectedEventCount_other", { selected: selectedCount, total: events.length })}</Text>
           </Pressable>
           {events.map(e => <Pressable key={e.event_id} disabled={saving} onPress={() => toggleEvent(e.event_id)} style={styles.item}>
             <Ionicons name={selectedIds.includes(e.event_id) ? "checkbox" : "square-outline"} size={24} color={colors.primary} />
-            <View style={{ flex: 1 }}><Text style={styles.name}>{e.venues?.event_venue_name || "Venue TBC"}</Text><Text style={styles.muted}>{dateLabel(e.event_date)}</Text></View>
+            <View style={{ flex: 1 }}><Text style={styles.name}>{e.venues?.event_venue_name || t("tours.venueToBeConfirmed")}</Text><Text style={styles.muted}>{dateLabel(e.event_date, i18n.language)}</Text></View>
           </Pressable>)}
-          {!events.length ? <Text style={styles.muted}>No eligible events currently assigned to this Tour.</Text> : null}
+          {!events.length ? <Text style={styles.muted}>{t("tours.noEligibleEvents")}</Text> : null}
         </View>
-        <Text style={styles.section}>2. Choose assignment mode</Text>
+        <Text style={styles.section}>{t("tours.chooseAssignmentMode")}</Text>
         <View style={styles.card}>{MODES.map(option => <Pressable key={option.key} disabled={saving} onPress={() => setMode(option.key)} style={styles.item}>
           <Ionicons name={mode === option.key ? "radio-button-on" : "radio-button-off"} size={23} color={colors.primary} />
-          <View style={{ flex: 1 }}><Text style={styles.name}>{option.title}</Text><Text style={styles.muted}>{option.note}</Text></View>
+          <View style={{ flex: 1 }}><Text style={styles.name}>{t(option.titleKey)}</Text><Text style={styles.muted}>{t(option.noteKey)}</Text></View>
         </Pressable>)}</View>
-        <Text style={styles.section}>3. Preview changes</Text>
+        <Text style={styles.section}>{t("tours.previewChanges")}</Text>
         <View style={styles.card}>
-          <Text style={styles.name}>{selectedCount} events selected · {tourMembers.length} Tour people</Text>
-          <Text style={styles.muted}>{totals.add} new event assignments</Text>
-          {mode !== "add" ? <Text style={styles.muted}>{totals.update} existing members with differing roles</Text> : null}
-          {mode === "replace" ? <><Text style={styles.warning}>{totals.protected} event-only members with responses protected</Text><Text style={styles.muted}>{totals.review} other event-only members requiring removal review</Text></> : null}
+          <Text style={styles.name}>{t("tours.previewCounts", { events: selectedCount, people: tourMembers.length })}</Text>
+          <Text style={styles.muted}>{t(totals.add === 1 ? "tours.newEventAssignments_one" : "tours.newEventAssignments_other", { count: totals.add })}</Text>
+          {mode !== "add" ? <Text style={styles.muted}>{t(totals.update === 1 ? "tours.differingRoleMembers_one" : "tours.differingRoleMembers_other", { count: totals.update })}</Text> : null}
+          {mode === "replace" ? <><Text style={styles.warning}>{t(totals.protected === 1 ? "tours.protectedResponseMembers_one" : "tours.protectedResponseMembers_other", { count: totals.protected })}</Text><Text style={styles.muted}>{t(totals.review === 1 ? "tours.exceptionsToReview_one" : "tours.exceptionsToReview_other", { count: totals.review })}</Text></> : null}
         </View>
         {diffs.map(d => <View key={d.event.event_id} style={styles.card}>
-          <Text style={styles.name}>{d.event.venues?.event_venue_name || "Venue TBC"}</Text>
-          <Text style={styles.muted}>{dateLabel(d.event.event_date)}</Text>
+          <Text style={styles.name}>{d.event.venues?.event_venue_name || t("tours.venueToBeConfirmed")}</Text>
+          <Text style={styles.muted}>{dateLabel(d.event.event_date, i18n.language)}</Text>
           <View style={styles.availabilityBlock}>
-            <Text style={styles.availabilityTitle}>Existing Event availability</Text>
-            <Text style={styles.muted}>Available: {d.responses.available} · Maybe: {d.responses.maybe} · Not Available: {d.responses.unavailable}</Text>
-            <Text style={styles.muted}>Awaiting response: {d.responses.awaiting}</Text>
+            <Text style={styles.availabilityTitle}>{t("tours.existingEventAvailability")}</Text>
+            <Text style={styles.muted}>{t("tours.availableCount", { count: d.responses.available })} · {t("tours.maybeCount", { count: d.responses.maybe })} · {t("tours.notAvailableCount", { count: d.responses.unavailable })}</Text>
+            <Text style={styles.muted}>{t("tours.awaitingResponseCount", { count: d.responses.awaiting })}</Text>
           </View>
-          <Text style={styles.line}><Text style={styles.bold}>Add ({d.additions.length}): </Text>{d.additions.length ? display(d.additions) : "None"}</Text>
-          {mode !== "add" ? <Text style={styles.line}><Text style={styles.bold}>Role changes ({d.roleUpdates.length}): </Text>{d.roleUpdates.length ? display(d.roleUpdates) : "None"}</Text> : null}
+          <Text style={styles.line}><Text style={styles.bold}>{t("tours.addCount", { count: d.additions.length })}: </Text>{d.additions.length ? display(d.additions) : t("tours.none")}</Text>
+          {mode !== "add" ? <Text style={styles.line}><Text style={styles.bold}>{t("tours.roleChangesCount", { count: d.roleUpdates.length })}: </Text>{d.roleUpdates.length ? display(d.roleUpdates) : t("tours.none")}</Text> : null}
           {mode === "replace" ? <>
-            <Text style={styles.line}><Text style={styles.bold}>Event-only responses protected ({d.protectedExtras.length}): </Text>{d.protectedExtras.length ? display(d.protectedExtras) : "None"}</Text>
-            <Text style={styles.line}><Text style={styles.bold}>Other exceptions to review ({d.unconfirmedExtras.length}): </Text>{d.unconfirmedExtras.length ? display(d.unconfirmedExtras) : "None"}</Text>
+            <Text style={styles.line}><Text style={styles.bold}>{t("tours.protectedResponseCount", { count: d.protectedExtras.length })}: </Text>{d.protectedExtras.length ? display(d.protectedExtras) : t("tours.none")}</Text>
+            <Text style={styles.line}><Text style={styles.bold}>{t("tours.exceptionReviewCount", { count: d.unconfirmedExtras.length })}: </Text>{d.unconfirmedExtras.length ? display(d.unconfirmedExtras) : t("tours.none")}</Text>
           </> : null}
         </View>)}
-        {selectedCount === 0 ? <Text style={styles.muted}>Select at least one Event to see a preview.</Text> : null}
+        {selectedCount === 0 ? <Text style={styles.muted}>{t("tours.selectEventForPreview")}</Text> : null}
         {mode === "add" && canManage ? (
           <Pressable accessibilityRole="button" disabled={saving || selectedCount === 0 || totals.add === 0}
             onPress={confirmAddMissing} style={[styles.applyButton, (saving || selectedCount === 0 || totals.add === 0) && styles.disabled]}>
             {saving ? <ActivityIndicator color="#fff" /> : <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />}
-            <Text style={styles.applyText}>{saving ? "Applying assignments…" : `Add ${totals.add} missing assignment${totals.add === 1 ? "" : "s"}`}</Text>
+            <Text style={styles.applyText}>{saving ? t("tours.applyingAssignments") : t(totals.add === 1 ? "tours.addMissingAssignment_one" : "tours.addMissingAssignment_other", { count: totals.add })}</Text>
           </Pressable>
         ) : null}
-        <Text style={styles.footer}>{mode === "add" ?
-          "Existing Event roles and availability responses will be preserved. Changes are made only after confirmation." :
-          "Preview only — updating roles and replacing Event line-ups are not yet enabled."}</Text>
+        <Text style={styles.footer}>{mode === "add" ? t("tours.addAssignmentFooter") : t("tours.previewOnlyFooter")}</Text>
       </ScrollView>}
   </>;
 }
